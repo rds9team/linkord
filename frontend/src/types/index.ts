@@ -40,3 +40,32 @@ export interface ServerData {
   is_public: boolean;
   created_at: string;
 }
+
+export interface ProfileUpdateData {
+  display_name?: string;
+  bio?: string;
+  theme_id?: string;
+  theme_mode?: 'dark' | 'light';
+  is_public?: boolean;
+  avatar_url?: string;
+  background_url?: string;
+  minecraft_uuid?: string;
+  analytics_id?: string;
+  hide_badges?: boolean;
+}
+
+export interface ReportData {
+  target_type: 'profile' | 'server' | 'media';
+  target_id: string;
+  reason: string;
+  description?: string;
+}
+
+export interface AuthResponse {
+  status: string;
+  user?: {
+    id: number;
+    username: string;
+  };
+}
+

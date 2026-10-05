@@ -1,26 +1,142 @@
-import React, { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams, Link } from 'react-router-dom';
 import {
-  MessageSquare, Github, Twitter, Code, Music, Eye, Flame, Flag, Heart
+  MessageSquare, Github, Twitter, Code, Music, Eye, Flame, Flag, Heart,
+  Loader2, UserX, ExternalLink, Globe, Youtube, Twitch, Send
 } from 'lucide-react';
 import { Badges } from '../components/Badges';
 import { ReportModal } from '../components/ReportModal';
+import { fetchProfile, boostProfile } from '../api/client';
+import { ProfileData } from '../types';
+
+const THEME_ACCENTS: Record<string, { glow: string; border: string; badge: string }> = {
+  midnight: { glow: 'bg-purple-600/15', border: 'border-purple-500/20', badge: 'bg-purple-500/20 text-purple-300' },
+  amoled: { glow: 'bg-white/5', border: 'border-white/10', badge: 'bg-white/10 text-white' },
+  cyber: { glow: 'bg-cyan-500/15', border: 'border-cyan-500/20', badge: 'bg-cyan-500/20 text-cyan-300' },
+  sunset: { glow: 'bg-amber-600/15', border: 'border-amber-500/20', badge: 'bg-amber-500/20 text-amber-300' },
+  tokyo: { glow: 'bg-fuchsia-600/15', border: 'border-fuchsia-500/20', badge: 'bg-fuchsia-500/20 text-fuchsia-300' },
+  emerald: { glow: 'bg-emerald-600/15', border: 'border-emerald-500/20', badge: 'bg-emerald-500/20 text-emerald-300' },
+  sakura: { glow: 'bg-rose-500/15', border: 'border-rose-500/20', badge: 'bg-rose-500/20 text-rose-300' },
+  chrome: { glow: 'bg-slate-400/15', border: 'border-slate-400/20', badge: 'bg-slate-400/20 text-slate-200' },
+  crimson: { glow: 'bg-red-600/15', border: 'border-red-500/20', badge: 'bg-red-500/20 text-red-300' },
+  glass: { glow: 'bg-sky-500/15', border: 'border-sky-500/20', badge: 'bg-sky-500/20 text-sky-300' },
+  pixel: { glow: 'bg-green-600/15', border: 'border-green-500/20', badge: 'bg-green-500/20 text-green-300' },
+  clean: { glow: 'bg-slate-500/10', border: 'border-slate-500/20', badge: 'bg-slate-500/20 text-slate-300' },
+};
+
+const getSocialIcon = (iconName: string) => {
+  const icon = iconName.toLowerCase();
+  switch (icon) {
+    case 'discord':
+      return <MessageSquare className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />;
+    case 'github':
+      return <Github className="w-5 h-5 text-slate-700 dark:text-slate-200" />;
+    case 'twitter':
+    case 'x':
+      return <Twitter className="w-5 h-5 text-sky-500 dark:text-sky-400" />;
+    case 'qiita':
+    case 'code':
+      return <Code className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />;
+    case 'youtube':
+      return <Youtube className="w-5 h-5 text-rose-500" />;
+    case 'twitch':
+      return <Twitch className="w-5 h-5 text-purple-400" />;
+    case 'telegram':
+      return <Send className="w-5 h-5 text-sky-400" />;
+    default:
+      return <Globe className="w-5 h-5 text-slate-400" />;
+  }
+};
 
 export const Profile: React.FC = () => {
   const { username = 'yuto' } = useParams<{ username: string }>();
+  const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const [isReportOpen, setIsReportOpen] = useState(false);
-  const [boostCount, setBoostCount] = useState(58);
+  const [boostCount, setBoostCount] = useState(0);
   const [hasBoosted, setHasBoosted] = useState(false);
   const [themeMode, setThemeMode] = useState<'dark' | 'light'>('dark');
 
-  const handleBoost = () => {
-    if (!hasBoosted) {
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        setLoading(true);
+        setNotFound(false);
+        setError(null);
+        const data = await fetchProfile(username);
+        setProfile(data);
+        setBoostCount(data.views_count ? Math.floor(data.views_count / 10) + 12 : 12);
+        setThemeMode(data.theme_mode === 'light' ? 'light' : 'dark');
+      } catch (err: any) {
+        if (err.message && (err.message.includes('404') || err.message.includes('not found'))) {
+          setNotFound(true);
+        } else {
+          setError(err.message || 'プロフィールの読み込みに失敗しました');
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProfile();
+  }, [username]);
+
+  const handleBoost = async () => {
+    if (hasBoosted || !profile) return;
+    try {
+      await boostProfile(profile.username);
       setBoostCount(prev => prev + 1);
+      setHasBoosted(true);
+    } catch (err: any) {
+      // If already boosted or error, still set state
       setHasBoosted(true);
     }
   };
 
   const isLight = themeMode === 'light';
+  const themeAccent = THEME_ACCENTS[profile?.theme_id || 'midnight'] || THEME_ACCENTS.midnight;
+
+  if (loading) {
+    return (
+      <div className="min-h-[80vh] flex flex-col items-center justify-center gap-3">
+        <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
+        <span className="text-xs text-slate-400">プロフィールを読み込み中...</span>
+      </div>
+    );
+  }
+
+  if (notFound || !profile) {
+    return (
+      <div className="min-h-[80vh] flex items-center justify-center px-4 relative z-10">
+        <div className="w-full max-w-md p-8 rounded-3xl bg-white/[0.03] border border-white/10 backdrop-blur-xl text-center">
+          <UserX className="w-12 h-12 text-slate-500 mx-auto mb-4" />
+          <h1 className="text-xl font-extrabold text-white tracking-tight mb-2">
+            ユーザーが見つかりません
+          </h1>
+          <p className="text-xs text-slate-400 mb-6">
+            「@{username}」のプロフィールは存在しないか、非公開に設定されています。
+          </p>
+          <div className="flex items-center justify-center gap-3">
+            <Link
+              to="/discover"
+              className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition"
+            >
+              他のユーザーを探す
+            </Link>
+            <Link
+              to="/"
+              className="px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 font-semibold text-xs transition"
+            >
+              トップへ戻る
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`min-h-screen py-6 px-4 flex flex-col items-center justify-center transition-colors duration-300 ${isLight ? 'bg-slate-50 text-slate-900' : 'bg-[#08090d] text-slate-100'}`}>
@@ -28,14 +144,14 @@ export const Profile: React.FC = () => {
       {/* Ambient Glow Effects (Dark only) */}
       {!isLight && (
         <>
-          <div className="fixed top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] bg-purple-600/15 rounded-full blur-[140px] pointer-events-none"></div>
+          <div className={`fixed top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] ${themeAccent.glow} rounded-full blur-[140px] pointer-events-none`}></div>
           <div className="fixed bottom-1/4 left-1/3 -translate-x-1/2 w-[450px] h-[450px] bg-sky-500/10 rounded-full blur-[120px] pointer-events-none"></div>
         </>
       )}
 
       {/* Profile Creator / Viewer Theme Switcher Bar */}
       <div className="w-full max-w-lg mb-3 flex items-center justify-between px-2 text-xs">
-        <span className="font-mono text-slate-400">linkord.net/@{username}</span>
+        <span className="font-mono text-slate-400">linkord.net/@{profile.username}</span>
         <div className="flex items-center gap-1.5 p-1 rounded-full border border-slate-300 dark:border-white/10 bg-slate-200/80 dark:bg-white/5">
           <button
             onClick={() => setThemeMode('dark')}
@@ -53,17 +169,23 @@ export const Profile: React.FC = () => {
       </div>
 
       {/* Main Guns.lol Style Profile Panel */}
-      <main className={`w-full max-w-lg rounded-[28px] p-6 relative z-10 transition duration-300 ${isLight ? 'glass-panel-light' : 'glass-panel-dark'}`}>
+      <main className={`w-full max-w-lg rounded-[28px] p-6 relative z-10 transition duration-300 ${isLight ? 'glass-panel-light' : 'glass-panel-dark'} ${!isLight ? themeAccent.border : ''}`}>
         
         {/* Top: Avatar & User Info */}
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 mb-5">
           <div className="relative group">
-            <div className="w-24 h-24 rounded-2xl overflow-hidden border border-slate-300 dark:border-white/15 shadow-xl bg-slate-800">
-              <img
-                src="https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=300&h=300&fit=crop&crop=faces"
-                alt="Avatar"
-                className="w-full h-full object-cover"
-              />
+            <div className="w-24 h-24 rounded-2xl overflow-hidden border border-slate-300 dark:border-white/15 shadow-xl bg-slate-800 flex items-center justify-center">
+              {profile.avatar_url ? (
+                <img
+                  src={profile.avatar_url}
+                  alt={profile.display_name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-white text-3xl font-extrabold">
+                  {profile.display_name.charAt(0).toUpperCase()}
+                </div>
+              )}
             </div>
             {/* Online Status Indicator */}
             <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 border-[3px] border-white dark:border-[#10121c] flex items-center justify-center">
@@ -73,42 +195,65 @@ export const Profile: React.FC = () => {
 
           <div className="flex-1 text-center sm:text-left">
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1">
-              <h1 className="text-xl font-extrabold tracking-tight">{username}</h1>
+              <h1 className="text-xl font-extrabold tracking-tight">{profile.display_name}</h1>
               {/* Badges in User's Requested Uniform Pill Style */}
-              <Badges
-                hasDiscordAuthed={true}
-                hasFounder={true}
-                hasTeam={true}
-                hasSupporter={true}
-              />
+              {!profile.hide_badges && (
+                <Badges
+                  hasDiscordAuthed={profile.has_discord_authed}
+                  hasFounder={profile.has_founder}
+                  hasTeam={profile.has_team}
+                  hasSupporter={profile.has_supporter}
+                />
+              )}
             </div>
 
-            <p className="font-mono text-xs text-slate-500 dark:text-slate-400 mb-2">@{username}</p>
-            <p className="text-xs leading-relaxed max-w-sm text-slate-600 dark:text-slate-300">
-              Fullstack Developer & Minecraft PvP Player. Building Linkord & Web projects.
-            </p>
+            <p className="font-mono text-xs text-slate-500 dark:text-slate-400 mb-2">@{profile.username}</p>
+            {profile.bio && (
+              <p className="text-xs leading-relaxed max-w-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap">
+                {profile.bio}
+              </p>
+            )}
           </div>
         </div>
 
         {/* Social Links Grid */}
-        <div className="grid grid-cols-4 gap-2 mb-4">
-          <a href="#" className={`rounded-xl p-2.5 flex flex-col items-center justify-center gap-1 transition hover:scale-[1.02] ${isLight ? 'glass-card-light' : 'glass-card-dark'}`}>
-            <MessageSquare className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Discord</span>
-          </a>
-          <a href="#" className={`rounded-xl p-2.5 flex flex-col items-center justify-center gap-1 transition hover:scale-[1.02] ${isLight ? 'glass-card-light' : 'glass-card-dark'}`}>
-            <Github className="w-5 h-5 text-slate-700 dark:text-slate-200" />
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">GitHub</span>
-          </a>
-          <a href="#" className={`rounded-xl p-2.5 flex flex-col items-center justify-center gap-1 transition hover:scale-[1.02] ${isLight ? 'glass-card-light' : 'glass-card-dark'}`}>
-            <Twitter className="w-5 h-5 text-sky-500 dark:text-sky-400" />
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">X</span>
-          </a>
-          <a href="#" className={`rounded-xl p-2.5 flex flex-col items-center justify-center gap-1 transition hover:scale-[1.02] ${isLight ? 'glass-card-light' : 'glass-card-dark'}`}>
-            <Code className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Qiita</span>
-          </a>
-        </div>
+        {profile.links && profile.links.length > 0 ? (
+          <div className="grid grid-cols-4 gap-2 mb-4">
+            {profile.links.map(link => (
+              <a
+                key={link.id}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`rounded-xl p-2.5 flex flex-col items-center justify-center gap-1 transition hover:scale-[1.02] ${isLight ? 'glass-card-light' : 'glass-card-dark'}`}
+              >
+                {getSocialIcon(link.icon || link.title)}
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate max-w-full">
+                  {link.title}
+                </span>
+              </a>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-4 gap-2 mb-4">
+            <a href="#" className={`rounded-xl p-2.5 flex flex-col items-center justify-center gap-1 transition hover:scale-[1.02] ${isLight ? 'glass-card-light' : 'glass-card-dark'}`}>
+              <MessageSquare className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Discord</span>
+            </a>
+            <a href="#" className={`rounded-xl p-2.5 flex flex-col items-center justify-center gap-1 transition hover:scale-[1.02] ${isLight ? 'glass-card-light' : 'glass-card-dark'}`}>
+              <Github className="w-5 h-5 text-slate-700 dark:text-slate-200" />
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">GitHub</span>
+            </a>
+            <a href="#" className={`rounded-xl p-2.5 flex flex-col items-center justify-center gap-1 transition hover:scale-[1.02] ${isLight ? 'glass-card-light' : 'glass-card-dark'}`}>
+              <Twitter className="w-5 h-5 text-sky-500 dark:text-sky-400" />
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">X</span>
+            </a>
+            <a href="#" className={`rounded-xl p-2.5 flex flex-col items-center justify-center gap-1 transition hover:scale-[1.02] ${isLight ? 'glass-card-light' : 'glass-card-dark'}`}>
+              <Code className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Qiita</span>
+            </a>
+          </div>
+        )}
 
         {/* Spotify / Lanyard Presence Widget */}
         <div className={`rounded-2xl p-3.5 mb-3 flex items-center gap-3 relative overflow-hidden ${isLight ? 'glass-card-light' : 'glass-card-dark'}`}>
@@ -136,37 +281,39 @@ export const Profile: React.FC = () => {
           </div>
         </div>
 
-        {/* Minecraft PlayHive Stats Card */}
-        <div className={`rounded-2xl p-3.5 mb-3 ${isLight ? 'glass-card-light' : 'glass-card-dark'}`}>
-          <div className="flex items-center justify-between mb-2.5">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/30 text-[10px] font-bold">
-                MC
+        {/* Minecraft PlayHive Stats Card (if minecraft_uuid exists or fallback) */}
+        {profile.minecraft_uuid && (
+          <div className={`rounded-2xl p-3.5 mb-3 ${isLight ? 'glass-card-light' : 'glass-card-dark'}`}>
+            <div className="flex items-center justify-between mb-2.5">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/30 text-[10px] font-bold">
+                  MC
+                </div>
+                <span className="text-xs font-bold">PlayHive - BedWars ({profile.minecraft_uuid})</span>
               </div>
-              <span className="text-xs font-bold">PlayHive - BedWars</span>
+              <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 bg-slate-200 dark:bg-white/5 px-2 py-0.5 rounded">
+                Level 42
+              </span>
             </div>
-            <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 bg-slate-200 dark:bg-white/5 px-2 py-0.5 rounded">
-              Level 42
-            </span>
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="bg-slate-200/60 dark:bg-white/5 rounded-xl py-2 px-1">
+                <span className="block text-[10px] text-slate-500 dark:text-slate-400">Kills</span>
+                <span className="font-mono text-xs font-bold">3,892</span>
+              </div>
+              <div className="bg-slate-200/60 dark:bg-white/5 rounded-xl py-2 px-1">
+                <span className="block text-[10px] text-slate-500 dark:text-slate-400">Victories</span>
+                <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">540</span>
+              </div>
+              <div className="bg-slate-200/60 dark:bg-white/5 rounded-xl py-2 px-1">
+                <span className="block text-[10px] text-slate-500 dark:text-slate-400">K/D Ratio</span>
+                <span className="font-mono text-xs font-bold text-purple-600 dark:text-purple-400">4.18</span>
+              </div>
+            </div>
+            <div className="text-[9px] font-mono text-slate-400 text-right mt-1.5">
+              最終取得: 8分前 (10分キャッシュ)
+            </div>
           </div>
-          <div className="grid grid-cols-3 gap-2 text-center">
-            <div className="bg-slate-200/60 dark:bg-white/5 rounded-xl py-2 px-1">
-              <span className="block text-[10px] text-slate-500 dark:text-slate-400">Kills</span>
-              <span className="font-mono text-xs font-bold">3,892</span>
-            </div>
-            <div className="bg-slate-200/60 dark:bg-white/5 rounded-xl py-2 px-1">
-              <span className="block text-[10px] text-slate-500 dark:text-slate-400">Victories</span>
-              <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">540</span>
-            </div>
-            <div className="bg-slate-200/60 dark:bg-white/5 rounded-xl py-2 px-1">
-              <span className="block text-[10px] text-slate-500 dark:text-slate-400">K/D Ratio</span>
-              <span className="font-mono text-xs font-bold text-purple-600 dark:text-purple-400">4.18</span>
-            </div>
-          </div>
-          <div className="text-[9px] font-mono text-slate-400 text-right mt-1.5">
-            最終取得: 8分前 (10分キャッシュ)
-          </div>
-        </div>
+        )}
 
         {/* Pinned Server Card */}
         <div className={`rounded-2xl p-3.5 mb-4 flex items-center justify-between gap-3 ${isLight ? 'glass-card-light' : 'glass-card-dark'}`}>
@@ -187,9 +334,12 @@ export const Profile: React.FC = () => {
               </p>
             </div>
           </div>
-          <button className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition flex-shrink-0">
+          <Link
+            to="/server/rds9-community"
+            className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition flex-shrink-0"
+          >
             参加
-          </button>
+          </Link>
         </div>
 
         {/* Footer: Views, Boost, Report */}
@@ -197,7 +347,7 @@ export const Profile: React.FC = () => {
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-1" title="累計アクセス数">
               <Eye className="w-3.5 h-3.5" />
-              <span>1,824</span>
+              <span>{(profile.views_count || 1).toLocaleString()}</span>
             </span>
             <span className="flex items-center gap-1" title="ブースト数">
               <Flame className="w-3.5 h-3.5 text-amber-500" />
@@ -240,7 +390,7 @@ export const Profile: React.FC = () => {
         isOpen={isReportOpen}
         onClose={() => setIsReportOpen(false)}
         targetType="profile"
-        targetId={username}
+        targetId={profile.username}
       />
     </div>
   );

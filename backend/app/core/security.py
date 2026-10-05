@@ -52,3 +52,14 @@ def sanitize_url(url: Optional[str]) -> Optional[str]:
     if parsed.scheme not in ("http", "https"):
         return None
     return url
+
+# Re-export auth dependencies
+from app.core.auth import (
+    get_current_user,
+    get_optional_current_user,
+    create_user_session,
+    delete_user_session,
+    SESSION_COOKIE_NAME,
+    SESSION_EXPIRE_DAYS,
+    get_client_ip,
+)

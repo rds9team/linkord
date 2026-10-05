@@ -1,5 +1,9 @@
-import React, { useState } from 'react';
-import { Palette, User, Link as LinkIcon, Gamepad2, Save, Check } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { Palette, User, Gamepad2, Save, Check, Loader2, AlertCircle, LogIn } from 'lucide-react';
+import { fetchMe, updateMyProfile } from '../api/client';
+import { useAuth } from '../context/AuthContext';
+import { ProfileUpdateData } from '../types';
 
 const PRESET_THEMES = [
   { id: 'midnight', name: 'Midnight (王道ダーク)' },
@@ -17,19 +21,100 @@ const PRESET_THEMES = [
 ];
 
 export const Settings: React.FC = () => {
-  const [displayName, setDisplayName] = useState('yuto');
-  const [bio, setBio] = useState('Fullstack Developer & Minecraft PvP Player. Building Linkord & Web projects.');
+  const { refreshUser } = useAuth();
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [notLoggedIn, setNotLoggedIn] = useState(false);
+
+  const [displayName, setDisplayName] = useState('');
+  const [bio, setBio] = useState('');
   const [themeMode, setThemeMode] = useState<'dark' | 'light'>('dark');
   const [themeId, setThemeId] = useState('midnight');
   const [hideBadges, setHideBadges] = useState(false);
-  const [minecraftId, setMinecraftId] = useState('yuto_0926');
+  const [minecraftId, setMinecraftId] = useState('');
   const [saved, setSaved] = useState(false);
 
-  const handleSave = (e: React.FormEvent) => {
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        setInitialLoading(true);
+        const data = await fetchMe();
+        setDisplayName(data.display_name || '');
+        setBio(data.bio || '');
+        setThemeMode(data.theme_mode === 'light' ? 'light' : 'dark');
+        setThemeId(data.theme_id || 'midnight');
+        setHideBadges(!!data.hide_badges);
+        setMinecraftId(data.minecraft_uuid || '');
+      } catch (err: any) {
+        if (err.message && (err.message.includes('401') || err.message.includes('Not authenticated'))) {
+          setNotLoggedIn(true);
+        } else {
+          setError(err.message || 'プロフィールの読み込みに失敗しました');
+        }
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+
+    loadProfile();
+  }, []);
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    setError(null);
+    setSaving(true);
+    setSaved(false);
+
+    try {
+      const payload: ProfileUpdateData = {
+        display_name: displayName,
+        bio: bio,
+        theme_id: themeId,
+        theme_mode: themeMode,
+        hide_badges: hideBadges,
+        minecraft_uuid: minecraftId,
+      };
+
+      await updateMyProfile(payload);
+      await refreshUser();
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err: any) {
+      setError(err.message || '設定の保存に失敗しました');
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (initialLoading) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3">
+        <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
+        <span className="text-xs text-slate-400">プロフィール設定を読み込み中...</span>
+      </div>
+    );
+  }
+
+  if (notLoggedIn) {
+    return (
+      <div className="max-w-md mx-auto px-4 py-16 text-center">
+        <div className="p-8 rounded-3xl bg-white/[0.03] border border-white/10 backdrop-blur-xl">
+          <LogIn className="w-10 h-10 text-purple-400 mx-auto mb-4" />
+          <h2 className="text-lg font-bold text-white mb-2">ログインが必要です</h2>
+          <p className="text-xs text-slate-400 mb-6">
+            プロフィール設定を編集するには、アカウントにログインしてください。
+          </p>
+          <Link
+            to="/login"
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition"
+          >
+            <span>ログインページへ</span>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 relative z-10">
@@ -41,6 +126,13 @@ export const Settings: React.FC = () => {
           公開プロフィールの情報やデザインテーマを編集できます。
         </p>
       </div>
+
+      {error && (
+        <div className="mb-6 p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
 
       <form onSubmit={handleSave} className="space-y-6">
         
@@ -60,6 +152,7 @@ export const Settings: React.FC = () => {
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-white/10 text-xs text-white focus:outline-none focus:border-purple-500"
+              required
             />
           </div>
 
@@ -132,7 +225,7 @@ export const Settings: React.FC = () => {
               type="checkbox"
               checked={hideBadges}
               onChange={(e) => setHideBadges(e.target.checked)}
-              className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500"
+              className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 bg-slate-900 border-white/10"
             />
           </div>
         </div>
@@ -161,17 +254,22 @@ export const Settings: React.FC = () => {
         {/* Submit */}
         <div className="flex items-center justify-end gap-3">
           {saved && (
-            <span className="text-xs text-emerald-400 font-semibold flex items-center gap-1">
+            <span className="text-xs text-emerald-400 font-semibold flex items-center gap-1 animate-fade-in">
               <Check className="w-4 h-4" />
               <span>保存しました！</span>
             </span>
           )}
           <button
             type="submit"
-            className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-purple-600/20 transition"
+            disabled={saving}
+            className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 disabled:opacity-50 text-white font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-purple-600/20 transition"
           >
-            <Save className="w-4 h-4" />
-            <span>設定を保存</span>
+            {saving ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Save className="w-4 h-4" />
+            )}
+            <span>{saving ? '保存中...' : '設定を保存'}</span>
           </button>
         </div>
 

@@ -1,20 +1,68 @@
-from fastapi import APIRouter, Depends, HTTPException, Response, Request
+import re
+import secrets
+import datetime
+from typing import Optional
+import httpx
+from fastapi import APIRouter, Depends, HTTPException, Response, Request, status
+from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
+
 from app.core.database import get_db
 from app.core.config import settings
-from app.core.security import generate_oauth_state, verify_oauth_state, generate_session_token
+from app.core.security import generate_oauth_state, verify_oauth_state
+from app.core.auth import (
+    get_current_user,
+    create_user_session,
+    delete_user_session,
+    SESSION_COOKIE_NAME,
+)
 from app.models.models import Account, AccountIdentity
+from app.schemas.schemas import AccountMeOut
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+def set_auth_cookie(response: Response, session_token: str) -> None:
+    response.set_cookie(
+        key=SESSION_COOKIE_NAME,
+        value=session_token,
+        httponly=True,
+        samesite="lax",
+        secure=(settings.APP_ENV == "production"),
+        max_age=30 * 86400,
+        path="/"
+    )
+
+async def generate_unique_username(db: AsyncSession, base_name: str) -> str:
+    cleaned = re.sub(r"[^a-zA-Z0-9_]", "", base_name.lower())
+    if not cleaned:
+        cleaned = "user"
+    cleaned = cleaned[:24]
+
+    candidate = cleaned
+    counter = 1
+    while True:
+        stmt = select(Account).where(Account.username == candidate)
+        res = await db.execute(stmt)
+        if not res.scalars().first():
+            return candidate
+        random_suffix = secrets.token_hex(2)
+        candidate = f"{cleaned[:20]}_{random_suffix}"
+        counter += 1
+        if counter > 10:
+            return f"user_{secrets.token_hex(4)}"
+
+@router.get("/me", response_model=AccountMeOut)
+async def get_me(current_user: Account = Depends(get_current_user)):
+    return current_user
 
 @router.get("/discord/login")
 def discord_login():
     state = generate_oauth_state("discord")
     if not settings.DISCORD_CLIENT_ID:
-        # Dev fallback URL if client id not set yet
         return {"url": f"{settings.FRONTEND_URL}/login?status=discord_mock&state={state}"}
-    
+
     discord_auth_url = (
         f"https://discord.com/api/oauth2/authorize?"
         f"client_id={settings.DISCORD_CLIENT_ID}&"
@@ -25,12 +73,157 @@ def discord_login():
     )
     return {"url": discord_auth_url}
 
+@router.get("/discord/callback")
+async def discord_callback(
+    request: Request,
+    code: Optional[str] = None,
+    state: Optional[str] = None,
+    error: Optional[str] = None,
+    db: AsyncSession = Depends(get_db)
+):
+    if error:
+        return RedirectResponse(
+            url=f"{settings.FRONTEND_URL}/login?error={error}",
+            status_code=status.HTTP_307_TEMPORARY_REDIRECT
+        )
+
+    if not state or not verify_oauth_state(state, "discord"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="無効または期限切れの認証リクエスト(state)です"
+        )
+
+    if not code:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="認可コード(code)が指定されていません"
+        )
+
+    if not settings.DISCORD_CLIENT_ID or not settings.DISCORD_CLIENT_SECRET:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Discord OAuth2 が設定されていません (DISCORD_CLIENT_ID / SECRET が未設定です)"
+        )
+
+    token_url = "https://discord.com/api/oauth2/token"
+    token_data = {
+        "client_id": settings.DISCORD_CLIENT_ID,
+        "client_secret": settings.DISCORD_CLIENT_SECRET,
+        "grant_type": "authorization_code",
+        "code": code,
+        "redirect_uri": settings.DISCORD_REDIRECT_URI,
+    }
+    token_headers = {"Content-Type": "application/x-www-form-urlencoded"}
+
+    async with httpx.AsyncClient() as client:
+        try:
+            token_res = await client.post(token_url, data=token_data, headers=token_headers)
+        except httpx.RequestError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"Discord トークン取得リクエストに失敗しました: {exc}"
+            )
+
+        if token_res.status_code != 200:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Discord トークン交換に失敗しました: {token_res.text}"
+            )
+
+        token_json = token_res.json()
+        access_token = token_json.get("access_token")
+        if not access_token:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Discord access_token が取得できませんでした"
+            )
+
+        try:
+            user_res = await client.get(
+                "https://discord.com/api/users/@me",
+                headers={"Authorization": f"Bearer {access_token}"}
+            )
+        except httpx.RequestError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"Discord ユーザー情報リクエストに失敗しました: {exc}"
+            )
+
+        if user_res.status_code != 200:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Discord ユーザー情報の取得に失敗しました: {user_res.text}"
+            )
+
+        user_data = user_res.json()
+
+    discord_user_id = str(user_data["id"])
+    discord_username = user_data.get("username", "user")
+    global_name = user_data.get("global_name") or discord_username
+    avatar_hash = user_data.get("avatar")
+    avatar_url = (
+        f"https://cdn.discordapp.com/avatars/{discord_user_id}/{avatar_hash}.png"
+        if avatar_hash else None
+    )
+
+    stmt = (
+        select(AccountIdentity)
+        .options(selectinload(AccountIdentity.account).selectinload(Account.links))
+        .where(
+            AccountIdentity.provider == "discord",
+            AccountIdentity.provider_user_id == discord_user_id
+        )
+    )
+    res = await db.execute(stmt)
+    identity = res.scalars().first()
+
+    if identity and identity.account:
+        account = identity.account
+        account.last_login_at = datetime.datetime.utcnow()
+        account.has_discord_authed = True
+        if not account.discord_id:
+            account.discord_id = discord_user_id
+        if avatar_url and not account.avatar_url:
+            account.avatar_url = avatar_url
+    else:
+        new_username = await generate_unique_username(db, discord_username)
+        account = Account(
+            username=new_username,
+            display_name=global_name[:64],
+            avatar_url=avatar_url,
+            discord_id=discord_user_id,
+            has_discord_authed=True,
+            last_login_at=datetime.datetime.utcnow(),
+        )
+        db.add(account)
+        await db.flush()
+
+        identity = AccountIdentity(
+            account_id=account.id,
+            provider="discord",
+            provider_user_id=discord_user_id,
+            provider_username=discord_username
+        )
+        db.add(identity)
+
+    await db.commit()
+    await db.refresh(account)
+
+    session = await create_user_session(db, account.id, request)
+
+    redirect_response = RedirectResponse(
+        url=f"{settings.FRONTEND_URL}/settings",
+        status_code=status.HTTP_307_TEMPORARY_REDIRECT
+    )
+    set_auth_cookie(redirect_response, session.session_token)
+    return redirect_response
+
 @router.get("/google/login")
 def google_login():
     state = generate_oauth_state("google")
     if not settings.GOOGLE_CLIENT_ID:
         return {"url": f"{settings.FRONTEND_URL}/login?status=google_mock&state={state}"}
-        
+
     google_auth_url = (
         f"https://accounts.google.com/o/oauth2/v2/auth?"
         f"client_id={settings.GOOGLE_CLIENT_ID}&"
@@ -41,13 +234,156 @@ def google_login():
     )
     return {"url": google_auth_url}
 
+@router.get("/google/callback")
+async def google_callback(
+    request: Request,
+    code: Optional[str] = None,
+    state: Optional[str] = None,
+    error: Optional[str] = None,
+    db: AsyncSession = Depends(get_db)
+):
+    if error:
+        return RedirectResponse(
+            url=f"{settings.FRONTEND_URL}/login?error={error}",
+            status_code=status.HTTP_307_TEMPORARY_REDIRECT
+        )
+
+    if not state or not verify_oauth_state(state, "google"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="無効または期限切れの認証リクエスト(state)です"
+        )
+
+    if not code:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="認可コード(code)が指定されていません"
+        )
+
+    if not settings.GOOGLE_CLIENT_ID or not settings.GOOGLE_CLIENT_SECRET:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Google OAuth2 が設定されていません (GOOGLE_CLIENT_ID / SECRET が未設定です)"
+        )
+
+    token_url = "https://oauth2.googleapis.com/token"
+    token_data = {
+        "client_id": settings.GOOGLE_CLIENT_ID,
+        "client_secret": settings.GOOGLE_CLIENT_SECRET,
+        "code": code,
+        "grant_type": "authorization_code",
+        "redirect_uri": settings.GOOGLE_REDIRECT_URI,
+    }
+
+    async with httpx.AsyncClient() as client:
+        try:
+            token_res = await client.post(token_url, data=token_data)
+        except httpx.RequestError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"Google トークン取得リクエストに失敗しました: {exc}"
+            )
+
+        if token_res.status_code != 200:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Google トークン交換に失敗しました: {token_res.text}"
+            )
+
+        token_json = token_res.json()
+        access_token = token_json.get("access_token")
+        if not access_token:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Google access_token が取得できませんでした"
+            )
+
+        try:
+            user_res = await client.get(
+                "https://www.googleapis.com/oauth2/v2/userinfo",
+                headers={"Authorization": f"Bearer {access_token}"}
+            )
+        except httpx.RequestError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"Google ユーザー情報リクエストに失敗しました: {exc}"
+            )
+
+        if user_res.status_code != 200:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Google ユーザー情報の取得に失敗しました: {user_res.text}"
+            )
+
+        user_data = user_res.json()
+
+    google_user_id = str(user_data["id"])
+    name = user_data.get("name") or "Google User"
+    email = user_data.get("email") or ""
+    picture = user_data.get("picture")
+
+    stmt = (
+        select(AccountIdentity)
+        .options(selectinload(AccountIdentity.account).selectinload(Account.links))
+        .where(
+            AccountIdentity.provider == "google",
+            AccountIdentity.provider_user_id == google_user_id
+        )
+    )
+    res = await db.execute(stmt)
+    identity = res.scalars().first()
+
+    if identity and identity.account:
+        account = identity.account
+        account.last_login_at = datetime.datetime.utcnow()
+        if picture and not account.avatar_url:
+            account.avatar_url = picture
+    else:
+        base_username = email.split("@")[0] if "@" in email else name
+        new_username = await generate_unique_username(db, base_username)
+        account = Account(
+            username=new_username,
+            display_name=name[:64],
+            avatar_url=picture,
+            last_login_at=datetime.datetime.utcnow(),
+        )
+        db.add(account)
+        await db.flush()
+
+        identity = AccountIdentity(
+            account_id=account.id,
+            provider="google",
+            provider_user_id=google_user_id,
+            provider_username=email or name
+        )
+        db.add(identity)
+
+    await db.commit()
+    await db.refresh(account)
+
+    session = await create_user_session(db, account.id, request)
+
+    redirect_response = RedirectResponse(
+        url=f"{settings.FRONTEND_URL}/settings",
+        status_code=status.HTTP_307_TEMPORARY_REDIRECT
+    )
+    set_auth_cookie(redirect_response, session.session_token)
+    return redirect_response
+
 @router.post("/dev-login")
-async def dev_login(response: Response, db: AsyncSession = Depends(get_db)):
-    """Development helper for fast testing without configuring Discord/Google app keys"""
-    stmt = select(Account).where(Account.username == "yuto")
+async def dev_login(
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_db)
+):
+    stmt = (
+        select(Account)
+        .options(selectinload(Account.links))
+        .where(Account.username == "yuto")
+    )
     result = await db.execute(stmt)
     account = result.scalars().first()
-    
+
     if not account:
         account = Account(
             username="yuto",
@@ -65,17 +401,32 @@ async def dev_login(response: Response, db: AsyncSession = Depends(get_db)):
         await db.commit()
         await db.refresh(account)
 
-    session_id = generate_session_token()
-    response.set_cookie(
-        key="linkord_session",
-        value=session_id,
-        httponly=True,
-        samesite="lax",
-        secure=(settings.APP_ENV == "production")
-    )
-    return {"status": "ok", "user": {"id": account.id, "username": account.username}}
+    session = await create_user_session(db, account.id, request)
+    set_auth_cookie(response, session.session_token)
+    return {
+        "status": "ok",
+        "user": {
+            "id": account.id,
+            "username": account.username,
+            "display_name": account.display_name
+        },
+        "session_token": session.session_token
+    }
 
 @router.post("/logout")
-def logout(response: Response):
-    response.delete_cookie(key="linkord_session")
-    return {"status": "ok"}
+async def logout(
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_db)
+):
+    token = request.cookies.get(SESSION_COOKIE_NAME)
+    if not token:
+        auth_header = request.headers.get("authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header[7:].strip()
+
+    if token:
+        await delete_user_session(db, token)
+
+    response.delete_cookie(key=SESSION_COOKIE_NAME, path="/")
+    return {"status": "ok", "message": "ログアウトしました"}

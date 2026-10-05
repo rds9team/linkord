@@ -42,6 +42,7 @@ class Account(Base):
     identities = relationship("AccountIdentity", back_populates="account", cascade="all, delete-orphan")
     links = relationship("SocialLink", back_populates="account", cascade="all, delete-orphan")
     servers = relationship("Server", back_populates="owner", cascade="all, delete-orphan")
+    sessions = relationship("UserSession", back_populates="account", cascade="all, delete-orphan")
 
 class AccountIdentity(Base):
     __tablename__ = "account_identities"
@@ -129,3 +130,32 @@ class Report(Base):
     admin_note = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
     resolved_at = Column(DateTime, nullable=True)
+
+class UserSession(Base):
+    __tablename__ = "user_sessions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id", ondelete="CASCADE"), nullable=False, index=True)
+    session_token = Column(String(128), unique=True, index=True, nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
+    user_agent = Column(String(512), nullable=True)
+    ip_address = Column(String(48), nullable=True)
+
+    account = relationship("Account", back_populates="sessions")
+
+class ProfileBoost(Base):
+    __tablename__ = "profile_boosts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("accounts.id", ondelete="CASCADE"), nullable=True)
+    target_account_id = Column(Integer, ForeignKey("accounts.id", ondelete="CASCADE"), nullable=False)
+    ip_address = Column(String(48), nullable=True)
+    time_window = Column(String(32), nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
+
+    __table_args__ = (
+        Index("idx_profile_boost_user_window", "user_id", "target_account_id", "time_window"),
+        Index("idx_profile_boost_ip_window", "ip_address", "target_account_id", "time_window"),
+    )
+

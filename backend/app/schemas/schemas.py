@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl, ConfigDict
 from typing import Optional, List
 import datetime
 
@@ -10,8 +10,7 @@ class SocialLinkBase(BaseModel):
 class SocialLinkOut(SocialLinkBase):
     id: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class ProfileOut(BaseModel):
     username: str
@@ -40,8 +39,14 @@ class ProfileOut(BaseModel):
     views_count: int = 0
     created_at: datetime.datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
+class AccountMeOut(ProfileOut):
+    id: int
+    updated_at: datetime.datetime
+    last_login_at: datetime.datetime
+
+    model_config = ConfigDict(from_attributes=True)
 
 class ProfileUpdate(BaseModel):
     display_name: Optional[str] = Field(None, max_length=64)
@@ -68,8 +73,7 @@ class ServerOut(BaseModel):
     is_public: bool
     created_at: datetime.datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class ServerCreate(BaseModel):
     slug: str = Field(..., max_length=48)

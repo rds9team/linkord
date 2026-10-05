@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { X, AlertTriangle } from 'lucide-react';
 
+import { createReport } from '../api/client';
+
 interface ReportModalProps {
   isOpen: boolean;
   onClose: () => void;
-  targetType: string;
+  targetType: 'profile' | 'server' | 'media';
   targetId: string;
 }
 
@@ -16,18 +18,33 @@ export const ReportModal: React.FC<ReportModalProps> = ({
 }) => {
   const [reason, setReason] = useState('spam');
   const [description, setDescription] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // In production, call /api/reports
-    setSubmitted(true);
-    setTimeout(() => {
-      setSubmitted(false);
-      onClose();
-    }, 1500);
+    setError(null);
+    setSubmitting(true);
+    try {
+      await createReport({
+        target_type: targetType,
+        target_id: targetId,
+        reason,
+        description: description || undefined,
+      });
+      setSubmitted(true);
+      setTimeout(() => {
+        setSubmitted(false);
+        onClose();
+      }, 1500);
+    } catch (err: any) {
+      setError(err.message || '通報の送信に失敗しました');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -82,6 +99,12 @@ export const ReportModal: React.FC<ReportModalProps> = ({
               />
             </div>
 
+            {error && (
+              <div className="text-xs text-rose-400 bg-rose-500/10 p-2.5 rounded-xl border border-rose-500/20">
+                {error}
+              </div>
+            )}
+
             <div className="flex justify-end gap-2 pt-2">
               <button
                 type="button"
@@ -92,9 +115,10 @@ export const ReportModal: React.FC<ReportModalProps> = ({
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 rounded-xl text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white transition"
+                disabled={submitting}
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white transition"
               >
-                通報を送信
+                {submitting ? '送信中...' : '通報を送信'}
               </button>
             </div>
           </form>

@@ -2,16 +2,18 @@ import React, { useState } from 'react';
 import { Palette, User, Link as LinkIcon, Gamepad2, Save, Check } from 'lucide-react';
 
 const PRESET_THEMES = [
-  { id: 'midnight', name: 'Midnight' },
-  { id: 'cyber', name: 'Cyber' },
-  { id: 'glass', name: 'Glass' },
-  { id: 'minecraft', name: 'Minecraft' },
-  { id: 'aurora', name: 'Aurora' },
-  { id: 'mono', name: 'Mono' },
-  { id: 'ocean', name: 'Ocean' },
-  { id: 'redstone', name: 'Redstone' },
-  { id: 'pink', name: 'Pink' },
-  { id: 'dark', name: 'Dark' },
+  { id: 'midnight', name: 'Midnight (王道ダーク)' },
+  { id: 'amoled', name: 'AMOLED (漆黒ミニマル)' },
+  { id: 'cyber', name: 'Cyberpunk (ネオン)' },
+  { id: 'sunset', name: 'Sunset (夕暮れ)' },
+  { id: 'tokyo', name: 'Tokyo (ラベンダー)' },
+  { id: 'emerald', name: 'Emerald (深緑)' },
+  { id: 'sakura', name: 'Sakura (ローズ)' },
+  { id: 'chrome', name: 'Y2K Chrome' },
+  { id: 'crimson', name: 'Crimson (深紅)' },
+  { id: 'glass', name: 'Glass (すりガラス)' },
+  { id: 'pixel', name: 'Pixel (レトロ)' },
+  { id: 'clean', name: 'Clean (クリーン)' },
 ];
 
 export const Settings: React.FC = () => {
@@ -109,13 +111,13 @@ export const Settings: React.FC = () => {
             <label className="block text-xs font-semibold text-slate-300 mb-2">
               プリセットテーマ選択
             </label>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {PRESET_THEMES.map(preset => (
                 <button
                   key={preset.id}
                   type="button"
                   onClick={() => setThemeId(preset.id)}
-                  className={`py-2 px-2.5 rounded-xl border text-xs font-medium transition text-center ${themeId === preset.id ? 'bg-purple-600 border-purple-400 text-white' : 'bg-slate-900 border-white/10 text-slate-400 hover:text-white'}`}
+                  className={`py-2 px-2.5 rounded-xl border text-[11px] font-medium transition text-center ${themeId === preset.id ? 'bg-purple-600 border-purple-400 text-white shadow-md' : 'bg-slate-900 border-white/10 text-slate-400 hover:text-white'}`}
                 >
                   {preset.name}
                 </button>

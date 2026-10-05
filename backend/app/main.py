@@ -3,8 +3,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.core.config import settings
 from app.core.database import engine, Base
+import os
+from fastapi.staticfiles import StaticFiles
 import app.models
-from app.api import auth, profile, server, minecraft, lanyard, report
+from app.api import auth, profile, server, minecraft, lanyard, report, media
+
+# Ensure uploads directory exists
+os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -20,6 +25,9 @@ app = FastAPI(
     redoc_url="/redoc",
     lifespan=lifespan
 )
+
+# Static file serving for uploads (safe, non-executable)
+app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
 
 # CORS configuration
 app.add_middleware(
@@ -37,6 +45,7 @@ app.include_router(server.router, prefix="/api")
 app.include_router(minecraft.router, prefix="/api")
 app.include_router(lanyard.router, prefix="/api")
 app.include_router(report.router, prefix="/api")
+app.include_router(media.router, prefix="/api")
 
 @app.get("/api/health")
 def health_check():

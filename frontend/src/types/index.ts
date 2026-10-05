@@ -23,6 +23,7 @@ export interface ProfileData {
   minecraft_uuid?: string;
   analytics_id?: string;
   views_count: number;
+  boosts_count?: number;
   links: SocialLink[];
   created_at: string;
 }
@@ -37,6 +38,7 @@ export interface ServerData {
   tags: string;
   language: string;
   member_count: number;
+  boosts_count?: number;
   is_public: boolean;
   created_at: string;
 }

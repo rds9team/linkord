@@ -114,3 +114,35 @@ export const createReport = (data: ReportData): Promise<{ status: string; messag
     body: JSON.stringify(data),
   });
 };
+
+export const uploadMedia = async (file: File): Promise<{ url: string; filename: string; size: number }> => {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch(`${API_BASE_URL}/api/media/upload`, {
+    method: 'POST',
+    body: formData,
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    let errorDetail = response.statusText;
+    try {
+      const errorJson = await response.json();
+      errorDetail = errorJson.detail || errorDetail;
+    } catch {
+      // ignore
+    }
+    throw new Error(errorDetail || '画像のアップロードに失敗しました');
+  }
+
+  return response.json();
+};
+
+export const fetchLanyardPresence = async (discordId: string): Promise<any> => {
+  return request<any>(`/api/lanyard/${encodeURIComponent(discordId)}`);
+};
+
+export const fetchMinecraftStats = async (uuid: string, gamemode: string = 'bedwars'): Promise<any> => {
+  return request<any>(`/api/minecraft/${encodeURIComponent(uuid)}/${encodeURIComponent(gamemode)}`);
+};

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Palette, User, Gamepad2, Save, Check, Loader2, AlertCircle, LogIn } from 'lucide-react';
-import { fetchMe, updateMyProfile } from '../api/client';
+import { Palette, User, Gamepad2, Save, Check, Loader2, AlertCircle, LogIn, Upload, Image as ImageIcon } from 'lucide-react';
+import { fetchMe, updateMyProfile, uploadMedia } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { ProfileUpdateData } from '../types';
 
@@ -24,11 +24,15 @@ export const Settings: React.FC = () => {
   const { refreshUser } = useAuth();
   const [initialLoading, setInitialLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [uploadingBg, setUploadingBg] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notLoggedIn, setNotLoggedIn] = useState(false);
 
   const [displayName, setDisplayName] = useState('');
   const [bio, setBio] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const [backgroundUrl, setBackgroundUrl] = useState('');
   const [themeMode, setThemeMode] = useState<'dark' | 'light'>('dark');
   const [themeId, setThemeId] = useState('midnight');
   const [hideBadges, setHideBadges] = useState(false);
@@ -42,6 +46,8 @@ export const Settings: React.FC = () => {
         const data = await fetchMe();
         setDisplayName(data.display_name || '');
         setBio(data.bio || '');
+        setAvatarUrl(data.avatar_url || '');
+        setBackgroundUrl(data.background_url || '');
         setThemeMode(data.theme_mode === 'light' ? 'light' : 'dark');
         setThemeId(data.theme_id || 'midnight');
         setHideBadges(!!data.hide_badges);
@@ -60,6 +66,36 @@ export const Settings: React.FC = () => {
     loadProfile();
   }, []);
 
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setUploadingAvatar(true);
+      setError(null);
+      const res = await uploadMedia(file);
+      setAvatarUrl(res.url);
+    } catch (err: any) {
+      setError(err.message || 'アバターのアップロードに失敗しました');
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  const handleBgChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setUploadingBg(true);
+      setError(null);
+      const res = await uploadMedia(file);
+      setBackgroundUrl(res.url);
+    } catch (err: any) {
+      setError(err.message || '背景画像のアップロードに失敗しました');
+    } finally {
+      setUploadingBg(false);
+    }
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -70,6 +106,8 @@ export const Settings: React.FC = () => {
       const payload: ProfileUpdateData = {
         display_name: displayName,
         bio: bio,
+        avatar_url: avatarUrl,
+        background_url: backgroundUrl,
         theme_id: themeId,
         theme_mode: themeMode,
         hide_badges: hideBadges,
@@ -141,6 +179,84 @@ export const Settings: React.FC = () => {
           <div className="flex items-center gap-2 text-sm font-bold text-white mb-2">
             <User className="w-4 h-4 text-purple-400" />
             <span>基本情報</span>
+          </div>
+
+          {/* Avatar Upload */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-2">
+              アバター画像
+            </label>
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-2xl bg-slate-800 border border-white/10 overflow-hidden flex items-center justify-center relative flex-shrink-0">
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="Avatar Preview" className="w-full h-full object-cover" />
+                ) : (
+                  <User className="w-7 h-7 text-slate-500" />
+                )}
+                {uploadingAvatar && (
+                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                    <Loader2 className="w-5 h-5 text-purple-400 animate-spin" />
+                  </div>
+                )}
+              </div>
+              <div>
+                <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-white/10 text-xs font-medium text-slate-200 transition">
+                  <Upload className="w-3.5 h-3.5 text-purple-400" />
+                  <span>画像を選択 (最大10MB)</span>
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    onChange={handleAvatarChange}
+                    className="hidden"
+                    disabled={uploadingAvatar}
+                  />
+                </label>
+                <p className="text-[11px] text-slate-500 mt-1">PNG, JPG, WebP, GIFに対応しています</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Background Upload */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-2">
+              背景画像
+            </label>
+            <div className="flex items-center gap-4">
+              <div className="w-24 h-14 rounded-xl bg-slate-800 border border-white/10 overflow-hidden flex items-center justify-center relative flex-shrink-0">
+                {backgroundUrl ? (
+                  <img src={backgroundUrl} alt="Background Preview" className="w-full h-full object-cover" />
+                ) : (
+                  <ImageIcon className="w-6 h-6 text-slate-500" />
+                )}
+                {uploadingBg && (
+                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                    <Loader2 className="w-5 h-5 text-purple-400 animate-spin" />
+                  </div>
+                )}
+              </div>
+              <div>
+                <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-white/10 text-xs font-medium text-slate-200 transition">
+                  <Upload className="w-3.5 h-3.5 text-sky-400" />
+                  <span>背景画像を選択</span>
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    onChange={handleBgChange}
+                    className="hidden"
+                    disabled={uploadingBg}
+                  />
+                </label>
+                {backgroundUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setBackgroundUrl('')}
+                    className="ml-2 text-[11px] text-rose-400 hover:underline"
+                  >
+                    削除
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
 
           <div>

@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { Badges } from '../components/Badges';
 import { ReportModal } from '../components/ReportModal';
-import { fetchProfile, boostProfile } from '../api/client';
+import { fetchProfile, boostProfile, fetchLanyardPresence, fetchMinecraftStats } from '../api/client';
 import { ProfileData } from '../types';
 
 const THEME_ACCENTS: Record<string, { glow: string; border: string; badge: string }> = {
@@ -60,6 +60,10 @@ export const Profile: React.FC = () => {
   const [hasBoosted, setHasBoosted] = useState(false);
   const [themeMode, setThemeMode] = useState<'dark' | 'light'>('dark');
 
+  // Dynamic Lanyard & Minecraft State
+  const [lanyardData, setLanyardData] = useState<any>(null);
+  const [mcData, setMcData] = useState<any>(null);
+
   useEffect(() => {
     const loadProfile = async () => {
       try {
@@ -68,8 +72,26 @@ export const Profile: React.FC = () => {
         setError(null);
         const data = await fetchProfile(username);
         setProfile(data);
-        setBoostCount(data.views_count ? Math.floor(data.views_count / 10) + 12 : 12);
+        setBoostCount(data.boosts_count !== undefined ? data.boosts_count : 0);
         setThemeMode(data.theme_mode === 'light' ? 'light' : 'dark');
+
+        // Fetch Lanyard presence if discord_id exists
+        if (data.discord_id) {
+          fetchLanyardPresence(data.discord_id)
+            .then(res => {
+              if (res && res.data) setLanyardData(res.data);
+            })
+            .catch(() => {});
+        }
+
+        // Fetch PlayHive stats if minecraft_uuid exists
+        if (data.minecraft_uuid) {
+          fetchMinecraftStats(data.minecraft_uuid, 'bedwars')
+            .then(res => {
+              if (res && res.data) setMcData(res.data);
+            })
+            .catch(() => {});
+        }
       } catch (err: any) {
         if (err.message && (err.message.includes('404') || err.message.includes('not found'))) {
           setNotFound(true);
@@ -169,33 +191,53 @@ export const Profile: React.FC = () => {
       </div>
 
       {/* Main Guns.lol Style Profile Panel */}
-      <main className={`w-full max-w-lg rounded-[28px] p-6 relative z-10 transition duration-300 ${isLight ? 'glass-panel-light' : 'glass-panel-dark'} ${!isLight ? themeAccent.border : ''}`}>
+      <main className={`w-full max-w-lg rounded-[28px] overflow-hidden relative z-10 transition duration-300 ${isLight ? 'glass-panel-light' : 'glass-panel-dark'} ${!isLight ? themeAccent.border : ''}`}>
         
-        {/* Top: Avatar & User Info */}
-        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 mb-5">
-          <div className="relative group">
-            <div className="w-24 h-24 rounded-2xl overflow-hidden border border-slate-300 dark:border-white/15 shadow-xl bg-slate-800 flex items-center justify-center">
-              {profile.avatar_url ? (
-                <img
-                  src={profile.avatar_url}
-                  alt={profile.display_name}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-white text-3xl font-extrabold">
-                  {profile.display_name.charAt(0).toUpperCase()}
-                </div>
-              )}
-            </div>
-            {/* Online Status Indicator */}
-            <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 border-[3px] border-white dark:border-[#10121c] flex items-center justify-center">
-              <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
-            </div>
+        {/* Profile Cover / Background Banner */}
+        {profile.background_url ? (
+          <div className="w-full h-32 relative overflow-hidden bg-slate-900 border-b border-white/10">
+            <img src={profile.background_url} alt="Cover" className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
           </div>
+        ) : null}
 
-          <div className="flex-1 text-center sm:text-left">
-            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1">
-              <h1 className="text-xl font-extrabold tracking-tight">{profile.display_name}</h1>
+        <div className="p-6">
+          {/* Top: Avatar & User Info */}
+          <div className={`flex flex-col sm:flex-row items-center sm:items-start gap-4 mb-5 ${profile.background_url ? '-mt-12' : ''}`}>
+            <div className="relative group flex-shrink-0">
+              <div className="w-24 h-24 rounded-2xl overflow-hidden border-2 border-slate-300 dark:border-white/20 shadow-xl bg-slate-800 flex items-center justify-center">
+                {profile.avatar_url ? (
+                  <img
+                    src={profile.avatar_url}
+                    alt={profile.display_name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-white text-3xl font-extrabold">
+                    {profile.display_name.charAt(0).toUpperCase()}
+                  </div>
+                )}
+              </div>
+              {/* Online Status Indicator based on Lanyard */}
+              <div
+                className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-[3px] border-white dark:border-[#10121c] flex items-center justify-center ${
+                  lanyardData?.discord_status === 'online'
+                    ? 'bg-emerald-500'
+                    : lanyardData?.discord_status === 'idle'
+                    ? 'bg-amber-500'
+                    : lanyardData?.discord_status === 'dnd'
+                    ? 'bg-rose-500'
+                    : 'bg-slate-500'
+                }`}
+                title={lanyardData?.discord_status ? `Discord: ${lanyardData.discord_status}` : 'オフライン'}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
+              </div>
+            </div>
+
+            <div className="flex-1 text-center sm:text-left min-w-0">
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1">
+                <h1 className="text-xl font-extrabold tracking-tight truncate">{profile.display_name}</h1>
               {/* Badges in User's Requested Uniform Pill Style */}
               {!profile.hide_badges && (
                 <Badges
@@ -255,33 +297,52 @@ export const Profile: React.FC = () => {
           </div>
         )}
 
-        {/* Spotify / Lanyard Presence Widget */}
-        <div className={`rounded-2xl p-3.5 mb-3 flex items-center gap-3 relative overflow-hidden ${isLight ? 'glass-card-light' : 'glass-card-dark'}`}>
-          <div className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500"></div>
-          <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-300 dark:bg-slate-800 flex-shrink-0 relative">
-            <img
-              src="https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=120&h=120&fit=crop"
-              alt="Album Cover"
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute bottom-1 right-1 w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center">
-              <Music className="w-2.5 h-2.5 text-white" />
+        {/* Spotify / Lanyard Presence Widget (Dynamic) */}
+        {lanyardData?.spotify ? (
+          <div className={`rounded-2xl p-3.5 mb-3 flex items-center gap-3 relative overflow-hidden ${isLight ? 'glass-card-light' : 'glass-card-dark'}`}>
+            <div className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500"></div>
+            <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-300 dark:bg-slate-800 flex-shrink-0 relative">
+              {lanyardData.spotify.album_art_url ? (
+                <img
+                  src={lanyardData.spotify.album_art_url}
+                  alt="Album Cover"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-slate-700 flex items-center justify-center">
+                  <Music className="w-5 h-5 text-white" />
+                </div>
+              )}
+              <div className="absolute bottom-1 right-1 w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center">
+                <Music className="w-2.5 h-2.5 text-white" />
+              </div>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5 text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold tracking-wider uppercase mb-0.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                Listening to Spotify
+              </div>
+              <p className="text-xs font-bold truncate">{lanyardData.spotify.song}</p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{lanyardData.spotify.artist}</p>
             </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5 text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold tracking-wider uppercase mb-0.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              Listening to Spotify
+        ) : lanyardData?.activities && lanyardData.activities.length > 0 ? (
+          <div className={`rounded-2xl p-3.5 mb-3 flex items-center gap-3 relative overflow-hidden ${isLight ? 'glass-card-light' : 'glass-card-dark'}`}>
+            <div className="absolute left-0 top-0 bottom-0 w-1 bg-purple-500"></div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5 text-[10px] text-purple-400 font-semibold tracking-wider uppercase mb-0.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse"></span>
+                Discord Activity
+              </div>
+              <p className="text-xs font-bold truncate">{lanyardData.activities[0].name}</p>
+              {lanyardData.activities[0].details && (
+                <p className="text-[11px] text-slate-400 truncate">{lanyardData.activities[0].details}</p>
+              )}
             </div>
-            <p className="text-xs font-bold truncate">After Hours</p>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">The Weeknd</p>
           </div>
-          <div className="text-[10px] font-mono text-slate-400 pr-1">
-            2:45 / 3:50
-          </div>
-        </div>
+        ) : null}
 
-        {/* Minecraft PlayHive Stats Card (if minecraft_uuid exists or fallback) */}
+        {/* Minecraft PlayHive Stats Card (if minecraft_uuid exists or mcData exists) */}
         {profile.minecraft_uuid && (
           <div className={`rounded-2xl p-3.5 mb-3 ${isLight ? 'glass-card-light' : 'glass-card-dark'}`}>
             <div className="flex items-center justify-between mb-2.5">
@@ -292,25 +353,25 @@ export const Profile: React.FC = () => {
                 <span className="text-xs font-bold">PlayHive - BedWars ({profile.minecraft_uuid})</span>
               </div>
               <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 bg-slate-200 dark:bg-white/5 px-2 py-0.5 rounded">
-                Level 42
+                Level {mcData?.level || 42}
               </span>
             </div>
             <div className="grid grid-cols-3 gap-2 text-center">
               <div className="bg-slate-200/60 dark:bg-white/5 rounded-xl py-2 px-1">
                 <span className="block text-[10px] text-slate-500 dark:text-slate-400">Kills</span>
-                <span className="font-mono text-xs font-bold">3,892</span>
+                <span className="font-mono text-xs font-bold">{(mcData?.kills || 3892).toLocaleString()}</span>
               </div>
               <div className="bg-slate-200/60 dark:bg-white/5 rounded-xl py-2 px-1">
                 <span className="block text-[10px] text-slate-500 dark:text-slate-400">Victories</span>
-                <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">540</span>
+                <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">{(mcData?.victories || 540).toLocaleString()}</span>
               </div>
               <div className="bg-slate-200/60 dark:bg-white/5 rounded-xl py-2 px-1">
                 <span className="block text-[10px] text-slate-500 dark:text-slate-400">K/D Ratio</span>
-                <span className="font-mono text-xs font-bold text-purple-600 dark:text-purple-400">4.18</span>
+                <span className="font-mono text-xs font-bold text-purple-600 dark:text-purple-400">{mcData?.kd || '4.18'}</span>
               </div>
             </div>
             <div className="text-[9px] font-mono text-slate-400 text-right mt-1.5">
-              最終取得: 8分前 (10分キャッシュ)
+              PlayHive API (10分キャッシュ)
             </div>
           </div>
         )}
@@ -376,6 +437,7 @@ export const Profile: React.FC = () => {
           </div>
         </div>
 
+        </div>
       </main>
 
       {/* Powered by Watermark */}

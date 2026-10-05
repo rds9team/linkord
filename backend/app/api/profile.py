@@ -2,7 +2,7 @@ import datetime
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_
+from sqlalchemy import select, or_, func
 from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
@@ -12,10 +12,17 @@ from app.schemas.schemas import ProfileOut, ProfileUpdate
 
 router = APIRouter(prefix="/profile", tags=["profile"])
 
+async def get_account_boosts_count(db: AsyncSession, account_id: int) -> int:
+    stmt = select(func.count(ProfileBoost.id)).where(ProfileBoost.target_account_id == account_id)
+    res = await db.execute(stmt)
+    return res.scalar() or 0
+
 @router.get("/me", response_model=ProfileOut)
 async def get_my_profile(
-    current_user: Account = Depends(get_current_user)
+    current_user: Account = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
 ):
+    current_user.boosts_count = await get_account_boosts_count(db, current_user.id)
     return current_user
 
 @router.patch("/me", response_model=ProfileOut)
@@ -31,6 +38,7 @@ async def update_my_profile(
     current_user.updated_at = datetime.datetime.utcnow()
     await db.commit()
     await db.refresh(current_user)
+    current_user.boosts_count = await get_account_boosts_count(db, current_user.id)
     return current_user
 
 @router.post("/{username}/boost")
@@ -103,4 +111,5 @@ async def get_profile(username: str, db: AsyncSession = Depends(get_db)):
     await db.commit()
     await db.refresh(account)
 
+    account.boosts_count = await get_account_boosts_count(db, account.id)
     return account

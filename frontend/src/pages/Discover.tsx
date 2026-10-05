@@ -201,7 +201,7 @@ export const Discover: React.FC = () => {
 
                     <div className="flex items-center gap-1 text-xs font-mono text-amber-400 bg-amber-500/10 px-2 py-1 rounded-lg">
                       <Flame className="w-3.5 h-3.5" />
-                      <span>{Math.floor(server.member_count / 20) + 10}</span>
+                      <span>{server.boosts_count !== undefined ? server.boosts_count : 0}</span>
                     </div>
                   </div>
 

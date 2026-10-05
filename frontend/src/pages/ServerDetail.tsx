@@ -35,7 +35,7 @@ export const ServerDetail: React.FC = () => {
         const data = await fetchServer(slug);
         if (isMounted) {
           setServer(data);
-          setBoosts(Math.floor(data.member_count / 20) + 12);
+          setBoosts(data.boosts_count !== undefined ? data.boosts_count : 0);
         }
       } catch (err) {
         if (isMounted) {

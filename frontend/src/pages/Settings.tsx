@@ -21,6 +21,21 @@ const PRESET_THEMES = [
   { id: 'clean', name: 'Clean (クリーン)' },
 ];
 
+const THEME_ACCENTS: Record<string, { glow: string; border: string; badge: string; sample: string }> = {
+  midnight: { glow: 'from-purple-600/30 via-indigo-600/20 to-transparent', border: 'border-purple-500/30', badge: 'bg-purple-500/20 text-purple-300 border-purple-500/30', sample: '#8b5cf6' },
+  amoled: { glow: 'from-white/10 via-zinc-800/20 to-transparent', border: 'border-white/20', badge: 'bg-white/10 text-white border-white/20', sample: '#ffffff' },
+  cyber: { glow: 'from-cyan-500/30 via-blue-600/20 to-transparent', border: 'border-cyan-500/30', badge: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30', sample: '#06b6d4' },
+  sunset: { glow: 'from-amber-500/30 via-orange-600/20 to-transparent', border: 'border-amber-500/30', badge: 'bg-amber-500/20 text-amber-300 border-amber-500/30', sample: '#f59e0b' },
+  tokyo: { glow: 'from-fuchsia-500/30 via-pink-600/20 to-transparent', border: 'border-fuchsia-500/30', badge: 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30', sample: '#d946ef' },
+  emerald: { glow: 'from-emerald-500/30 via-teal-600/20 to-transparent', border: 'border-emerald-500/30', badge: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30', sample: '#10b981' },
+  sakura: { glow: 'from-rose-400/30 via-pink-500/20 to-transparent', border: 'border-rose-400/30', badge: 'bg-rose-400/20 text-rose-300 border-rose-400/30', sample: '#fb7185' },
+  chrome: { glow: 'from-slate-300/30 via-zinc-400/20 to-transparent', border: 'border-slate-300/30', badge: 'bg-slate-400/20 text-slate-200 border-slate-300/30', sample: '#cbd5e1' },
+  crimson: { glow: 'from-red-600/30 via-rose-700/20 to-transparent', border: 'border-red-500/30', badge: 'bg-red-500/20 text-red-300 border-red-500/30', sample: '#ef4444' },
+  glass: { glow: 'from-sky-400/30 via-cyan-500/20 to-transparent', border: 'border-sky-400/30', badge: 'bg-sky-400/20 text-sky-300 border-sky-400/30', sample: '#38bdf8' },
+  pixel: { glow: 'from-green-500/30 via-emerald-600/20 to-transparent', border: 'border-green-500/30', badge: 'bg-green-500/20 text-green-300 border-green-500/30', sample: '#22c55e' },
+  clean: { glow: 'from-slate-500/20 via-slate-600/10 to-transparent', border: 'border-slate-500/30', badge: 'bg-slate-500/20 text-slate-300 border-slate-500/30', sample: '#94a3b8' },
+};
+
 export const Settings: React.FC = () => {
   useTitle('設定');
   const { refreshUser, user } = useAuth();
@@ -360,18 +375,79 @@ export const Settings: React.FC = () => {
               プリセットテーマ選択
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {PRESET_THEMES.map(preset => (
-                <button
-                  key={preset.id}
-                  type="button"
-                  onClick={() => setThemeId(preset.id)}
-                  className={`py-2 px-2.5 rounded-xl border text-[11px] font-medium transition text-center ${themeId === preset.id ? 'bg-purple-600 border-purple-400 text-white shadow-md' : 'bg-slate-900 border-white/10 text-slate-400 hover:text-white'}`}
-                >
-                  {preset.name}
-                </button>
-              ))}
+              {PRESET_THEMES.map(preset => {
+                const accent = THEME_ACCENTS[preset.id] || THEME_ACCENTS.midnight;
+                const isSelected = themeId === preset.id;
+                return (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => setThemeId(preset.id)}
+                    className={`py-2 px-2.5 rounded-xl border text-[11px] font-medium transition flex items-center justify-between gap-1.5 ${isSelected ? 'bg-purple-600 border-purple-400 text-white shadow-md' : 'bg-slate-900 border-white/10 text-slate-400 hover:text-white'}`}
+                  >
+                    <span className="truncate">{preset.name}</span>
+                    <span
+                      className="w-2.5 h-2.5 rounded-full flex-shrink-0 border border-white/30"
+                      style={{ backgroundColor: accent.sample }}
+                    />
+                  </button>
+                );
+              })}
             </div>
           </div>
+
+          {/* Real-time Theme Preview */}
+          {(() => {
+            const currentAccent = THEME_ACCENTS[themeId] || THEME_ACCENTS.midnight;
+            const isLightPreview = themeMode === 'light';
+            return (
+              <div className="mt-4 pt-4 border-t border-white/5">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[11px] font-semibold text-slate-300">リアルタイムプレビュー</span>
+                  <span className="text-[10px] text-purple-400 font-mono">
+                    {PRESET_THEMES.find(p => p.id === themeId)?.name} / {isLightPreview ? 'Light' : 'Dark'}
+                  </span>
+                </div>
+                <div className={`relative overflow-hidden rounded-2xl border p-4 transition-all duration-300 ${isLightPreview ? 'bg-slate-100 border-slate-300 text-slate-900' : 'bg-[#0f1118] border-white/10 text-white'}`}>
+                  {/* Background Accent Glow */}
+                  {!isLightPreview && (
+                    <div className={`absolute -top-12 -right-12 w-48 h-48 bg-gradient-to-br ${currentAccent.glow} rounded-full blur-2xl pointer-events-none`}></div>
+                  )}
+                  {backgroundUrl && (
+                    <div
+                      className="absolute inset-0 bg-cover bg-center opacity-15 pointer-events-none"
+                      style={{ backgroundImage: `url(${backgroundUrl})` }}
+                    />
+                  )}
+                  <div className="relative z-10 flex items-center gap-3">
+                    <div className={`w-12 h-12 rounded-xl border overflow-hidden flex items-center justify-center flex-shrink-0 ${isLightPreview ? 'bg-white border-slate-300' : 'bg-slate-800 border-white/10'}`}>
+                      {avatarUrl ? (
+                        <img src={avatarUrl} alt="Preview" className="w-full h-full object-cover" />
+                      ) : (
+                        <User className={`w-6 h-6 ${isLightPreview ? 'text-slate-400' : 'text-slate-500'}`} />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-xs truncate">
+                          {displayName || (user ? user.display_name : '表示名')}
+                        </span>
+                        <span className={`text-[9px] px-2 py-0.5 rounded-full border font-semibold ${currentAccent.badge}`}>
+                          Supporter
+                        </span>
+                      </div>
+                      <p className={`text-[10px] font-mono mt-0.5 ${isLightPreview ? 'text-slate-500' : 'text-slate-400'}`}>
+                        @{user?.username || 'username'}
+                      </p>
+                      <p className={`text-[10px] mt-1 line-clamp-1 ${isLightPreview ? 'text-slate-600' : 'text-slate-300'}`}>
+                        {bio || '自己紹介テキストのサンプルプレビューです。'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Badge Display Option */}
           <div className="pt-2 border-t border-white/5 flex items-center justify-between">

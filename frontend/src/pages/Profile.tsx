@@ -59,7 +59,8 @@ const isSafeHttpUrl = (url?: string): boolean => {
 };
 
 export const Profile: React.FC = () => {
-  const { username = 'yuto' } = useParams<{ username: string }>();
+  const { username: rawUsername = 'yuto' } = useParams<{ username: string }>();
+  const username = rawUsername.startsWith('@') ? rawUsername.slice(1) : rawUsername;
   const { user: currentUser } = useAuth();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -454,28 +455,36 @@ export const Profile: React.FC = () => {
                 <div className="w-6 h-6 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/30 text-[10px] font-bold">
                   MC
                 </div>
-                <span className="text-xs font-bold">PlayHive - BedWars ({profile.minecraft_uuid})</span>
+                <span className="text-xs font-bold">PlayHive - BedWars</span>
+                <span className="text-[10px] font-mono text-slate-400">({profile.minecraft_uuid})</span>
               </div>
-              <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 bg-slate-200 dark:bg-white/5 px-2 py-0.5 rounded">
-                Level {mcData?.level || 42}
-              </span>
+              {mcData?.prestige !== undefined && mcData?.prestige > 0 && (
+                <span className="text-[10px] font-mono text-amber-500 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded font-bold">
+                  P{mcData.prestige}
+                </span>
+              )}
             </div>
-            <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="grid grid-cols-4 gap-2 text-center">
               <div className="bg-slate-200/60 dark:bg-white/5 rounded-xl py-2 px-1">
                 <span className="block text-[10px] text-slate-500 dark:text-slate-400">Kills</span>
-                <span className="font-mono text-xs font-bold">{(mcData?.kills || 3892).toLocaleString()}</span>
+                <span className="font-mono text-xs font-bold">{(mcData?.kills ?? 0).toLocaleString()}</span>
               </div>
               <div className="bg-slate-200/60 dark:bg-white/5 rounded-xl py-2 px-1">
                 <span className="block text-[10px] text-slate-500 dark:text-slate-400">Victories</span>
-                <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">{(mcData?.victories || 540).toLocaleString()}</span>
+                <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">{(mcData?.victories ?? 0).toLocaleString()}</span>
               </div>
               <div className="bg-slate-200/60 dark:bg-white/5 rounded-xl py-2 px-1">
-                <span className="block text-[10px] text-slate-500 dark:text-slate-400">K/D Ratio</span>
-                <span className="font-mono text-xs font-bold text-purple-600 dark:text-purple-400">{mcData?.kd || '4.18'}</span>
+                <span className="block text-[10px] text-slate-500 dark:text-slate-400">Played</span>
+                <span className="font-mono text-xs font-bold text-sky-500">{(mcData?.played ?? 0).toLocaleString()}</span>
+              </div>
+              <div className="bg-slate-200/60 dark:bg-white/5 rounded-xl py-2 px-1">
+                <span className="block text-[10px] text-slate-500 dark:text-slate-400">K/D</span>
+                <span className="font-mono text-xs font-bold text-purple-600 dark:text-purple-400">{mcData?.kd ?? '0.0'}</span>
               </div>
             </div>
-            <div className="text-[9px] font-mono text-slate-400 text-right mt-1.5">
-              PlayHive API (10分キャッシュ)
+            <div className="text-[9px] font-mono text-slate-400 text-right mt-1.5 flex items-center justify-between">
+              <span className="text-[9px] text-slate-500">playhive.com/api (BedWars)</span>
+              <span>10分キャッシュ</span>
             </div>
           </div>
         )}

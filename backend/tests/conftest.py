@@ -30,6 +30,11 @@ async def create_test_account_and_session(
             db.add(account)
             await db.commit()
             await db.refresh(account)
+        else:
+            account.has_supporter = has_supporter
+            account.has_founder = has_founder
+            await db.commit()
+            await db.refresh(account)
         token = secrets.token_urlsafe(32)
         sess = UserSession(
             account_id=account.id,

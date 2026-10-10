@@ -3,6 +3,7 @@ import pytest
 from httpx import AsyncClient, ASGITransport
 from app.main import app
 from app.core.database import engine, Base, AsyncSessionLocal
+from tests.conftest import create_test_account_and_session
 from app.models.models import Account, Report, Follow
 
 @pytest.mark.asyncio
@@ -75,34 +76,36 @@ async def test_follow_list_and_search_and_admin():
         assert len(following) >= 1
         assert following[0]["username"] == admin_uname
 
-        # 4. Admin endpoint check without admin login (dev-login is user "yuto")
-        await ac.post("/api/auth/dev-login")
-        # "yuto" is not in ADMIN_USERNAMES so /api/admin/reports should be 403
-        res_admin_forbidden = await ac.get("/api/admin/reports")
+        # 4. Admin endpoint check without admin login
+        non_admin_acc, non_admin_token = await create_test_account_and_session("non_admin_user")
+        non_admin_ac = AsyncClient(transport=transport, base_url="http://test", headers={"Authorization": f"Bearer {non_admin_token}"})
+        res_admin_forbidden = await non_admin_ac.get("/api/admin/reports")
         assert res_admin_forbidden.status_code == 403
 
-        # Configure settings to allow "yuto" as admin for testing
+        # Configure settings to allow "test_admin" as admin for testing
+        test_admin_acc, test_admin_token = await create_test_account_and_session("test_admin")
+        admin_client = AsyncClient(transport=transport, base_url="http://test", headers={"Authorization": f"Bearer {test_admin_token}"})
         from app.core.config import settings
         original_admins = settings.ADMIN_USERNAMES
-        settings.ADMIN_USERNAMES = f"{original_admins},yuto"
+        settings.ADMIN_USERNAMES = f"{original_admins},test_admin"
 
         try:
             # 5. Admin stats
-            res_stats = await ac.get("/api/admin/stats")
+            res_stats = await admin_client.get("/api/admin/stats")
             assert res_stats.status_code == 200
             stats = res_stats.json()
             assert stats["total_users"] >= 2
             assert stats["total_reports"] >= 1
 
             # 6. Admin list reports
-            res_reports = await ac.get("/api/admin/reports?status=pending")
+            res_reports = await admin_client.get("/api/admin/reports?status=pending")
             assert res_reports.status_code == 200
             reports = res_reports.json()
             assert len(reports) >= 1
             report_id = reports[0]["id"]
 
             # 7. Update report
-            res_update_rep = await ac.patch(f"/api/admin/reports/{report_id}", json={
+            res_update_rep = await admin_client.patch(f"/api/admin/reports/{report_id}", json={
                 "status": "resolved",
                 "admin_note": "Handled by test"
             })
@@ -110,7 +113,7 @@ async def test_follow_list_and_search_and_admin():
             assert res_update_rep.json()["status"] == "resolved"
 
             # 8. Toggle profile visibility
-            res_vis = await ac.patch(f"/api/admin/profiles/{user2_uname}/visibility")
+            res_vis = await admin_client.patch(f"/api/admin/profiles/{user2_uname}/visibility")
             assert res_vis.status_code == 200
             assert res_vis.json()["is_public"] is False
         finally:

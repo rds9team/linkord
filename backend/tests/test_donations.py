@@ -1,8 +1,8 @@
 import pytest
 from httpx import AsyncClient, ASGITransport
 from app.main import app
-from app.core.database import engine, Base, AsyncSessionLocal
-from app.models.models import Account, Donation
+from app.core.database import engine, Base
+from tests.conftest import create_test_account_and_session
 
 @pytest.mark.asyncio
 async def test_paypay_donation_and_admin_flow():
@@ -32,12 +32,12 @@ async def test_paypay_donation_and_admin_flow():
         assert data["passcode"] == "1234"
         donation_id = data["id"]
 
-        # 3. Dev login as "yuto"
-        login_res = await ac.post("/api/auth/dev-login")
-        assert login_res.status_code == 200
+        # 3. Create test account & session for user
+        account, token = await create_test_account_and_session("donation_user", has_supporter=False)
+        user_ac = AsyncClient(transport=transport, base_url="http://test", headers={"Authorization": f"Bearer {token}"})
 
         # 4. Authenticated user sends donation
-        user_donation_res = await ac.post("/api/donations", json={
+        user_donation_res = await user_ac.post("/api/donations", json={
             "paypay_url": "https://pay.paypay.ne.jp/userDonation999",
             "amount": 1000,
             "message": "サポーターになります！"
@@ -45,25 +45,28 @@ async def test_paypay_donation_and_admin_flow():
         assert user_donation_res.status_code == 201
         user_d_id = user_donation_res.json()["id"]
 
-        # 5. Check my profile has_supporter is currently False (or reset)
-        me_res = await ac.get("/api/auth/me")
+        # 5. Check user profile has_supporter is currently False
+        me_res = await user_ac.get("/api/auth/me")
         assert me_res.status_code == 200
+        assert me_res.json()["has_supporter"] is False
 
         # 6. Admin resolves donation and grants supporter badge
-        # Set yuto as admin
+        admin_acc, admin_token = await create_test_account_and_session("admin_user", has_supporter=True)
+        admin_ac = AsyncClient(transport=transport, base_url="http://test", headers={"Authorization": f"Bearer {admin_token}"})
+
         from app.core.config import settings
         orig_admins = settings.ADMIN_USERNAMES
-        settings.ADMIN_USERNAMES = "yuto,admin"
+        settings.ADMIN_USERNAMES = f"{orig_admins},admin_user"
 
         try:
             # List donations
-            admin_list_res = await ac.get("/api/admin/donations")
+            admin_list_res = await admin_ac.get("/api/admin/donations")
             assert admin_list_res.status_code == 200
             donations = admin_list_res.json()
             assert len(donations) >= 2
 
             # Approve user donation
-            approve_res = await ac.post(f"/api/admin/donations/{user_d_id}/resolve", json={
+            approve_res = await admin_ac.post(f"/api/admin/donations/{user_d_id}/resolve", json={
                 "action": "approve",
                 "admin_note": "PayPay受け取り確認完了"
             })
@@ -71,7 +74,7 @@ async def test_paypay_donation_and_admin_flow():
             assert approve_res.json()["status"] == "approved"
 
             # Check profile now has supporter badge
-            me_after = await ac.get("/api/auth/me")
+            me_after = await user_ac.get("/api/auth/me")
             assert me_after.status_code == 200
             assert me_after.json()["has_supporter"] is True
 

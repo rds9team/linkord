@@ -4,15 +4,17 @@ import asyncio
 from httpx import AsyncClient, ASGITransport
 from app.main import app
 from app.core.database import engine, Base
+from tests.conftest import create_test_account_and_session
 
 @pytest.mark.asyncio
 async def test_full_auth_and_api_flow():
-    # Setup database tables
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
     ts = int(time.time())
     test_slug = f"test-srv-{ts}"
+
+    account, token = await create_test_account_and_session("yuto", has_supporter=True)
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
@@ -25,16 +27,9 @@ async def test_full_auth_and_api_flow():
         res = await ac.get("/api/auth/me")
         assert res.status_code == 401
 
-        # 3. Dev login
-        login_res = await ac.post("/api/auth/dev-login")
-        assert login_res.status_code == 200
-        login_data = login_res.json()
-        assert login_data["status"] == "ok"
-        assert login_data["user"]["username"] == "yuto"
-        session_token = login_data["session_token"]
-        assert session_token
+        # 3. Auth via session token
+        ac.headers.update({"Authorization": f"Bearer {token}"})
 
-        # Cookies are preserved by AsyncClient
         # 4. Authorized /api/auth/me
         me_res = await ac.get("/api/auth/me")
         assert me_res.status_code == 200
@@ -106,6 +101,7 @@ async def test_full_auth_and_api_flow():
         assert logout_res.status_code == 200
 
         # 14. Access /api/auth/me after logout -> 401
+        ac.headers.pop("Authorization", None)
         after_logout = await ac.get("/api/auth/me")
         assert after_logout.status_code == 401
 

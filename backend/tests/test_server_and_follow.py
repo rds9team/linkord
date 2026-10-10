@@ -3,6 +3,7 @@ import pytest
 from httpx import AsyncClient, ASGITransport
 from app.main import app
 from app.core.database import engine, Base
+from tests.conftest import create_test_account_and_session
 
 @pytest.mark.asyncio
 async def test_server_crud_and_follow():
@@ -13,12 +14,10 @@ async def test_server_crud_and_follow():
     ts = int(time.time())
     srv_slug = f"crud-server-{ts}"
 
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        # Dev login as "yuto"
-        login_res = await ac.post("/api/auth/dev-login")
-        assert login_res.status_code == 200
+    account, token = await create_test_account_and_session("server_user")
 
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test", headers={"Authorization": f"Bearer {token}"}) as ac:
         # 1. Create server with icon_url
         create_res = await ac.post("/api/servers", json={
             "slug": srv_slug,
@@ -49,7 +48,7 @@ async def test_server_crud_and_follow():
         assert update_res.json()["description"] == "New description"
 
         # 4. Check follow self should fail (400)
-        follow_self_res = await ac.post("/api/profile/yuto/follow")
+        follow_self_res = await ac.post("/api/profile/server_user/follow")
         assert follow_self_res.status_code == 400
 
         # 5. Delete server

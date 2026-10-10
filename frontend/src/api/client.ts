@@ -1,4 +1,4 @@
-import { ProfileData, ProfileUpdateData, ServerData, ServerCreateData, ReportData, AuthResponse, FollowUser, ProfileSearchResult, ReportItem, AdminStats, DonationItem } from '../types';
+import { ProfileData, ProfileUpdateData, ServerData, ServerCreateData, ReportData, FollowUser, ProfileSearchResult, ReportItem, AdminStats, DonationItem } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
@@ -64,33 +64,6 @@ export const updateMyProfile = (data: ProfileUpdateData): Promise<ProfileData> =
 export const getDiscordLoginUrl = async (): Promise<string> => {
   const res = await request<{ url: string }>('/api/auth/discord/login');
   return res.url;
-};
-
-export const registerAccount = (data: {
-  username: string;
-  password: string;
-  display_name?: string;
-}): Promise<AuthResponse> => {
-  return request<AuthResponse>('/api/auth/register', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
-};
-
-export const loginWithPassword = (data: {
-  identifier: string;
-  password: string;
-}): Promise<AuthResponse> => {
-  return request<AuthResponse>('/api/auth/login', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
-};
-
-export const devLogin = (): Promise<AuthResponse> => {
-  return request<AuthResponse>('/api/auth/dev-login', {
-    method: 'POST',
-  });
 };
 
 export const logout = (): Promise<{ status: string }> => {

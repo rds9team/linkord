@@ -24,14 +24,16 @@ from app.schemas.schemas import AccountMeOut, UserRegister, UserLogin
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 def set_auth_cookie(response: Response, session_token: str) -> None:
+    is_production = settings.APP_ENV == "production"
     response.set_cookie(
         key=SESSION_COOKIE_NAME,
         value=session_token,
         httponly=True,
         samesite="lax",
-        secure=(settings.APP_ENV == "production"),
+        secure=is_production,
         max_age=30 * 86400,
-        path="/"
+        path="/",
+        domain=".linkord.net" if is_production else None,
     )
 
 async def generate_unique_tag(db: AsyncSession, username: str) -> str:
@@ -531,55 +533,6 @@ async def google_callback(
     set_auth_cookie(redirect_response, session.session_token)
     return redirect_response
 
-@router.post("/dev-login")
-async def dev_login(
-    request: Request,
-    response: Response,
-    db: AsyncSession = Depends(get_db)
-):
-    stmt = (
-        select(Account)
-        .options(selectinload(Account.links))
-        .where(Account.username == "yuto")
-    )
-    result = await db.execute(stmt)
-    account = result.scalars().first()
-
-    if not account:
-        account = Account(
-            username="yuto",
-            tag=None,
-            display_name="yuto",
-            bio="Fullstack Developer & Minecraft PvP Player. Building Linkord & Web projects.",
-            theme_id="midnight",
-            theme_mode="dark",
-            has_discord_authed=True,
-            has_founder=True,
-            has_team=True,
-            has_supporter=True,
-            discord_id="123456789012345678"
-        )
-        db.add(account)
-        await db.commit()
-        await db.refresh(account)
-    elif account.deleted_at is not None:
-        account.deleted_at = None
-        if not getattr(account, "tag", None):
-            account.tag = "0001"
-        await db.commit()
-        await db.refresh(account)
-
-    session = await create_user_session(db, account.id, request)
-    set_auth_cookie(response, session.session_token)
-    return {
-        "status": "ok",
-        "user": {
-            "id": account.id,
-            "username": account.username,
-            "display_name": account.display_name
-        },
-        "session_token": session.session_token
-    }
 
 @router.post("/logout")
 async def logout(
@@ -596,7 +549,12 @@ async def logout(
     if token:
         await delete_user_session(db, token)
 
-    response.delete_cookie(key=SESSION_COOKIE_NAME, path="/")
+    is_production = settings.APP_ENV == "production"
+    response.delete_cookie(
+        key=SESSION_COOKIE_NAME,
+        path="/",
+        domain=".linkord.net" if is_production else None,
+    )
     return {"status": "ok", "message": "ログアウトしました"}
 
 @router.post("/delete-account")
@@ -615,6 +573,11 @@ async def delete_account(
         await db.delete(s)
 
     await db.commit()
-    response.delete_cookie(key=SESSION_COOKIE_NAME, path="/")
+    is_production = settings.APP_ENV == "production"
+    response.delete_cookie(
+        key=SESSION_COOKIE_NAME,
+        path="/",
+        domain=".linkord.net" if is_production else None,
+    )
     return {"status": "ok", "message": "退会処理が完了しました"}
 

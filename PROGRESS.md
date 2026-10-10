@@ -207,6 +207,20 @@ Linkord（Discord プロフィール & サーバーポータル / linkord.net）
 - 将来のパスワード登録等のみタグ番号を付与する柔軟な設計にアップデート（`Account.tag` の NULL 許容化、`full_username` プロパティの自動切り替え）。
 - 既存のテスト用アカウント・関連テーブルデータを初期化（0件）し、実運用可能な状態に整備。
 
+### 12. Discord サーバー掲載の完全実連携 & モックデータ完全撤廃 (本格運用対応)
+- フロントエンドに存在していたハードコードされたモックサーバー（`FALLBACK_SERVERS`, `FALLBACK_SERVER` 等）を完全撤廃。
+- バックエンドに `GET /api/servers/inspect-invite?invite={url_or_code}` エンドポイントを実装。Discord 公式 Invite API（パブリック呼び出し）からギルド名、アイコン画像、メンバー数、アクティブ数を即座に自動取得。
+- サーバー掲載モーダル（`CreateServerModal.tsx`）を刷新：招待URLを入力して「取得」ボタンを押すと、Discord公式情報からサーバー名・URL slug候補・アイコン・メンバー数を即座に自動補完＆プレビュー表示。
+- バックエンドのサーバー作成処理（`POST /api/servers`）でも招待URLから実メンバー数や公式アイコンURLを自動補完・保存する堅牢な設計にアップデート。
+
+### 13. 設定画面のリアルタイムテーマプレビュー
+- `frontend/src/pages/Settings.tsx` にインタラクティブなテーマプレビューカードを実装。
+- 12種類のテーマプリセットを選択した瞬間に、アバター・バッジ・アクセントカラー・背景グラデーションがリアルタイムにプレビューされ、保存前に確認可能。
+
+### 14. Minecraft PlayHive 公式 API 準拠アップデート
+- `backend/app/api/minecraft.py` を公式 OpenAPI (`https://api.playhive.com/v0/game/all/{game}/{identifier}`) に完全準拠。
+- BedWars 等の公式実データ（Kills, Victories, Played, K/D, Prestige）を安全に取得し、10分間キャッシュ。プロフィールカード側にも正確に反映。
+
 ---
 
 ## 🚀 次のステップ（今後の拡張タスク）

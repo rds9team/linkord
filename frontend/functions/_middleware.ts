@@ -15,7 +15,14 @@ export async function onRequest(context: any): Promise<Response> {
   const isCrawler = /Discordbot|Twitterbot|facebookexternalhit|Slackbot|TelegramBot|LinkedInBot|Embedly|WhatsApp/i.test(userAgent);
 
   if (!isCrawler) {
-    return next();
+    const res = await next();
+    if (res.status === 404 && request.method === 'GET') {
+      const u = new URL(request.url);
+      if (!u.pathname.startsWith('/api') && !u.pathname.includes('.')) {
+        return env.ASSETS ? env.ASSETS.fetch(new Request(new URL('/', request.url), request)) : res;
+      }
+    }
+    return res;
   }
 
   const url = new URL(request.url);
@@ -111,5 +118,12 @@ export async function onRequest(context: any): Promise<Response> {
     }
   }
 
-  return next();
+  const res = await next();
+  if (res.status === 404 && request.method === 'GET') {
+    const u = new URL(request.url);
+    if (!u.pathname.startsWith('/api') && !u.pathname.includes('.')) {
+      return env.ASSETS ? env.ASSETS.fetch(new Request(new URL('/', request.url), request)) : res;
+    }
+  }
+  return res;
 }

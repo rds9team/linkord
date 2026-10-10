@@ -1,6 +1,6 @@
 # Linkord 開発進捗 & 備忘録まとめ
 
-最終更新: 2026-10-09
+最終更新: 2026-10-10
 
 Linkord（Discord プロフィール & サーバーポータル / linkord.net）の開発状況、これまでに実装した内容、および今後の作業用備忘録のまとめです。
 
@@ -10,11 +10,12 @@ Linkord（Discord プロフィール & サーバーポータル / linkord.net）
 
 | コンポーネント | 稼働場所 / URL | 状態 | 備考 |
 |---|---|---|---|
-| **Git リポジトリ** | `https://github.com/rds9team/linkord` (main) | 追従中 | バックエンド・フロントエンド結合テスト全件パス |
-| **バックエンド API** | VPS (`vps-gateway.sorahost.net`) | **オンライン (PM2 id: 5)** | ポート 8085 / SQLite (テストモード) |
-| **フロントエンド** | ローカル `frontend/dist/` ビルド済 | ビルド成功 (TypeScript 型チェック済) | Cloudflare Pages 接続待ち |
-| **Discord Webhook** | 通知チャンネル | 正常稼働 | 節目ごとに自動投稿中 |
-| **ドメイン** | `linkord.net` | NS Cloudflare 伝播完了 | Tunnel ホスト名設定待ち |
+| **Git リポジトリ** | `https://github.com/rds9team/linkord` (main) | **最新追従 (完全同期)** | バックエンド・フロントエンド結合テスト全件パス |
+| **バックエンド API** | VPS (`vps-gateway.sorahost.net`) | **オンライン (PM2 id: 5)** | ポート 8085 / SQLite 本番DB / 4桁タグ認証対応 |
+| **Cloudflare Tunnel** | VPS (`vps-gateway.sorahost.net`) | **オンライン (PM2 id: 9: linkord-tunnel)** | `api.linkord.net` -> VPS localhost:8085 疎通OK |
+| **フロントエンド** | Cloudflare Pages (`linkord.net`) | **オンライン** | SPAリライト・Functions OGP動的生成 稼働中 |
+| **Discord Webhook** | 通知チャンネル | **正常稼働** | デプロイ完了・節目ごとに自動投稿中 |
+| **ドメイン / SSL** | `linkord.net` / `api.linkord.net` | **本番運用中 (HTTP/2 200)** | HTTPS/Cloudflare Edge 正常応答 |
 
 ---
 

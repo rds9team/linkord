@@ -7,51 +7,12 @@ import { CreateServerModal } from '../components/CreateServerModal';
 import { Badges } from '../components/Badges';
 import { useTitle } from '../hooks/useTitle';
 
-const FALLBACK_SERVERS: ServerData[] = [
-  {
-    id: 1,
-    slug: 'rds9-community',
-    name: 'RDS9 Community',
-    description: '学生エンジニアやMinecraft PvPプレイヤーが集まる公式コミュニティ。Bot開発や雑談も盛んです。',
-    member_count: 1240,
-    tags: 'Minecraft, 開発, PvP, コミュニティ',
-    language: 'ja',
-    invite_url: 'https://discord.gg/example1',
-    is_public: true,
-    created_at: '2026-10-01T00:00:00Z',
-  },
-  {
-    id: 2,
-    slug: 'japan-pvp-lounge',
-    name: 'Japan PvP Lounge',
-    description: 'Minecraft Java & BedrockのPvPプレイヤー向け対戦・スクリム募集サーバー。初心者歓迎！',
-    member_count: 890,
-    tags: 'Minecraft, PvP, BedWars',
-    language: 'ja',
-    invite_url: 'https://discord.gg/example2',
-    is_public: true,
-    created_at: '2026-10-02T00:00:00Z',
-  },
-  {
-    id: 3,
-    slug: 'dev-cafe',
-    name: 'Dev Cafe JP',
-    description: 'Web開発、Python、TypeScript、Discord Bot開発などを気軽に相談・共有できるプログラミングサーバー。',
-    member_count: 2150,
-    tags: 'プログラミング, 開発, Bot',
-    language: 'ja',
-    invite_url: 'https://discord.gg/example3',
-    is_public: true,
-    created_at: '2026-10-03T00:00:00Z',
-  },
-];
-
 export const Discover: React.FC = () => {
   useTitle('発見');
   const [mainCategory, setMainCategory] = useState<'servers' | 'users'>('servers');
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'popular' | 'new' | 'minecraft'>('popular');
-  const [servers, setServers] = useState<ServerData[]>(FALLBACK_SERVERS);
+  const [servers, setServers] = useState<ServerData[]>([]);
   const [users, setUsers] = useState<ProfileSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -67,27 +28,11 @@ export const Discover: React.FC = () => {
           const tag = activeTab === 'minecraft' ? 'Minecraft' : undefined;
           const data = await fetchServers(tag, searchTerm || undefined);
           if (isMounted) {
-            if (data && data.length > 0) {
-              setServers(data);
-            } else {
-              setServers(searchTerm ? [] : FALLBACK_SERVERS);
-            }
+            setServers(data || []);
           }
         } catch {
           if (isMounted) {
-            let filtered = FALLBACK_SERVERS;
-            if (activeTab === 'minecraft') {
-              filtered = filtered.filter(s => s.tags.includes('Minecraft'));
-            }
-            if (searchTerm) {
-              const term = searchTerm.toLowerCase();
-              filtered = filtered.filter(s =>
-                s.name.toLowerCase().includes(term) ||
-                (s.description && s.description.toLowerCase().includes(term)) ||
-                s.tags.toLowerCase().includes(term)
-              );
-            }
-            setServers(filtered);
+            setServers([]);
           }
         } finally {
           if (isMounted) {
@@ -235,8 +180,23 @@ export const Discover: React.FC = () => {
       {/* Main Content */}
       {!loading && mainCategory === 'servers' && (
         servers.length === 0 ? (
-          <div className="text-center py-12 text-slate-400 text-xs">
-            該当するサーバーが見つかりませんでした。
+          <div className="text-center py-16 px-4 rounded-3xl bg-white/[0.02] border border-white/5 max-w-md mx-auto">
+            <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mx-auto mb-3 text-purple-400">
+              <Users className="w-6 h-6" />
+            </div>
+            <h3 className="text-sm font-bold text-white mb-1">
+              {searchTerm ? '一致するサーバーが見つかりませんでした' : '掲載中のサーバーはまだありません'}
+            </h3>
+            <p className="text-xs text-slate-400 mb-5 leading-relaxed">
+              あなたのコミュニティやMinecraftサーバーをLinkordに掲載して、新しいメンバーを募集しましょう！
+            </p>
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition shadow-lg shadow-purple-600/20"
+            >
+              <Plus className="w-4 h-4" />
+              <span>サーバーを掲載する</span>
+            </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

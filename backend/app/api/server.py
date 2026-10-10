@@ -1,6 +1,7 @@
 import re
 import datetime
 from typing import Optional
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_
@@ -10,6 +11,43 @@ from app.models.models import Server, Boost, Account
 from app.schemas.schemas import ServerOut, ServerCreate, ServerUpdate
 
 router = APIRouter(prefix="/servers", tags=["servers"])
+
+@router.get("/inspect-invite")
+async def inspect_discord_invite(invite: str = Query(..., description="Discord invite URL or code")):
+    raw_invite = invite.strip()
+    match = re.search(r"(?:discord\.gg/|discord\.com/invite/)?([a-zA-Z0-9_-]+)$", raw_invite)
+    if not match:
+        raise HTTPException(status_code=400, detail="無効なDiscord招待URLまたはコードです")
+    
+    code = match.group(1)
+    url = f"https://discord.com/api/v10/invites/{code}?with_counts=true"
+    
+    try:
+        async with httpx.AsyncClient(timeout=6.0) as client:
+            resp = await client.get(url)
+            if resp.status_code == 200:
+                data = resp.json()
+                guild = data.get("guild", {})
+                guild_id = guild.get("id")
+                icon_hash = guild.get("icon")
+                icon_url = f"https://cdn.discordapp.com/icons/{guild_id}/{icon_hash}.png" if guild_id and icon_hash else None
+                
+                return {
+                    "code": code,
+                    "invite_url": f"https://discord.gg/{code}",
+                    "guild_id": guild_id,
+                    "name": guild.get("name"),
+                    "description": guild.get("description") or "",
+                    "icon_url": icon_url,
+                    "member_count": data.get("approximate_member_count") or 0,
+                    "presence_count": data.get("approximate_presence_count") or 0,
+                }
+            elif resp.status_code == 404:
+                raise HTTPException(status_code=404, detail="Discord招待が見つかりません。期限切れか無効な招待URLです")
+            else:
+                raise HTTPException(status_code=400, detail=f"Discord APIエラー: {resp.status_code}")
+    except httpx.RequestError as exc:
+        raise HTTPException(status_code=502, detail=f"Discord APIとの通信に失敗しました: {exc}")
 
 async def get_server_boosts_count(db: AsyncSession, server_id: int) -> int:
     stmt = select(func.count(Boost.id)).where(Boost.server_id == server_id)
@@ -72,15 +110,38 @@ async def create_server(
             detail="指定されたサーバーslugは既に使用されています"
         )
 
+    # Validate invite & fetch real Discord server info
+    member_count = 0
+    real_icon_url = data.icon_url
+    clean_invite = data.invite_url.strip()
+    match = re.search(r"(?:discord\.gg/|discord\.com/invite/)?([a-zA-Z0-9_-]+)$", clean_invite)
+    if match:
+        code = match.group(1)
+        clean_invite = f"https://discord.gg/{code}"
+        try:
+            async with httpx.AsyncClient(timeout=4.0) as client:
+                d_res = await client.get(f"https://discord.com/api/v10/invites/{code}?with_counts=true")
+                if d_res.status_code == 200:
+                    d_data = d_res.json()
+                    member_count = d_data.get("approximate_member_count") or 0
+                    guild = d_data.get("guild", {})
+                    guild_id = guild.get("id")
+                    icon_hash = guild.get("icon")
+                    if guild_id and icon_hash and not real_icon_url:
+                        real_icon_url = f"https://cdn.discordapp.com/icons/{guild_id}/{icon_hash}.png"
+        except Exception:
+            pass
+
     server = Server(
         owner_id=current_user.id,
         slug=data.slug,
         name=data.name,
         description=data.description,
-        icon_url=data.icon_url,
-        invite_url=data.invite_url,
+        icon_url=real_icon_url,
+        invite_url=clean_invite,
         tags=data.tags,
         language=data.language,
+        member_count=member_count,
     )
     db.add(server)
     await db.commit()

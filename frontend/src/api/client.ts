@@ -92,6 +92,21 @@ export const createServer = (data: ServerCreateData): Promise<ServerData> => {
   });
 };
 
+export const inspectDiscordInvite = (invite: string): Promise<{
+  code: string;
+  invite_url: string;
+  guild_id?: string;
+  name?: string;
+  description?: string;
+  icon_url?: string;
+  member_count: number;
+  presence_count: number;
+}> => {
+  return request(`/api/servers/inspect-invite`, {
+    params: { invite },
+  });
+};
+
 export const deleteServer = (slug: string): Promise<{ status: string; message: string }> => {
   return request<{ status: string; message: string }>(`/api/servers/${encodeURIComponent(slug)}`, {
     method: 'DELETE',

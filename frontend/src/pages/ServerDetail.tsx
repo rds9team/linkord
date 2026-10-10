@@ -6,30 +6,17 @@ import { fetchServer, boostServer } from '../api/client';
 import { ServerData } from '../types';
 import { useTitle } from '../hooks/useTitle';
 
-const FALLBACK_SERVER: ServerData = {
-  id: 1,
-  slug: 'rds9-community',
-  name: 'RDS9 Community',
-  description: '学生エンジニアやMinecraft PvPプレイヤーが集まる公式コミュニティです。Discord Bot開発の技術相談、Minecraft対戦のスクリム募集、日々の雑談など活発に行われています。誰でも歓迎です！',
-  member_count: 1240,
-  tags: 'Minecraft, 開発, PvP, 学生エンジニア, 公式',
-  language: 'ja',
-  invite_url: 'https://discord.gg/example1',
-  is_public: true,
-  created_at: '2026-10-01T00:00:00Z',
-};
-
 const isSafeHttpUrl = (url?: string): boolean => {
   if (!url) return false;
   return /^https?:\/\//i.test(url.trim());
 };
 
 export const ServerDetail: React.FC = () => {
-  const { slug = 'rds9-community' } = useParams<{ slug: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const [server, setServer] = useState<ServerData | null>(null);
   useTitle(server ? server.name : 'サーバー');
   const [loading, setLoading] = useState(true);
-  const [boosts, setBoosts] = useState(58);
+  const [boosts, setBoosts] = useState(0);
   const [boosted, setBoosted] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [boostError, setBoostError] = useState<string | null>(null);
@@ -37,6 +24,7 @@ export const ServerDetail: React.FC = () => {
   useEffect(() => {
     let isMounted = true;
     const loadServer = async () => {
+      if (!slug) return;
       try {
         setLoading(true);
         const data = await fetchServer(slug);
@@ -44,18 +32,9 @@ export const ServerDetail: React.FC = () => {
           setServer(data);
           setBoosts(data.boosts_count !== undefined ? data.boosts_count : 0);
         }
-      } catch (err) {
+      } catch {
         if (isMounted) {
-          // If fallback matches or server not found, fallback gracefully
-          if (slug === 'rds9-community') {
-            setServer(FALLBACK_SERVER);
-          } else {
-            setServer({
-              ...FALLBACK_SERVER,
-              slug,
-              name: slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-            });
-          }
+          setServer(null);
         }
       } finally {
         if (isMounted) {

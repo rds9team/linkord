@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { X, Server as ServerIcon, Upload, Loader2 } from 'lucide-react';
+import { X, Server as ServerIcon, Upload, Loader2, Sparkles, CheckCircle2, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { createServer, uploadMedia } from '../api/client';
+import { createServer, uploadMedia, inspectDiscordInvite } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
 interface CreateServerModalProps {
@@ -26,9 +26,64 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
   const [tags, setTags] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [inspecting, setInspecting] = useState(false);
+  const [inspectSuccess, setInspectSuccess] = useState(false);
+  const [serverStats, setServerStats] = useState<{ member_count: number; presence_count: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
+
+  const handleInspectInvite = async (inviteInput?: string) => {
+    const targetInvite = (inviteInput !== undefined ? inviteInput : inviteUrl).trim();
+    if (!targetInvite) return;
+
+    try {
+      setInspecting(true);
+      setError(null);
+      const res = await inspectDiscordInvite(targetInvite);
+
+      // Auto-fill fields if empty or updated
+      if (res.name && (!name || inspectSuccess)) {
+        setName(res.name);
+      }
+      if (!slug || inspectSuccess) {
+        // Auto-generate safe slug from guild name or code
+        const safeSlug = (res.name || res.code)
+          .toLowerCase()
+          .replace(/[^a-z0-9_-]/g, '-')
+          .replace(/-+/g, '-')
+          .slice(0, 30);
+        if (safeSlug.length >= 3) {
+          setSlug(safeSlug);
+        } else {
+          setSlug(`server-${res.code.slice(0, 8)}`);
+        }
+      }
+      if (res.icon_url && (!iconUrl || inspectSuccess)) {
+        setIconUrl(res.icon_url);
+      }
+      if (res.description && (!description || inspectSuccess)) {
+        setDescription(res.description);
+      }
+      setInviteUrl(res.invite_url);
+      setServerStats({
+        member_count: res.member_count,
+        presence_count: res.presence_count,
+      });
+      setInspectSuccess(true);
+    } catch (err: any) {
+      setError(err.message || 'Discordサーバー情報の取得に失敗しました。招待URLを確認してください。');
+      setInspectSuccess(false);
+    } finally {
+      setInspecting(false);
+    }
+  };
+
+  const handleInviteChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setInviteUrl(val);
+    setInspectSuccess(false);
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -115,6 +170,54 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+            {/* Invite URL (Primary) */}
+            <div className="p-3 rounded-xl bg-purple-500/5 border border-purple-500/20">
+              <label className="block font-semibold text-purple-300 mb-1">
+                Discord 招待URL <span className="text-rose-400">*</span>
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  required
+                  value={inviteUrl}
+                  onChange={handleInviteChange}
+                  onBlur={() => {
+                    if (inviteUrl && !inspectSuccess) handleInspectInvite();
+                  }}
+                  placeholder="https://discord.gg/xxxxxx"
+                  className="flex-1 px-3 py-2 rounded-xl bg-slate-800 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-purple-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleInspectInvite()}
+                  disabled={inspecting || !inviteUrl.trim()}
+                  className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white font-semibold flex items-center gap-1.5 transition whitespace-nowrap shadow-md shadow-purple-600/20"
+                >
+                  {inspecting ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Sparkles className="w-3.5 h-3.5" />
+                  )}
+                  <span>取得</span>
+                </button>
+              </div>
+
+              {inspectSuccess && (
+                <div className="mt-2.5 flex items-center justify-between text-[11px] text-emerald-400 bg-emerald-500/10 px-2.5 py-1.5 rounded-lg border border-emerald-500/20">
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Discord公式情報を自動取得しました</span>
+                  </div>
+                  {serverStats && (
+                    <div className="flex items-center gap-1 text-slate-300">
+                      <Users className="w-3 h-3 text-emerald-400" />
+                      <span>{serverStats.member_count.toLocaleString()} 人</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* Server Name */}
             <div>
               <label className="block font-semibold text-slate-300 mb-1">
@@ -147,21 +250,6 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
                 />
               </div>
               <p className="text-[10px] text-slate-400 mt-1">3〜48文字の半角英数字、ハイフン、アンダースコア</p>
-            </div>
-
-            {/* Invite URL */}
-            <div>
-              <label className="block font-semibold text-slate-300 mb-1">
-                Discord 招待URL <span className="text-rose-400">*</span>
-              </label>
-              <input
-                type="url"
-                required
-                value={inviteUrl}
-                onChange={(e) => setInviteUrl(e.target.value)}
-                placeholder="https://discord.gg/xxxxxx"
-                className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-purple-500"
-              />
             </div>
 
             {/* Icon */}

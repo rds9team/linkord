@@ -489,32 +489,7 @@ export const Profile: React.FC = () => {
           </div>
         )}
 
-        {/* Pinned Server Card */}
-        <div className={`rounded-2xl p-3.5 mb-4 flex items-center justify-between gap-3 ${isLight ? 'glass-card-light' : 'glass-card-dark'}`}>
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center font-bold text-white shadow-md flex-shrink-0">
-              RDS
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
-                <p className="text-xs font-bold truncate">RDS9 Community</p>
-                <span className="text-[9px] bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 px-1.5 py-0.2 rounded font-medium">
-                  Official
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                <span>1,240 メンバー</span>
-              </p>
-            </div>
-          </div>
-          <Link
-            to="/server/rds9-community"
-            className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition flex-shrink-0"
-          >
-            参加
-          </Link>
-        </div>
+
 
         {/* Footer: Views, Boost, Report */}
         <div className="pt-2 border-t border-slate-200 dark:border-white/5 flex items-center justify-between text-slate-500 dark:text-slate-400 text-[11px] font-mono">

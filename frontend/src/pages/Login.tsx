@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { LogIn, ShieldCheck, Terminal, AlertCircle } from 'lucide-react';
 import { getDiscordLoginUrl, getGoogleLoginUrl } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useTitle } from '../hooks/useTitle';
 
 export const Login: React.FC = () => {
+  useTitle('ログイン');
   const { login, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);

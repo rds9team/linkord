@@ -4,6 +4,7 @@ import { Flame, Flag, ExternalLink, ArrowLeft, Loader2, ServerCrash } from 'luci
 import { ReportModal } from '../components/ReportModal';
 import { fetchServer, boostServer } from '../api/client';
 import { ServerData } from '../types';
+import { useTitle } from '../hooks/useTitle';
 
 const FALLBACK_SERVER: ServerData = {
   id: 1,
@@ -26,6 +27,7 @@ const isSafeHttpUrl = (url?: string): boolean => {
 export const ServerDetail: React.FC = () => {
   const { slug = 'rds9-community' } = useParams<{ slug: string }>();
   const [server, setServer] = useState<ServerData | null>(null);
+  useTitle(server ? server.name : 'サーバー');
   const [loading, setLoading] = useState(true);
   const [boosts, setBoosts] = useState(58);
   const [boosted, setBoosted] = useState(false);

@@ -10,8 +10,10 @@ import {
   toggleServerVisibility,
 } from '../api/client';
 import { AdminStats, ReportItem } from '../types';
+import { useTitle } from '../hooks/useTitle';
 
 export const Admin: React.FC = () => {
+  useTitle('管理');
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<AdminStats | null>(null);

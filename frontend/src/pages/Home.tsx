@@ -1,8 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Sparkles, ArrowRight, ShieldCheck, Zap, Server, Gamepad2, Heart } from 'lucide-react';
+import { useTitle } from '../hooks/useTitle';
 
 export const Home: React.FC = () => {
+  useTitle();
   return (
     <div className="flex flex-col items-center justify-center pt-8 sm:pt-16 pb-20 px-4 max-w-4xl mx-auto text-center relative z-10">
       

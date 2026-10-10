@@ -4,6 +4,7 @@ import { Palette, User, Gamepad2, Save, Check, Loader2, AlertCircle, LogIn, Uplo
 import { fetchMe, updateMyProfile, uploadMedia, deleteAccount } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { ProfileUpdateData } from '../types';
+import { useTitle } from '../hooks/useTitle';
 
 const PRESET_THEMES = [
   { id: 'midnight', name: 'Midnight (王道ダーク)' },
@@ -21,6 +22,7 @@ const PRESET_THEMES = [
 ];
 
 export const Settings: React.FC = () => {
+  useTitle('設定');
   const { refreshUser } = useAuth();
   const navigate = useNavigate();
   const [initialLoading, setInitialLoading] = useState(true);

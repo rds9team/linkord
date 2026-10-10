@@ -1,8 +1,10 @@
 import React from 'react';
 import { Lock, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useTitle } from '../hooks/useTitle';
 
 export const Privacy: React.FC = () => {
+  useTitle('プライバシーポリシー');
   return (
     <div className="max-w-4xl mx-auto px-4 py-12 relative z-10 text-slate-200">
       <Link

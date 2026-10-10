@@ -5,6 +5,7 @@ import { fetchServers, searchProfiles } from '../api/client';
 import { ServerData, ProfileSearchResult } from '../types';
 import { CreateServerModal } from '../components/CreateServerModal';
 import { Badges } from '../components/Badges';
+import { useTitle } from '../hooks/useTitle';
 
 const FALLBACK_SERVERS: ServerData[] = [
   {
@@ -46,6 +47,7 @@ const FALLBACK_SERVERS: ServerData[] = [
 ];
 
 export const Discover: React.FC = () => {
+  useTitle('発見');
   const [mainCategory, setMainCategory] = useState<'servers' | 'users'>('servers');
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'popular' | 'new' | 'minecraft'>('popular');

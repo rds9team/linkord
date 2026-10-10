@@ -9,6 +9,7 @@ import { ReportModal } from '../components/ReportModal';
 import { FollowListModal } from '../components/FollowListModal';
 import { SpotifyWidget, ActivityWidget, CustomStatusBubble } from '../components/LanyardWidgets';
 import { useLanyard } from '../hooks/useLanyard';
+import { useTitle } from '../hooks/useTitle';
 import { fetchProfile, boostProfile, toggleFollow, fetchMinecraftStats } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { ProfileData } from '../types';
@@ -65,6 +66,16 @@ export const Profile: React.FC = () => {
   const [notFound, setNotFound] = useState(false);
   const [isDeleted, setIsDeleted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useTitle(
+    notFound
+      ? 'ユーザーが見つかりません'
+      : isDeleted
+      ? '退会済みアカウント'
+      : profile?.display_name
+      ? `${profile.display_name}`
+      : 'プロフィール'
+  );
 
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [boostCount, setBoostCount] = useState(0);

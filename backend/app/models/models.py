@@ -10,7 +10,7 @@ class Account(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(32), index=True, nullable=False)
-    tag = Column(String(4), default="0001", nullable=False)
+    tag = Column(String(4), nullable=True, default=None)
     password_hash = Column(String(256), nullable=True)
     display_name = Column(String(64), nullable=False)
     bio = Column(Text, nullable=True)
@@ -47,12 +47,15 @@ class Account(Base):
 
     @property
     def full_username(self) -> str:
-        return f"{self.username}#{self.tag}"
+        if self.tag:
+            return f"{self.username}#{self.tag}"
+        return self.username
 
     identities = relationship("AccountIdentity", back_populates="account", cascade="all, delete-orphan")
     links = relationship("SocialLink", back_populates="account", cascade="all, delete-orphan")
     servers = relationship("Server", back_populates="owner", cascade="all, delete-orphan")
     sessions = relationship("UserSession", back_populates="account", cascade="all, delete-orphan")
+    donations = relationship("Donation", back_populates="account")
 
 class AccountIdentity(Base):
     __tablename__ = "account_identities"
@@ -168,4 +171,21 @@ class ProfileBoost(Base):
         Index("idx_profile_boost_user_window", "user_id", "target_account_id", "time_window"),
         Index("idx_profile_boost_ip_window", "ip_address", "target_account_id", "time_window"),
     )
+
+class Donation(Base):
+    __tablename__ = "donations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id", ondelete="SET NULL"), nullable=True, index=True)
+    donor_name = Column(String(64), nullable=False)
+    paypay_url = Column(String(256), nullable=False)
+    passcode = Column(String(16), nullable=True)
+    amount = Column(Integer, nullable=True)
+    message = Column(Text, nullable=True)
+    status = Column(String(32), default="pending", nullable=False) # pending, approved, rejected
+    admin_note = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
+    resolved_at = Column(DateTime, nullable=True)
+
+    account = relationship("Account", back_populates="donations")
 

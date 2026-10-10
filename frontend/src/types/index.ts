@@ -124,5 +124,23 @@ export interface AdminStats {
   total_servers: number;
   total_reports: number;
   pending_reports: number;
+  total_donations?: number;
+  pending_donations?: number;
+}
+
+export interface DonationItem {
+  id: number;
+  account_id?: number | null;
+  donor_name: string;
+  paypay_url: string;
+  passcode?: string | null;
+  amount?: number | null;
+  message?: string | null;
+  status: 'pending' | 'approved' | 'rejected';
+  admin_note?: string | null;
+  created_at: string;
+  resolved_at?: string | null;
+  donor_username?: string | null;
+  donor_avatar?: string | null;
 }
 

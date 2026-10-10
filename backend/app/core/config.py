@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     GOOGLE_REDIRECT_URI: str = "http://localhost:8000/api/auth/google/callback"
     
     PAYPAY_SUPPORT_URL: str = "https://linkord.net"
+    DISCORD_DONATION_WEBHOOK_URL: Optional[str] = None
     
     STORAGE_PROVIDER: str = "local"
     UPLOAD_DIR: str = "./uploads"

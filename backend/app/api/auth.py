@@ -308,11 +308,28 @@ async def discord_callback(
         if avatar_url and not account.avatar_url:
             account.avatar_url = avatar_url
     else:
-        new_username = await generate_unique_username(db, discord_username)
-        tag = await generate_unique_tag(db, new_username)
+        # Discordのユーザー名（pomeloユニーク）をそのまま小文字で使用
+        clean_username = discord_username.lower().strip()
+        clean_username = re.sub(r"[^a-zA-Z0-9_\.]", "_", clean_username)
+        if len(clean_username) < 2:
+            clean_username = f"user_{discord_user_id[-6:]}"
+        elif len(clean_username) > 32:
+            clean_username = clean_username[:32]
+
+        # 既存のusernameとの重複フォールバック
+        target_username = clean_username
+        suffix = 1
+        while True:
+            exist_stmt = select(Account).where(Account.username == target_username)
+            exist_res = await db.execute(exist_stmt)
+            if not exist_res.scalars().first():
+                break
+            target_username = f"{clean_username[:26]}_{suffix}"
+            suffix += 1
+
         account = Account(
-            username=new_username,
-            tag=tag,
+            username=target_username,
+            tag=None, # Discord連携ユーザーはタグなし
             display_name=global_name[:64],
             avatar_url=avatar_url,
             discord_id=discord_user_id,
@@ -511,7 +528,7 @@ async def dev_login(
     if not account:
         account = Account(
             username="yuto",
-            tag="0001",
+            tag=None,
             display_name="yuto",
             bio="Fullstack Developer & Minecraft PvP Player. Building Linkord & Web projects.",
             theme_id="midnight",

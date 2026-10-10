@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Link2, Compass, Settings, Heart, LogIn, LogOut, User as UserIcon } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { SupportModal } from './SupportModal';
 
 export const Navbar: React.FC = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
+  const [isSupportOpen, setIsSupportOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -44,15 +46,13 @@ export const Navbar: React.FC = () => {
           </Link>
         )}
 
-        <a
-          href="https://linkord.net"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="px-3 py-1.5 rounded-full text-xs font-medium bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200 hover:text-white flex items-center gap-1.5 transition"
+        <button
+          onClick={() => setIsSupportOpen(true)}
+          className="px-3 py-1.5 rounded-full text-xs font-medium bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 hover:text-white flex items-center gap-1.5 transition cursor-pointer"
         >
-          <Heart className="w-3.5 h-3.5 text-rose-400" />
+          <Heart className="w-3.5 h-3.5 text-rose-400 fill-rose-500/30" />
           <span className="hidden sm:inline">応援する</span>
-        </a>
+        </button>
 
         {isAuthenticated && user ? (
           <div className="flex items-center gap-1 sm:gap-2 ml-1">
@@ -92,6 +92,8 @@ export const Navbar: React.FC = () => {
           </Link>
         )}
       </nav>
+
+      <SupportModal isOpen={isSupportOpen} onClose={() => setIsSupportOpen(false)} />
     </header>
   );
 };

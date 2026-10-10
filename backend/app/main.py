@@ -6,7 +6,7 @@ from app.core.database import engine, Base
 import os
 from fastapi.staticfiles import StaticFiles
 import app.models
-from app.api import auth, profile, server, minecraft, lanyard, report, media, admin
+from app.api import auth, profile, server, minecraft, lanyard, report, media, admin, donations
 
 # Ensure uploads directory exists
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
@@ -65,6 +65,7 @@ app.include_router(lanyard.router, prefix="/api")
 app.include_router(report.router, prefix="/api")
 app.include_router(media.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
+app.include_router(donations.router, prefix="/api")
 
 @app.get("/api/health")
 def health_check():

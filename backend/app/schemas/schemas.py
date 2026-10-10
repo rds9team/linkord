@@ -33,7 +33,7 @@ class SocialLinkOut(SocialLinkBase):
 
 class ProfileOut(BaseModel):
     username: str
-    tag: str = "0001"
+    tag: Optional[str] = None
     full_username: Optional[str] = None
     display_name: str
     bio: Optional[str] = None
@@ -82,8 +82,8 @@ class UserRegister(BaseModel):
     @classmethod
     def validate_username(cls, v: str) -> str:
         v = v.strip().lower()
-        if not re.match(r"^[a-zA-Z0-9_]+$", v):
-            raise ValueError("ユーザー名は半角英数字およびアンダースコア（_）のみ使用できます")
+        if not re.match(r"^[a-zA-Z0-9_\.]+$", v):
+            raise ValueError("ユーザー名は半角英数字、アンダースコア（_）、ドット（.）のみ使用できます")
         return v
 
 class UserLogin(BaseModel):
@@ -176,7 +176,7 @@ class ReportCreate(BaseModel):
 
 class FollowUserOut(BaseModel):
     username: str
-    tag: str = "0001"
+    tag: Optional[str] = None
     display_name: str
     avatar_url: Optional[str] = None
     bio: Optional[str] = None
@@ -214,4 +214,41 @@ class AdminStatsOut(BaseModel):
     total_servers: int
     total_reports: int
     pending_reports: int
+    total_donations: int = 0
+    pending_donations: int = 0
+
+class DonationCreate(BaseModel):
+    paypay_url: str = Field(..., max_length=256)
+    passcode: Optional[str] = Field(None, max_length=16)
+    amount: Optional[int] = Field(None, ge=1)
+    message: Optional[str] = Field(None, max_length=500)
+
+    @field_validator("paypay_url")
+    @classmethod
+    def validate_paypay_url(cls, v: str) -> str:
+        v = v.strip()
+        if not re.match(r"^https://pay\.paypay\.ne\.jp/[a-zA-Z0-9_\-\.\/]+$", v):
+            raise ValueError("有効なPayPay送金リンク（https://pay.paypay.ne.jp/...）を入力してください")
+        return v
+
+class DonationOut(BaseModel):
+    id: int
+    account_id: Optional[int] = None
+    donor_name: str
+    paypay_url: str
+    passcode: Optional[str] = None
+    amount: Optional[int] = None
+    message: Optional[str] = None
+    status: str
+    admin_note: Optional[str] = None
+    created_at: datetime.datetime
+    resolved_at: Optional[datetime.datetime] = None
+    donor_username: Optional[str] = None
+    donor_avatar: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+class DonationResolve(BaseModel):
+    action: str = Field(..., pattern="^(approve|reject)$")
+    admin_note: Optional[str] = None
 

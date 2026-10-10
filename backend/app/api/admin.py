@@ -3,12 +3,13 @@ from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, update
+from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
 from app.core.config import settings
 from app.core.auth import get_current_user
-from app.models.models import Account, Server, Report
-from app.schemas.schemas import ReportOut, ReportUpdate, AdminStatsOut
+from app.models.models import Account, Server, Report, Donation
+from app.schemas.schemas import ReportOut, ReportUpdate, AdminStatsOut, DonationOut, DonationResolve
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -38,12 +39,16 @@ async def get_admin_stats(
     servers_count = (await db.execute(select(func.count(Server.id)))).scalar() or 0
     total_reports = (await db.execute(select(func.count(Report.id)))).scalar() or 0
     pending_reports = (await db.execute(select(func.count(Report.id)).where(Report.status == "pending"))).scalar() or 0
+    total_donations = (await db.execute(select(func.count(Donation.id)))).scalar() or 0
+    pending_donations = (await db.execute(select(func.count(Donation.id)).where(Donation.status == "pending"))).scalar() or 0
 
     return AdminStatsOut(
         total_users=users_count,
         total_servers=servers_count,
         total_reports=total_reports,
-        pending_reports=pending_reports
+        pending_reports=pending_reports,
+        total_donations=total_donations,
+        pending_donations=pending_donations
     )
 
 @router.get("/reports", response_model=List[ReportOut])
@@ -124,3 +129,70 @@ async def toggle_server_visibility(
         "is_public": target.is_public,
         "message": f"{target.name} の公開状態を {'公開' if target.is_public else '非公開'} に変更しました"
     }
+
+@router.get("/donations", response_model=List[DonationOut])
+async def list_donations(
+    status_filter: Optional[str] = Query(None, alias="status"),
+    limit: int = 50,
+    admin: Account = Depends(require_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    stmt = (
+        select(Donation)
+        .options(selectinload(Donation.account))
+        .order_by(Donation.created_at.desc())
+        .limit(min(limit, 100))
+    )
+    if status_filter:
+        stmt = stmt.where(Donation.status == status_filter)
+    res = await db.execute(stmt)
+    donations = res.scalars().all()
+
+    out = []
+    for d in donations:
+        d_out = DonationOut.model_validate(d)
+        if d.account:
+            d_out.donor_username = d.account.username
+            d_out.donor_avatar = d.account.avatar_url
+        out.append(d_out)
+    return out
+
+@router.post("/donations/{donation_id}/resolve", response_model=DonationOut)
+async def resolve_donation(
+    donation_id: int,
+    data: DonationResolve,
+    admin: Account = Depends(require_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    stmt = (
+        select(Donation)
+        .options(selectinload(Donation.account))
+        .where(Donation.id == donation_id)
+    )
+    res = await db.execute(stmt)
+    donation = res.scalars().first()
+    if not donation:
+        raise HTTPException(status_code=404, detail="支援申請が見つかりません")
+
+    if data.action == "approve":
+        donation.status = "approved"
+        donation.resolved_at = datetime.datetime.utcnow()
+        if data.admin_note:
+            donation.admin_note = data.admin_note
+        # 紐付いているアカウントに Supporter バッジを付与
+        if donation.account:
+            donation.account.has_supporter = True
+    elif data.action == "reject":
+        donation.status = "rejected"
+        donation.resolved_at = datetime.datetime.utcnow()
+        if data.admin_note:
+            donation.admin_note = data.admin_note
+
+    await db.commit()
+    await db.refresh(donation)
+
+    d_out = DonationOut.model_validate(donation)
+    if donation.account:
+        d_out.donor_username = donation.account.username
+        d_out.donor_avatar = donation.account.avatar_url
+    return d_out

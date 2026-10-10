@@ -1,4 +1,4 @@
-import { ProfileData, ProfileUpdateData, ServerData, ServerCreateData, ReportData, AuthResponse, FollowUser, ProfileSearchResult, ReportItem, AdminStats } from '../types';
+import { ProfileData, ProfileUpdateData, ServerData, ServerCreateData, ReportData, AuthResponse, FollowUser, ProfileSearchResult, ReportItem, AdminStats, DonationItem } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
@@ -232,6 +232,34 @@ export const toggleServerVisibility = (slug: string): Promise<any> => {
 export const deleteAccount = (): Promise<{ status: string; message: string }> => {
   return request<{ status: string; message: string }>('/api/auth/delete-account', {
     method: 'POST',
+  });
+};
+
+export const submitDonation = (data: {
+  paypay_url: string;
+  passcode?: string;
+  amount?: number;
+  message?: string;
+}): Promise<DonationItem> => {
+  return request<DonationItem>('/api/donations', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+};
+
+export const fetchAdminDonations = (status?: string): Promise<DonationItem[]> => {
+  return request<DonationItem[]>('/api/admin/donations', {
+    params: { status },
+  });
+};
+
+export const resolveAdminDonation = (
+  id: number,
+  data: { action: 'approve' | 'reject'; admin_note?: string }
+): Promise<DonationItem> => {
+  return request<DonationItem>(`/api/admin/donations/${id}/resolve`, {
+    method: 'POST',
+    body: JSON.stringify(data),
   });
 };
 

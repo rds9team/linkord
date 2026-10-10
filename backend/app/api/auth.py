@@ -190,7 +190,7 @@ def discord_login():
         f"client_id={settings.DISCORD_CLIENT_ID}&"
         f"redirect_uri={settings.DISCORD_REDIRECT_URI}&"
         f"response_type=code&"
-        f"scope=identify&"
+        f"scope=identify%20email&"
         f"state={state}"
     )
     return {"url": discord_auth_url}
@@ -281,6 +281,7 @@ async def discord_callback(
 
     discord_user_id = str(user_data["id"])
     discord_username = user_data.get("username", "user")
+    discord_email = user_data.get("email")
     global_name = user_data.get("global_name") or discord_username
     avatar_hash = user_data.get("avatar")
     avatar_url = (
@@ -307,6 +308,8 @@ async def discord_callback(
             account.discord_id = discord_user_id
         if avatar_url and not account.avatar_url:
             account.avatar_url = avatar_url
+        if discord_email:
+            account.email = discord_email
     else:
         # Discordのユーザー名（pomeloユニーク）をそのまま小文字で使用
         clean_username = discord_username.lower().strip()
@@ -332,6 +335,7 @@ async def discord_callback(
             tag=None, # Discord連携ユーザーはタグなし
             display_name=global_name[:64],
             avatar_url=avatar_url,
+            email=discord_email,
             discord_id=discord_user_id,
             has_discord_authed=True,
             last_login_at=datetime.datetime.utcnow(),

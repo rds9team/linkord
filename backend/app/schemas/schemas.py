@@ -68,6 +68,7 @@ class ProfileOut(BaseModel):
 
 class AccountMeOut(ProfileOut):
     id: int
+    email: Optional[str] = None
     updated_at: datetime.datetime
     last_login_at: datetime.datetime
 

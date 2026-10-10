@@ -1,6 +1,6 @@
 # Linkord 開発進捗 & 備忘録まとめ
 
-最終更新: 2026-10-05
+最終更新: 2026-10-09
 
 Linkord（Discord プロフィール & サーバーポータル / linkord.net）の開発状況、これまでに実装した内容、および今後の作業用備忘録のまとめです。
 
@@ -10,9 +10,9 @@ Linkord（Discord プロフィール & サーバーポータル / linkord.net）
 
 | コンポーネント | 稼働場所 / URL | 状態 | 備考 |
 |---|---|---|---|
-| **Git リポジトリ** | `https://github.com/rds9team/linkord` (main) | 最新プッシュ完了 | コミット履歴 clean |
+| **Git リポジトリ** | `https://github.com/rds9team/linkord` (main) | 追従中 | バックエンド・フロントエンド結合テスト全件パス |
 | **バックエンド API** | VPS (`vps-gateway.sorahost.net`) | **オンライン (PM2 id: 5)** | ポート 8085 / SQLite (テストモード) |
-| **フロントエンド** | ローカル `frontend/dist/` ビルド済 | ビルド成功 | Cloudflare Pages 接続待ち |
+| **フロントエンド** | ローカル `frontend/dist/` ビルド済 | ビルド成功 (TypeScript 型チェック済) | Cloudflare Pages 接続待ち |
 | **Discord Webhook** | 通知チャンネル | 正常稼働 | 節目ごとに自動投稿中 |
 | **ドメイン** | `linkord.net` | NS Cloudflare 伝播完了 | Tunnel ホスト名設定待ち |
 
@@ -49,44 +49,96 @@ Linkord（Discord プロフィール & サーバーポータル / linkord.net）
   - プロフィール編集（表示名、自己紹介 Bio、テーマ、Minecraft ID、バッジ非表示設定）
   - 累計アクセス数（`views_count`）の自動カウントアップ
 
-### 4. メディアアップロード & 静的ファイル配信
-- アバター画像 & 背景画像のアップロード API (`POST /api/media/upload`)
+### 4. フォロー / フォロワー機能 (新規追加)
+- **バックエンド**:
+  - `POST /api/profile/{username}/follow` によるフォロー / アンフォローのトグル処理
+  - 重複フォロー防止、自己フォロー防止（400 エラー）
+  - フォロワー数 (`followers_count`)、フォロー中数 (`following_count`)、ログインユーザーのフォロー状態 (`is_following`) を自動集計して返却
+- **フロントエンド**:
+  - プロフィールヘッダーにフォロワー数バッジとワンクリック「フォロー / フォロー中」ボタンを配置
+  - プロフフッター統計欄にフォロワー数カウンターを追加
+  - 状態変更時のリアルタイムUI更新
+
+### 5. サーバー登録・編集・削除機能 (新規追加)
+- **バックエンド**:
+  - `POST /api/servers`: サーバー新規登録（名前、slug、招待URL、アイコンURL、説明、タグ、言語）
+  - `PATCH /api/servers/{slug}`: オーナー限定のサーバー情報更新
+  - `DELETE /api/servers/{slug}`: オーナー限定のサーバー削除
+- **フロントエンド**:
+  - `Discover` ページに「サーバーを掲載する」ボタンを設置
+  - サーバー登録モーダル `CreateServerModal`:
+    - サーバー名、slug (URL重複チェック)、招待URL、説明、タグの入力
+    - アイコン画像のローカルアップロード（`uploadMedia`）& プレビュー対応
+    - 登録完了時に即座に対象サーバーページ (`/server/:slug`) へ自動遷移
+
+### 6. メディアアップロード & 静的ファイル配信
+- アバター画像 & 背景画像 & サーバーアイコンのアップロード API (`POST /api/media/upload`)
 - ファイル先頭マジックナンバー（シグネチャ）による実体検証（JPEG, PNG, WebP, GIF）
 - ファイル名 UUID ハッシュ化、最大 10MB 制限
 - VPS ローカルストレージ安全配信 (`/uploads/...`)
-- 設定画面でのプレビュー＆即時アップロード UI
+- 設定画面 & サーバー登録画面でのプレビュー＆即時アップロード UI
 
-### 5. 外部 API 連携（Lanyard & PlayHive）
-- **Lanyard (Discord Presence)**:
-  - バックエンドプロキシ (`/api/lanyard/{discord_id}`) + タイムアウトフォールバック
-  - Spotify 再生情報の動的表示（曲名、アーティスト、アルバムアート）
-  - Discord ステータス（Online, Idle, DND, Offline）のアバターインジケーター連動
-  - 未連携時・オフライン時の不要なダミー非表示化
+### 7. 外部 API 連携（Lanyard & PlayHive）
+- **Lanyard (Discord リアルタイム Presence & WebSocket 完全同期)**:
+  - `useLanyard` カスタムフックによる公式 WebSocket (`wss://api.lanyard.rest/socket`) リッスン＆定期ハートビート・自動再接続
+  - バックエンド HTTP プロキシ (`/api/lanyard/{discord_id}`) による初回即時ロード＆フォールバック
+  - **Spotify リッチウィジェット**: 曲名、アーティスト、アルバムアート、1秒ごとのリアルタイム再生プログレスバー（進行時間 / 総時間）、Spotify直接リンク
+  - **アクティビティ / ゲーム / VS Code ウィジェット**: アプリ・ゲームアイコン（Discord Asset URL解決）、詳細・状態、経過時間の動的カウント
+  - **カスタムステータス吹き出し (`CustomStatusBubble`)**: Discordの「ひとことステータス」（絵文字＋テキスト）をアバター横に吹き出し表示
+  - **オンライン状態インジケータ**: Online / Idle / DND / Offline のリアルタイム切り替え
+  - **設定画面案内**: Lanyard公式Discordサーバーへのワンクリック参加導線カードを追加
 - **Minecraft PlayHive**:
   - バックエンド PlayHive API クライアント (`/api/minecraft/{uuid}/{gamemode}`)
   - 10 分インメモリキャッシュ & フォールバック機能
   - Kills, Victories, K/D, Level の動的表示
 
-### 6. サーバー機能 & ブースト機能
-- サーバー一覧・検索（名前・説明・タグの部分一致）・カテゴリ絞り込み
-- サーバー詳細ページ (`/server/:slug`)
-- **ブースト機能**:
-  - プロフィールブースト (`POST /api/profile/{username}/boost`)
-  - サーバーブースト (`POST /api/servers/{slug}/boost` または `{id}`)
-  - 1人（または同一IP）1時間に1回のみの厳格な制限
-  - ダミー計算式を撤廃し、DB 実集計の `boosts_count` を返却・表示
+### 8. ブースト機能 & 通報機能
+- プロフィールブースト (`POST /api/profile/{username}/boost`)
+- サーバーブースト (`POST /api/servers/{slug}/boost` または `{id}`)
+- 1人（または同一IP）1時間に1回のみの厳格な制限（DB 集計 `boosts_count`）
+- 通報モーダル (`ReportModal`) による違反プロフ・サーバーの通報送信
 
-### 7. バグ精査 & 修正
-- ブースト数のハードコード・ダミー計算式を完全排除し、実 DB カウントと連動
-- サーバーブースト API でフロントエンドから slug を送った際に 422 になる不整合を修正（ID / slug 両対応）
-- プロフィール画面で `background_url` が反映されない問題を修正（上部カバーバナー実装）
-- バックエンド結合テスト (`test_auth.py`, `test_media.py`) 全件パス確認済み
+### 9. 利用規約・プライバシーポリシー & 共通フッター (新規追加)
+- **利用規約 (`/terms`)**: 禁止事項（スパム、なりすまし、不正アクセス）、サーバー掲載条件、免責事項を明記
+- **プライバシーポリシー (`/privacy`)**: 収集する情報、OAuth2連携、外部API連携（Lanyard/PlayHive）、Cookie利用、データ削除窓口を明記
+- **共通フッター (`Footer`)**: 各種リンク（見つける、利用規約、プライバシーポリシー、公式Discord）と著作権表示を統合
+
+### 10. Cloudflare Pages Functions による Discord Bot 向け動的 OGP 生成 (新規追加)
+- `frontend/functions/_middleware.ts` を実装
+- Discordbot, Twitterbot, Slackbot 等のクローラーUser-Agentをエッジで検知
+- プロフィール (`/@username`) やサーバー (`/server/:slug`) のURLが Discord に貼られた際、自動でタイトル・Bio・アイコン・テーマカラーを含む `<meta property="og:...">` HTMLを即時レスポンス
+
+### 11. フォロー一覧モーダル & 相互連携 (今回追加)
+- `FollowListModal`: プロフィール画面の「フォロワー数」「フォロー中数」をクリックした際にユーザー一覧をモーダル表示
+- バックエンド API: `GET /api/profile/{username}/followers`, `GET /api/profile/{username}/following`
+- アバター、表示名、@username、各種バッジ、Bio の一覧表示と、各ユーザーへのスムーズな画面遷移
+
+### 12. ユーザー検索 & 見つける (Discover) 画面のタブ統合 (今回追加)
+- `GET /api/profile/search`: ユーザー名、表示名、自己紹介によるキーワード検索 API
+- Discover 画面に「Discord サーバー」と「ユーザー」の切り替えタブを設置
+- ユーザー検索カード（フォロワー数・累計閲覧数・バッジ・Bio）
+
+### 13. 管理者ダッシュボード & モデレーション機能 (今回追加)
+- 管理者権限認証ミドルウェア (`require_admin_user`, `ADMIN_USERNAMES` 環境変数対応)
+- 管理画面 UI (`/admin`):
+  - 統計情報カード（ユーザー数、サーバー数、総通報数、未対応通報数）
+  - 通報一覧テーブル（フィルタ、ステータス変更、メモ記録）
+  - 規約違反ユーザー／サーバーのワンクリック強制非公開化機能
+
+### 14. 退会処理 & 退会済みプロフィール表示 (今回追加)
+- `POST /api/auth/delete-account` および `DELETE /api/profile/me`: 論理削除 (`deleted_at`) & セッション全破棄 & Cookie 削除
+- 設定画面に Danger Zone（アカウント削除）を配置
+- 退会済みユーザーの URL アクセス時は HTTP 410 Gone を返し、専用の「退会済み」画面を表示
+
+### 15. バグ精査 & 修正
+- サーバーブースト時の潜在的な制約不整合（未ログイン時にオーナーIDが代入されてしまう問題）を是正
+- サーバー一覧 API に `language` フィルタを追加
 
 ---
 
 ## 📝 ユーザー用備忘録（あとでやることメモ）
 
-後で時間ができたときに進める外部サービス設定・インフラ作業の一覧です。
+時間ができたときに進める外部サービス設定・インフラ作業の一覧です。
 
 ### 1. Discord Developer Portal の設定
 - [Discord Developer Portal](https://discord.com/developers/applications) にアクセス
@@ -99,7 +151,7 @@ Linkord（Discord プロフィール & サーバーポータル / linkord.net）
 - [Google Cloud Console](https://console.cloud.google.com/) で OAuth 2.0 クライアント ID を作成
 - 承認済みのリダイレクト URI に `https://linkord.net/api/auth/google/callback` を追加
 
-### 3. VPS の環境変数 (.env) 更新
+### 3. VPS の環境変数 (.env) 更新 & 再起動
 - VPS（`vps-gateway.sorahost.net`）の `~/services/linkord/backend/.env` を編集:
   ```bash
   DISCORD_CLIENT_ID=取得したClient_ID
@@ -107,6 +159,7 @@ Linkord（Discord プロフィール & サーバーポータル / linkord.net）
   # Googleも設定する場合
   GOOGLE_CLIENT_ID=...
   GOOGLE_CLIENT_SECRET=...
+  ADMIN_USERNAMES=admin,yuto
   ```
 - 反映コマンド:
   ```bash
@@ -124,16 +177,24 @@ Linkord（Discord プロフィール & サーバーポータル / linkord.net）
 
 ### 5. Cloudflare Pages のデプロイ設定
 - Cloudflare Pages に GitHub リポジトリ `rds9team/linkord` を接続
-  - Root directory: `frontend`
-  - Build command: `npm run build`
-  - Output directory: `dist`
-  - Environment variables: `VITE_API_URL=https://api.linkord.net`
+  - **Framework preset**: `Vite`
+  - **Root directory**: `frontend`
+  - **Build command**: `npm run build`
+  - **Build output directory**: `dist`
+  - **Environment variables (Pages Functions用)**:
+    - `API_URL`: `https://api.linkord.net` (デフォルトでもこのURLをフォールバック参照)
+- **ホスティング動作仕様**:
+  - `public/_redirects` (`/* /index.html 200`) により、`/@username` や `/settings`、`/server/:slug` の直接URLアクセス・リロード時でも 404 にならず SPA ルーティングが正常動作。
+  - `functions/api/[[catchall]].ts` により、フロントエンドからの全 `/api/*` リクエストが `API_URL`（VPS API）へ透過リバースプロキシされ、同一オリジン（SameSite Cookie `linkord_session`）として CORS トラブルなく安定通信。
+  - `functions/uploads/[[catchall]].ts` により、ユーザーがアップロードした画像（`/uploads/*`）も透過プロキシおよび Cloudflare CDN 経由で高速配信。
+  - `functions/_middleware.ts` により、Discordbot や Twitterbot などのクローラーに対して動的 OGP HTML を安全に返却（XSS サニタイズ済み）。
 
 ---
 
-## 🚀 次のステップ（残タスク）
+## 🚀 次のステップ（今後の拡張タスク）
 
-1. **サーバー新規登録モーダル / 画面の実装** (フロントエンドから `POST /api/servers`)
-2. **フォロー / フォロワー機能** (`POST /api/profile/{username}/follow`)
-3. **利用規約 (`/terms`) & プライバシーポリシー (`/privacy`) ページ**
-4. **Cloudflare Pages Functions による Discord Bot 向け OGP 動的生成** (ボット検知時に meta タグ HTML を返却)
+1. **サーバー所有権の認証 Bot 連携（オプション）**:
+   - Discord Bot 経由でサーバーの管理者権限確認およびメンバー数のリアルタイム同期
+2. **ランディングページ（LP）のデザインブラッシュアップ**:
+   - guns.lol スタイルの洗練されたファーストビューアニメーション強化
+

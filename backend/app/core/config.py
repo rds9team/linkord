@@ -22,6 +22,11 @@ class Settings(BaseSettings):
     STORAGE_PROVIDER: str = "local"
     UPLOAD_DIR: str = "./uploads"
 
+    ADMIN_USERNAMES: str = "admin"
+
+    def get_admin_usernames(self) -> list[str]:
+        return [u.strip() for u in self.ADMIN_USERNAMES.split(",") if u.strip()]
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 settings = Settings()

@@ -400,6 +400,10 @@ async def dev_login(
         db.add(account)
         await db.commit()
         await db.refresh(account)
+    elif account.deleted_at is not None:
+        account.deleted_at = None
+        await db.commit()
+        await db.refresh(account)
 
     session = await create_user_session(db, account.id, request)
     set_auth_cookie(response, session.session_token)
@@ -430,3 +434,23 @@ async def logout(
 
     response.delete_cookie(key=SESSION_COOKIE_NAME, path="/")
     return {"status": "ok", "message": "ログアウトしました"}
+
+@router.post("/delete-account")
+async def delete_account(
+    response: Response,
+    current_user: Account = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    current_user.deleted_at = datetime.datetime.utcnow()
+    # Delete all active sessions
+    from app.models.models import UserSession
+    stmt = select(UserSession).where(UserSession.account_id == current_user.id)
+    res = await db.execute(stmt)
+    sessions = res.scalars().all()
+    for s in sessions:
+        await db.delete(s)
+
+    await db.commit()
+    response.delete_cookie(key=SESSION_COOKIE_NAME, path="/")
+    return {"status": "ok", "message": "退会処理が完了しました"}
+

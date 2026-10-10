@@ -18,6 +18,11 @@ const FALLBACK_SERVER: ServerData = {
   created_at: '2026-10-01T00:00:00Z',
 };
 
+const isSafeHttpUrl = (url?: string): boolean => {
+  if (!url) return false;
+  return /^https?:\/\//i.test(url.trim());
+};
+
 export const ServerDetail: React.FC = () => {
   const { slug = 'rds9-community' } = useParams<{ slug: string }>();
   const [server, setServer] = useState<ServerData | null>(null);
@@ -148,15 +153,24 @@ export const ServerDetail: React.FC = () => {
 
           {/* Action Buttons */}
           <div className="flex sm:flex-col gap-2 w-full sm:w-auto">
-            <a
-              href={server.invite_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition shadow-lg shadow-indigo-600/20"
-            >
-              <span>サーバーに参加</span>
-              <ExternalLink className="w-3.5 h-3.5" />
-            </a>
+            {isSafeHttpUrl(server.invite_url) ? (
+              <a
+                href={server.invite_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition shadow-lg shadow-indigo-600/20"
+              >
+                <span>サーバーに参加</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            ) : (
+              <button
+                disabled
+                className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl bg-slate-700 text-slate-400 font-bold text-xs flex items-center justify-center gap-1.5 cursor-not-allowed"
+              >
+                <span>招待リンク無効</span>
+              </button>
+            )}
             <button
               onClick={handleBoost}
               disabled={boosted}

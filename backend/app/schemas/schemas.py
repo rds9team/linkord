@@ -1,11 +1,30 @@
-from pydantic import BaseModel, Field, HttpUrl, ConfigDict
+from pydantic import BaseModel, Field, HttpUrl, ConfigDict, field_validator
 from typing import Optional, List
 import datetime
+import re
+
+def validate_safe_http_url(v: Optional[str]) -> Optional[str]:
+    if v is None:
+        return None
+    v = v.strip()
+    if not v:
+        return ""
+    if not (v.startswith("http://") or v.startswith("https://") or v.startswith("/uploads/")):
+        raise ValueError("URLはhttp://またはhttps://で始まる必要があります")
+    return v
 
 class SocialLinkBase(BaseModel):
     title: str = Field(..., max_length=32)
     url: str = Field(..., max_length=512)
     icon: str = Field(default="link", max_length=32)
+
+    @field_validator("url")
+    @classmethod
+    def check_url_scheme(cls, v: str) -> str:
+        v = v.strip()
+        if not (v.startswith("http://") or v.startswith("https://")):
+            raise ValueError("URLはhttp://またはhttps://で始まる必要があります")
+        return v
 
 class SocialLinkOut(SocialLinkBase):
     id: int
@@ -38,6 +57,9 @@ class ProfileOut(BaseModel):
     # Stats
     views_count: int = 0
     boosts_count: int = 0
+    followers_count: int = 0
+    following_count: int = 0
+    is_following: bool = False
     created_at: datetime.datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -61,6 +83,11 @@ class ProfileUpdate(BaseModel):
     analytics_id: Optional[str] = Field(None, max_length=32)
     hide_badges: Optional[bool] = None
 
+    @field_validator("avatar_url", "background_url")
+    @classmethod
+    def check_media_url(cls, v: Optional[str]) -> Optional[str]:
+        return validate_safe_http_url(v)
+
 class ServerOut(BaseModel):
     id: int
     slug: str
@@ -81,12 +108,90 @@ class ServerCreate(BaseModel):
     slug: str = Field(..., max_length=48)
     name: str = Field(..., max_length=64)
     description: Optional[str] = None
+    icon_url: Optional[str] = None
     invite_url: str = Field(..., max_length=512)
     tags: str = ""
     language: str = "ja"
+
+    @field_validator("invite_url")
+    @classmethod
+    def check_invite_url(cls, v: str) -> str:
+        v = v.strip()
+        if not (v.startswith("http://") or v.startswith("https://")):
+            raise ValueError("招待URLはhttp://またはhttps://で始まる必要があります")
+        return v
+
+    @field_validator("icon_url")
+    @classmethod
+    def check_icon_url(cls, v: Optional[str]) -> Optional[str]:
+        return validate_safe_http_url(v)
+
+class ServerUpdate(BaseModel):
+    name: Optional[str] = Field(None, max_length=64)
+    description: Optional[str] = None
+    icon_url: Optional[str] = None
+    invite_url: Optional[str] = Field(None, max_length=512)
+    tags: Optional[str] = None
+    language: Optional[str] = None
+
+    @field_validator("invite_url")
+    @classmethod
+    def check_update_invite_url(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        v = v.strip()
+        if not (v.startswith("http://") or v.startswith("https://")):
+            raise ValueError("招待URLはhttp://またはhttps://で始まる必要があります")
+        return v
+
+    @field_validator("icon_url")
+    @classmethod
+    def check_update_icon_url(cls, v: Optional[str]) -> Optional[str]:
+        return validate_safe_http_url(v)
 
 class ReportCreate(BaseModel):
     target_type: str = Field(..., max_length=32)
     target_id: str = Field(..., max_length=64)
     reason: str = Field(..., max_length=64)
     description: Optional[str] = None
+
+class FollowUserOut(BaseModel):
+    username: str
+    display_name: str
+    avatar_url: Optional[str] = None
+    bio: Optional[str] = None
+    has_discord_authed: bool = False
+    has_supporter: bool = False
+    has_team: bool = False
+    has_founder: bool = False
+
+    model_config = ConfigDict(from_attributes=True)
+
+class ProfileSearchResult(FollowUserOut):
+    views_count: int = 0
+    followers_count: int = 0
+
+class ReportOut(BaseModel):
+    id: int
+    reporter_id: Optional[int] = None
+    target_type: str
+    target_id: str
+    reason: str
+    description: Optional[str] = None
+    status: str
+    admin_note: Optional[str] = None
+    created_at: datetime.datetime
+    resolved_at: Optional[datetime.datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+class ReportUpdate(BaseModel):
+    status: Optional[str] = Field(None, max_length=32)
+    admin_note: Optional[str] = None
+
+class AdminStatsOut(BaseModel):
+    total_users: int
+    total_servers: int
+    total_reports: int
+    pending_reports: int
+

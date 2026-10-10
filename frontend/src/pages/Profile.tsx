@@ -2,11 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   MessageSquare, Github, Twitter, Code, Music, Eye, Flame, Flag, Heart,
-  Loader2, UserX, ExternalLink, Globe, Youtube, Twitch, Send
+  Loader2, UserX, ExternalLink, Globe, Youtube, Twitch, Send, UserPlus, UserCheck, Users
 } from 'lucide-react';
 import { Badges } from '../components/Badges';
 import { ReportModal } from '../components/ReportModal';
-import { fetchProfile, boostProfile, fetchLanyardPresence, fetchMinecraftStats } from '../api/client';
+import { FollowListModal } from '../components/FollowListModal';
+import { SpotifyWidget, ActivityWidget, CustomStatusBubble } from '../components/LanyardWidgets';
+import { useLanyard } from '../hooks/useLanyard';
+import { fetchProfile, boostProfile, toggleFollow, fetchMinecraftStats } from '../api/client';
+import { useAuth } from '../context/AuthContext';
 import { ProfileData } from '../types';
 
 const THEME_ACCENTS: Record<string, { glow: string; border: string; badge: string }> = {
@@ -48,11 +52,18 @@ const getSocialIcon = (iconName: string) => {
   }
 };
 
+const isSafeHttpUrl = (url?: string): boolean => {
+  if (!url) return false;
+  return /^https?:\/\//i.test(url.trim());
+};
+
 export const Profile: React.FC = () => {
   const { username = 'yuto' } = useParams<{ username: string }>();
+  const { user: currentUser } = useAuth();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [isDeleted, setIsDeleted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [isReportOpen, setIsReportOpen] = useState(false);
@@ -60,29 +71,33 @@ export const Profile: React.FC = () => {
   const [hasBoosted, setHasBoosted] = useState(false);
   const [themeMode, setThemeMode] = useState<'dark' | 'light'>('dark');
 
-  // Dynamic Lanyard & Minecraft State
-  const [lanyardData, setLanyardData] = useState<any>(null);
+  // Follow State
+  const [followersCount, setFollowersCount] = useState(0);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
+  const [isFollowModalOpen, setIsFollowModalOpen] = useState(false);
+  const [followModalType, setFollowModalType] = useState<'followers' | 'following'>('followers');
+
+  // Real-time WebSocket Lanyard Presence
+  const { data: lanyardData } = useLanyard(profile?.discord_id);
   const [mcData, setMcData] = useState<any>(null);
+
+  const customStatusActivity = lanyardData?.activities?.find(a => a.type === 4);
+  const otherActivities = lanyardData?.activities?.filter(a => a.type !== 4) || [];
 
   useEffect(() => {
     const loadProfile = async () => {
       try {
         setLoading(true);
         setNotFound(false);
+        setIsDeleted(false);
         setError(null);
         const data = await fetchProfile(username);
         setProfile(data);
         setBoostCount(data.boosts_count !== undefined ? data.boosts_count : 0);
+        setFollowersCount(data.followers_count || 0);
+        setIsFollowing(!!data.is_following);
         setThemeMode(data.theme_mode === 'light' ? 'light' : 'dark');
-
-        // Fetch Lanyard presence if discord_id exists
-        if (data.discord_id) {
-          fetchLanyardPresence(data.discord_id)
-            .then(res => {
-              if (res && res.data) setLanyardData(res.data);
-            })
-            .catch(() => {});
-        }
 
         // Fetch PlayHive stats if minecraft_uuid exists
         if (data.minecraft_uuid) {
@@ -93,7 +108,9 @@ export const Profile: React.FC = () => {
             .catch(() => {});
         }
       } catch (err: any) {
-        if (err.message && (err.message.includes('404') || err.message.includes('not found'))) {
+        if (err.message && (err.message.includes('410') || err.message.includes('退会済み'))) {
+          setIsDeleted(true);
+        } else if (err.message && (err.message.includes('404') || err.message.includes('not found'))) {
           setNotFound(true);
         } else {
           setError(err.message || 'プロフィールの読み込みに失敗しました');
@@ -118,6 +135,24 @@ export const Profile: React.FC = () => {
     }
   };
 
+  const handleToggleFollow = async () => {
+    if (!profile || followLoading) return;
+    if (!currentUser) {
+      alert('ユーザーをフォローするにはログインが必要です');
+      return;
+    }
+    try {
+      setFollowLoading(true);
+      const res = await toggleFollow(profile.username);
+      setIsFollowing(res.is_following);
+      setFollowersCount(res.followers_count);
+    } catch (err: any) {
+      alert(err.message || 'フォロー操作に失敗しました');
+    } finally {
+      setFollowLoading(false);
+    }
+  };
+
   const isLight = themeMode === 'light';
   const themeAccent = THEME_ACCENTS[profile?.theme_id || 'midnight'] || THEME_ACCENTS.midnight;
 
@@ -126,6 +161,36 @@ export const Profile: React.FC = () => {
       <div className="min-h-[80vh] flex flex-col items-center justify-center gap-3">
         <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
         <span className="text-xs text-slate-400">プロフィールを読み込み中...</span>
+      </div>
+    );
+  }
+
+  if (isDeleted) {
+    return (
+      <div className="min-h-[80vh] flex items-center justify-center px-4 relative z-10">
+        <div className="w-full max-w-md p-8 rounded-3xl bg-white/[0.03] border border-white/10 backdrop-blur-xl text-center">
+          <UserX className="w-12 h-12 text-rose-500 mx-auto mb-4" />
+          <h1 className="text-xl font-extrabold text-white tracking-tight mb-2">
+            退会済みのアカウントです
+          </h1>
+          <p className="text-xs text-slate-400 mb-6">
+            「@{username}」のプロフィールはユーザーによって削除されました。
+          </p>
+          <div className="flex items-center justify-center gap-3">
+            <Link
+              to="/discover"
+              className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition"
+            >
+              他のユーザーを探す
+            </Link>
+            <Link
+              to="/"
+              className="px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 font-semibold text-xs transition"
+            >
+              トップへ戻る
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }
@@ -249,7 +314,62 @@ export const Profile: React.FC = () => {
               )}
             </div>
 
-            <p className="font-mono text-xs text-slate-500 dark:text-slate-400 mb-2">@{profile.username}</p>
+            <div className="flex items-center justify-center sm:justify-start gap-2.5 mb-2 flex-wrap">
+              <p className="font-mono text-xs text-slate-500 dark:text-slate-400">@{profile.username}</p>
+              <button
+                onClick={() => {
+                  setFollowModalType('followers');
+                  setIsFollowModalOpen(true);
+                }}
+                className="text-[11px] text-slate-400 hover:text-white flex items-center gap-1 font-medium bg-white/5 hover:bg-white/10 px-2 py-0.5 rounded-full transition cursor-pointer"
+                title="フォロワー一覧を表示"
+              >
+                <Users className="w-3 h-3 text-slate-400" />
+                <span className="font-semibold text-slate-200">{followersCount}</span> フォロワー
+              </button>
+              <button
+                onClick={() => {
+                  setFollowModalType('following');
+                  setIsFollowModalOpen(true);
+                }}
+                className="text-[11px] text-slate-400 hover:text-white flex items-center gap-1 font-medium bg-white/5 hover:bg-white/10 px-2 py-0.5 rounded-full transition cursor-pointer"
+                title="フォロー中一覧を表示"
+              >
+                <span className="font-semibold text-slate-200">{profile.following_count || 0}</span> フォロー中
+              </button>
+              {currentUser?.username !== profile.username && (
+                <button
+                  onClick={handleToggleFollow}
+                  disabled={followLoading}
+                  className={`px-3 py-1 rounded-full text-[11px] font-semibold transition flex items-center gap-1 shadow-sm ${
+                    isFollowing
+                      ? 'bg-white/10 hover:bg-rose-500/20 text-slate-200 hover:text-rose-300 border border-white/10 hover:border-rose-500/30'
+                      : 'bg-purple-600 hover:bg-purple-500 text-white shadow-purple-600/30'
+                  }`}
+                >
+                  {followLoading ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : isFollowing ? (
+                    <>
+                      <UserCheck className="w-3 h-3 text-emerald-400" />
+                      <span>フォロー中</span>
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="w-3 h-3" />
+                      <span>フォロー</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+
+            {/* Discord Custom Status Bubble (Lanyard) */}
+            {customStatusActivity && (
+              <div className="mb-2.5 flex justify-center sm:justify-start">
+                <CustomStatusBubble activity={customStatusActivity} />
+              </div>
+            )}
             {profile.bio && (
               <p className="text-xs leading-relaxed max-w-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap">
                 {profile.bio}
@@ -261,20 +381,23 @@ export const Profile: React.FC = () => {
         {/* Social Links Grid */}
         {profile.links && profile.links.length > 0 ? (
           <div className="grid grid-cols-4 gap-2 mb-4">
-            {profile.links.map(link => (
-              <a
-                key={link.id}
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`rounded-xl p-2.5 flex flex-col items-center justify-center gap-1 transition hover:scale-[1.02] ${isLight ? 'glass-card-light' : 'glass-card-dark'}`}
-              >
-                {getSocialIcon(link.icon || link.title)}
-                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate max-w-full">
-                  {link.title}
-                </span>
-              </a>
-            ))}
+            {profile.links.map(link => {
+              const safe = isSafeHttpUrl(link.url);
+              return (
+                <a
+                  key={link.id}
+                  href={safe ? link.url : '#'}
+                  target={safe ? '_blank' : undefined}
+                  rel={safe ? 'noopener noreferrer' : undefined}
+                  className={`rounded-xl p-2.5 flex flex-col items-center justify-center gap-1 transition hover:scale-[1.02] ${isLight ? 'glass-card-light' : 'glass-card-dark'}`}
+                >
+                  {getSocialIcon(link.icon || link.title)}
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate max-w-full">
+                    {link.title}
+                  </span>
+                </a>
+              );
+            })}
           </div>
         ) : (
           <div className="grid grid-cols-4 gap-2 mb-4">
@@ -297,50 +420,15 @@ export const Profile: React.FC = () => {
           </div>
         )}
 
-        {/* Spotify / Lanyard Presence Widget (Dynamic) */}
-        {lanyardData?.spotify ? (
-          <div className={`rounded-2xl p-3.5 mb-3 flex items-center gap-3 relative overflow-hidden ${isLight ? 'glass-card-light' : 'glass-card-dark'}`}>
-            <div className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500"></div>
-            <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-300 dark:bg-slate-800 flex-shrink-0 relative">
-              {lanyardData.spotify.album_art_url ? (
-                <img
-                  src={lanyardData.spotify.album_art_url}
-                  alt="Album Cover"
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full bg-slate-700 flex items-center justify-center">
-                  <Music className="w-5 h-5 text-white" />
-                </div>
-              )}
-              <div className="absolute bottom-1 right-1 w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center">
-                <Music className="w-2.5 h-2.5 text-white" />
-              </div>
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5 text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold tracking-wider uppercase mb-0.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                Listening to Spotify
-              </div>
-              <p className="text-xs font-bold truncate">{lanyardData.spotify.song}</p>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{lanyardData.spotify.artist}</p>
-            </div>
-          </div>
-        ) : lanyardData?.activities && lanyardData.activities.length > 0 ? (
-          <div className={`rounded-2xl p-3.5 mb-3 flex items-center gap-3 relative overflow-hidden ${isLight ? 'glass-card-light' : 'glass-card-dark'}`}>
-            <div className="absolute left-0 top-0 bottom-0 w-1 bg-purple-500"></div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5 text-[10px] text-purple-400 font-semibold tracking-wider uppercase mb-0.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse"></span>
-                Discord Activity
-              </div>
-              <p className="text-xs font-bold truncate">{lanyardData.activities[0].name}</p>
-              {lanyardData.activities[0].details && (
-                <p className="text-[11px] text-slate-400 truncate">{lanyardData.activities[0].details}</p>
-              )}
-            </div>
-          </div>
-        ) : null}
+        {/* Spotify / Lanyard Presence Widget (Dynamic & WebSocket-synced) */}
+        {lanyardData?.spotify && (
+          <SpotifyWidget spotify={lanyardData.spotify} isLight={isLight} />
+        )}
+
+        {/* Discord Activities (Games, VS Code, Streaming etc.) */}
+        {otherActivities.length > 0 && (
+          <ActivityWidget activity={otherActivities[0]} isLight={isLight} />
+        )}
 
         {/* Minecraft PlayHive Stats Card (if minecraft_uuid exists or mcData exists) */}
         {profile.minecraft_uuid && (
@@ -410,6 +498,17 @@ export const Profile: React.FC = () => {
               <Eye className="w-3.5 h-3.5" />
               <span>{(profile.views_count || 1).toLocaleString()}</span>
             </span>
+            <button
+              onClick={() => {
+                setFollowModalType('followers');
+                setIsFollowModalOpen(true);
+              }}
+              className="flex items-center gap-1 hover:text-white transition cursor-pointer"
+              title="フォロワー一覧を表示"
+            >
+              <Users className="w-3.5 h-3.5" />
+              <span>{followersCount.toLocaleString()}</span>
+            </button>
             <span className="flex items-center gap-1" title="ブースト数">
               <Flame className="w-3.5 h-3.5 text-amber-500" />
               <span className="text-amber-500 font-bold">{boostCount}</span>
@@ -453,6 +552,14 @@ export const Profile: React.FC = () => {
         onClose={() => setIsReportOpen(false)}
         targetType="profile"
         targetId={profile.username}
+      />
+
+      {/* Follow List Modal */}
+      <FollowListModal
+        isOpen={isFollowModalOpen}
+        onClose={() => setIsFollowModalOpen(false)}
+        username={profile.username}
+        type={followModalType}
       />
     </div>
   );

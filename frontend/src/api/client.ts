@@ -1,4 +1,4 @@
-import { ProfileData, ProfileUpdateData, ServerData, ReportData, AuthResponse } from '../types';
+import { ProfileData, ProfileUpdateData, ServerData, ServerCreateData, ReportData, AuthResponse, FollowUser, ProfileSearchResult, ReportItem, AdminStats } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
@@ -96,6 +96,25 @@ export const fetchServer = (slug: string): Promise<ServerData> => {
   return request<ServerData>(`/api/servers/${encodeURIComponent(slug)}`);
 };
 
+export const createServer = (data: ServerCreateData): Promise<ServerData> => {
+  return request<ServerData>('/api/servers', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+};
+
+export const deleteServer = (slug: string): Promise<{ status: string; message: string }> => {
+  return request<{ status: string; message: string }>(`/api/servers/${encodeURIComponent(slug)}`, {
+    method: 'DELETE',
+  });
+};
+
+export const toggleFollow = (username: string): Promise<{ status: string; is_following: boolean; followers_count: number; message: string }> => {
+  return request<{ status: string; is_following: boolean; followers_count: number; message: string }>(`/api/profile/${encodeURIComponent(username)}/follow`, {
+    method: 'POST',
+  });
+};
+
 export const boostServer = (slug: string): Promise<{ status: string; message: string }> => {
   return request<{ status: string; message: string }>(`/api/servers/${encodeURIComponent(slug)}/boost`, {
     method: 'POST',
@@ -146,3 +165,58 @@ export const fetchLanyardPresence = async (discordId: string): Promise<any> => {
 export const fetchMinecraftStats = async (uuid: string, gamemode: string = 'bedwars'): Promise<any> => {
   return request<any>(`/api/minecraft/${encodeURIComponent(uuid)}/${encodeURIComponent(gamemode)}`);
 };
+
+export const fetchFollowers = (username: string): Promise<FollowUser[]> => {
+  return request<FollowUser[]>(`/api/profile/${encodeURIComponent(username)}/followers`);
+};
+
+export const fetchFollowing = (username: string): Promise<FollowUser[]> => {
+  return request<FollowUser[]>(`/api/profile/${encodeURIComponent(username)}/following`);
+};
+
+export const searchProfiles = (query?: string): Promise<ProfileSearchResult[]> => {
+  return request<ProfileSearchResult[]>('/api/profile/search', {
+    params: { q: query },
+  });
+};
+
+export const checkAdminAccess = (): Promise<{ status: string; is_admin: boolean; username: string }> => {
+  return request<{ status: string; is_admin: boolean; username: string }>('/api/admin/check');
+};
+
+export const fetchAdminStats = (): Promise<AdminStats> => {
+  return request<AdminStats>('/api/admin/stats');
+};
+
+export const fetchAdminReports = (status?: string): Promise<ReportItem[]> => {
+  return request<ReportItem[]>('/api/admin/reports', {
+    params: { status },
+  });
+};
+
+export const updateAdminReport = (id: number, data: { status?: string; admin_note?: string }): Promise<ReportItem> => {
+  return request<ReportItem>(`/api/admin/reports/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+};
+
+export const toggleProfileVisibility = (username: string): Promise<any> => {
+  return request<any>(`/api/admin/profiles/${encodeURIComponent(username)}/visibility`, {
+    method: 'PATCH',
+  });
+};
+
+export const toggleServerVisibility = (slug: string): Promise<any> => {
+  return request<any>(`/api/admin/servers/${encodeURIComponent(slug)}/visibility`, {
+    method: 'PATCH',
+  });
+};
+
+export const deleteAccount = (): Promise<{ status: string; message: string }> => {
+  return request<{ status: string; message: string }>('/api/auth/delete-account', {
+    method: 'POST',
+  });
+};
+
+

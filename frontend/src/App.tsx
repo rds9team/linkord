@@ -1,12 +1,16 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Navbar } from './components/Navbar';
+import { Footer } from './components/Footer';
 import { Home } from './pages/Home';
 import { Profile } from './pages/Profile';
 import { Discover } from './pages/Discover';
 import { ServerDetail } from './pages/ServerDetail';
 import { Settings } from './pages/Settings';
 import { Login } from './pages/Login';
+import { Terms } from './pages/Terms';
+import { Privacy } from './pages/Privacy';
+import { Admin } from './pages/Admin';
 import { AuthProvider } from './context/AuthContext';
 
 export const App: React.FC = () => {
@@ -26,10 +30,15 @@ export const App: React.FC = () => {
             <Route path="/server/:slug" element={<ServerDetail />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/admin" element={<Admin />} />
             <Route path="/@:username" element={<Profile />} />
             <Route path="/:username" element={<Profile />} />
           </Routes>
         </div>
+
+        <Footer />
       </div>
     </BrowserRouter>
   </AuthProvider>

@@ -6,7 +6,7 @@ from app.core.database import engine, Base
 import os
 from fastapi.staticfiles import StaticFiles
 import app.models
-from app.api import auth, profile, server, minecraft, lanyard, report, media
+from app.api import auth, profile, server, minecraft, lanyard, report, media, admin
 
 # Ensure uploads directory exists
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
@@ -32,11 +32,29 @@ app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads"
 # CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.FRONTEND_URL, "http://localhost:5173", "http://localhost:3000", "https://linkord.net"],
+    allow_origins=[
+        settings.FRONTEND_URL,
+        "http://localhost:5173",
+        "http://localhost:4173",
+        "http://localhost:3000",
+        "https://linkord.net",
+        "https://www.linkord.net",
+    ],
+    allow_origin_regex=r"^https://([a-zA-Z0-9-]+\.)*linkord\.net$|^https://([a-zA-Z0-9-]+\.)*pages\.dev$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Security Headers Middleware
+@app.middleware("http")
+async def add_security_headers(request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    return response
 
 # Include API routers
 app.include_router(auth.router, prefix="/api")
@@ -46,6 +64,7 @@ app.include_router(minecraft.router, prefix="/api")
 app.include_router(lanyard.router, prefix="/api")
 app.include_router(report.router, prefix="/api")
 app.include_router(media.router, prefix="/api")
+app.include_router(admin.router, prefix="/api")
 
 @app.get("/api/health")
 def health_check():

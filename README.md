@@ -14,8 +14,8 @@ Linkord（https://linkord.net）は、Discordユーザーのプロフィール�
 
 - **プロフィール**: guns.lol スタイルのサイバー・ダークグラスモーフィズム、カスタムテーマ（Dark/White、12種プリセット）
 - **Discord / Google 認証**: 安全な OAuth2 + セッション Cookie 管理、Authed バッジ自動付与
-- **コミュニティ**: Discord サーバー掲載・検索、ユーザー検索、フォロー・フォロワーモーダル
-- **外部連携**: Lanyard (Spotify / Discord アクティビティ同期)、Minecraft PlayHive 戦績
+- **コミュニティ & 簡単サーバー掲載**: Discord 招待URL / OAuth 連携によるワンクリック自動情報補完（サーバー名・アイコン・メンバー数自動取得）、サーバー検索、ユーザー検索、フォロー・フォロワーモーダル
+- **外部連携**: Lanyard (Spotify / Discord アクティビティ同期)、Minecraft PlayHive 公式戦績
 - **モデレーション**: 通報システム、管理者ダッシュボード (`/admin`)、規約違反コンテンツの非公開化
 - **その他**: ブースト機能、Cloudflare Pages Functions 動的 OGP 生成、アカウント退会処理
 

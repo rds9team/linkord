@@ -370,6 +370,18 @@ PlayHive API
 
 ## 11. サーバー登録
 
+### 登録方式（Discord連携・招待URL自動検証）
+
+手動入力の手間を省き、安全かつ簡単にサーバーを掲載できる仕組みを提供する。
+
+1. **Discord招待URLからの自動取得・検証（ワンクリック補完）**:
+   - 招待URL (`https://discord.gg/xxxxxx`) を入力すると、Discord 公式 Invite API (`/api/v10/invites/{code}?with_counts=true`) を自動コール。
+   - サーバー名、Discord公式アイコンURL、総メンバー数、アクティブ人数を即座に自動取得・入力フォームへ自動補完。
+   - サーバー名からURLスラッグ（slug）の自動生成サジェストを行う。
+2. **Discord OAuth連携によるサーバー掲載・所有権確認（オプション・推奨）**:
+   - Discord OAuth2 のギルド管理権限・所属ギルド情報を利用し、ユーザーが管理者（Administrator / Manage Guild）権限を持つサーバー一覧からワンタップで選択・掲載可能。
+   - なりすまし登録を防止し、正規オーナー認証を自動化。
+
 ### 登録項目
 
 - サーバー名
@@ -395,9 +407,10 @@ PlayHive API
 
 取得優先順位：
 
-1. Discord公式ウィジェット等から取得
-2. 導入Botから取得
-3. 管理者による手動入力
+1. Discord公式招待API（Invite API with_counts=true）からリアルタイム取得
+2. Discord公式ウィジェット等から取得
+3. 導入Botから取得
+4. 管理者による手動入力
 
 取得できない場合は、最終更新日時を表示する。
 

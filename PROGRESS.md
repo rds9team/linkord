@@ -190,6 +190,23 @@ Linkord（Discord プロフィール & サーバーポータル / linkord.net）
   - `functions/uploads/[[catchall]].ts` により、ユーザーがアップロードした画像（`/uploads/*`）も透過プロキシおよび Cloudflare CDN 経由で高速配信。
   - `functions/_middleware.ts` により、Discordbot や Twitterbot などのクローラーに対して動的 OGP HTML を安全に返却（XSS サニタイズ済み）。
 
+### 10. PayPay 支援機能 & Supporter バッジ付与ワークフロー (新規追加)
+- **概要**:
+  - ユーザーが PayPay アプリで発行した送金リンク（`https://pay.paypay.ne.jp/...`）をフォームから送信。
+  - バックエンドで `https://pay.paypay.ne.jp/` 正規表現による厳格なバリデーションを実施後、`donations` テーブルに保存。
+  - Discord Webhook 通知により、管理者チャンネルへ支援者情報・送金リンク・パスコードを即時通知。
+  - 管理者ダッシュボード（`/admin`）に「💖 PayPay支援管理」タブを実装：
+    - 送金リンクの確認・受取用外部リンクボタン
+    - ワンクリックでの「承認 & Supporterバッジ付与」ボタン（ユーザーの `has_supporter = True` に更新）
+    - 却下ボタンおよび対応ステータス管理
+  - ナビゲーションバーの「応援する」ボタンから `SupportModal` を呼び出し可能。
+
+### 11. Discord 連携時のユーザー名直接採用 & DB クリーンアップ
+- Discord の pomelo（新ユーザー名システム）に準拠し、Discord 連携時は Discord のユニークなユーザー名（小文字英数字・ピリオド・アンダースコア）をそのまま Linkord の `username` として採用。
+- Discord 連携ユーザーはタグ（`#0001` 等）を付加せず、`@username` 単体で表示。
+- 将来のパスワード登録等のみタグ番号を付与する柔軟な設計にアップデート（`Account.tag` の NULL 許容化、`full_username` プロパティの自動切り替え）。
+- 既存のテスト用アカウント・関連テーブルデータを初期化（0件）し、実運用可能な状態に整備。
+
 ---
 
 ## 🚀 次のステップ（今後の拡張タスク）

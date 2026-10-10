@@ -350,7 +350,10 @@ export const Discover: React.FC = () => {
                           {u.display_name}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-400 truncate">@{u.username}</p>
+                      <p className="text-xs text-slate-400 truncate flex items-center font-mono">
+                        <span>@{u.username}</span>
+                        {u.tag && <span className="text-purple-400 font-semibold opacity-90">#{u.tag}</span>}
+                      </p>
                       <div className="mt-1">
                         <Badges
                           hasDiscordAuthed={u.has_discord_authed}

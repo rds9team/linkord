@@ -1,12 +1,14 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { ProfileData } from '../types';
-import { fetchMe, devLogin as apiDevLogin, logout as apiLogout } from '../api/client';
+import { fetchMe, devLogin as apiDevLogin, logout as apiLogout, loginWithPassword as apiLoginWithPassword, registerAccount as apiRegisterAccount } from '../api/client';
 
 interface AuthContextType {
   user: ProfileData | null;
   loading: boolean;
   isAuthenticated: boolean;
   login: () => Promise<void>;
+  loginWithPassword: (identifier: string, password: string) => Promise<void>;
+  register: (username: string, password: string, displayName?: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -42,6 +44,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const loginWithPassword = async (identifier: string, password: string) => {
+    try {
+      await apiLoginWithPassword({ identifier, password });
+      await refreshUser();
+    } catch (err) {
+      console.error('Password login failed:', err);
+      throw err;
+    }
+  };
+
+  const register = async (username: string, password: string, displayName?: string) => {
+    try {
+      await apiRegisterAccount({ username, password, display_name: displayName });
+      await refreshUser();
+    } catch (err) {
+      console.error('Registration failed:', err);
+      throw err;
+    }
+  };
+
   const logout = async () => {
     try {
       await apiLogout();
@@ -59,6 +81,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loading,
         isAuthenticated: !!user,
         login,
+        loginWithPassword,
+        register,
         logout,
         refreshUser,
       }}

@@ -23,7 +23,7 @@ const PRESET_THEMES = [
 
 export const Settings: React.FC = () => {
   useTitle('設定');
-  const { refreshUser } = useAuth();
+  const { refreshUser, user } = useAuth();
   const navigate = useNavigate();
   const [initialLoading, setInitialLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -200,6 +200,25 @@ export const Settings: React.FC = () => {
             <User className="w-4 h-4 text-purple-400" />
             <span>基本情報</span>
           </div>
+
+          {/* User ID & Tag */}
+          {user && (
+            <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-between">
+              <div>
+                <p className="text-[11px] text-purple-300 font-semibold">ユーザーID（タグ）</p>
+                <p className="text-xs font-mono text-white flex items-center gap-1 mt-0.5">
+                  <span>@{user.username}</span>
+                  {user.tag && <span className="text-purple-400 font-bold">#{user.tag}</span>}
+                </p>
+              </div>
+              <Link
+                to={`/@${user.username}`}
+                className="text-[11px] text-purple-300 hover:text-white font-semibold underline underline-offset-2"
+              >
+                プロフィールを確認
+              </Link>
+            </div>
+          )}
 
           {/* Avatar Upload */}
           <div>

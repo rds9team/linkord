@@ -66,9 +66,25 @@ export const getDiscordLoginUrl = async (): Promise<string> => {
   return res.url;
 };
 
-export const getGoogleLoginUrl = async (): Promise<string> => {
-  const res = await request<{ url: string }>('/api/auth/google/login');
-  return res.url;
+export const registerAccount = (data: {
+  username: string;
+  password: string;
+  display_name?: string;
+}): Promise<AuthResponse> => {
+  return request<AuthResponse>('/api/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+};
+
+export const loginWithPassword = (data: {
+  identifier: string;
+  password: string;
+}): Promise<AuthResponse> => {
+  return request<AuthResponse>('/api/auth/login', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
 };
 
 export const devLogin = (): Promise<AuthResponse> => {

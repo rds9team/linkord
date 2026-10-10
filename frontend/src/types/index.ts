@@ -7,6 +7,8 @@ export interface SocialLink {
 
 export interface ProfileData {
   username: string;
+  tag?: string;
+  full_username?: string;
   display_name: string;
   bio?: string;
   theme_id: string;
@@ -81,11 +83,15 @@ export interface AuthResponse {
   user?: {
     id: number;
     username: string;
+    tag?: string;
+    full_username?: string;
+    display_name?: string;
   };
 }
 
 export interface FollowUser {
   username: string;
+  tag?: string;
   display_name: string;
   avatar_url?: string;
   bio?: string;

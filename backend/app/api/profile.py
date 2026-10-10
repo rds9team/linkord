@@ -41,6 +41,7 @@ async def search_profiles(
         followers = await get_followers_count(db, acc.id)
         out.append(ProfileSearchResult(
             username=acc.username,
+            tag=acc.tag,
             display_name=acc.display_name,
             avatar_url=acc.avatar_url,
             bio=acc.bio,
@@ -73,6 +74,40 @@ async def check_is_following(db: AsyncSession, follower_id: int, following_id: i
     stmt = select(Follow.id).where(Follow.follower_id == follower_id, Follow.following_id == following_id)
     res = await db.execute(stmt)
     return res.scalars().first() is not None
+
+async def find_account_by_identifier(db: AsyncSession, identifier: str) -> Optional[Account]:
+    clean = identifier.strip()
+    target_username = clean
+    target_tag: Optional[str] = None
+
+    if "#" in clean:
+        parts = clean.split("#", 1)
+        target_username = parts[0].strip().lower()
+        target_tag = parts[1].strip()
+    elif "-" in clean and len(clean.rsplit("-", 1)[1]) == 4 and clean.rsplit("-", 1)[1].isdigit():
+        parts = clean.rsplit("-", 1)
+        target_username = parts[0].strip().lower()
+        target_tag = parts[1].strip()
+    else:
+        target_username = clean.lower()
+
+    if target_tag:
+        stmt = (
+            select(Account)
+            .options(selectinload(Account.links))
+            .where(Account.username == target_username, Account.tag == target_tag)
+        )
+        res = await db.execute(stmt)
+        return res.scalars().first()
+    else:
+        stmt = (
+            select(Account)
+            .options(selectinload(Account.links))
+            .where(Account.username == target_username)
+            .order_by(Account.id.asc())
+        )
+        res = await db.execute(stmt)
+        return res.scalars().first()
 
 @router.get("/me", response_model=ProfileOut)
 async def get_my_profile(
@@ -247,13 +282,7 @@ async def get_profile(
     current_user: Optional[Account] = Depends(get_optional_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    stmt = (
-        select(Account)
-        .options(selectinload(Account.links))
-        .where(Account.username == username)
-    )
-    result = await db.execute(stmt)
-    account = result.scalars().first()
+    account = await find_account_by_identifier(db, username)
 
     if not account:
         raise HTTPException(status_code=404, detail="Profile not found")

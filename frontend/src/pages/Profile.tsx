@@ -103,7 +103,9 @@ export const Profile: React.FC = () => {
         setNotFound(false);
         setIsDeleted(false);
         setError(null);
-        const data = await fetchProfile(username);
+        const hashTag = window.location.hash ? window.location.hash.replace('#', '') : '';
+        const identifier = hashTag && /^\d{4}$/.test(hashTag) ? `${username}#${hashTag}` : username;
+        const data = await fetchProfile(identifier);
         setProfile(data);
         setBoostCount(data.boosts_count !== undefined ? data.boosts_count : 0);
         setFollowersCount(data.followers_count || 0);
@@ -326,7 +328,10 @@ export const Profile: React.FC = () => {
             </div>
 
             <div className="flex items-center justify-center sm:justify-start gap-2.5 mb-2 flex-wrap">
-              <p className="font-mono text-xs text-slate-500 dark:text-slate-400">@{profile.username}</p>
+              <p className="font-mono text-xs text-slate-500 dark:text-slate-400 flex items-center">
+                <span>@{profile.username}</span>
+                {profile.tag && <span className="text-purple-400 font-semibold opacity-90">#{profile.tag}</span>}
+              </p>
               <button
                 onClick={() => {
                   setFollowModalType('followers');

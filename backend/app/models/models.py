@@ -9,7 +9,9 @@ class Account(Base):
     __tablename__ = "accounts"
 
     id = Column(Integer, primary_key=True, index=True)
-    username = Column(String(32), unique=True, index=True, nullable=False)
+    username = Column(String(32), index=True, nullable=False)
+    tag = Column(String(4), default="0001", nullable=False)
+    password_hash = Column(String(256), nullable=True)
     display_name = Column(String(64), nullable=False)
     bio = Column(Text, nullable=True)
     theme_id = Column(String(32), default="midnight", nullable=False)
@@ -38,6 +40,14 @@ class Account(Base):
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow, nullable=False)
     last_login_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
     deleted_at = Column(DateTime, nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint("username", "tag", name="uq_username_tag"),
+    )
+
+    @property
+    def full_username(self) -> str:
+        return f"{self.username}#{self.tag}"
 
     identities = relationship("AccountIdentity", back_populates="account", cascade="all, delete-orphan")
     links = relationship("SocialLink", back_populates="account", cascade="all, delete-orphan")

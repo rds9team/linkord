@@ -11,7 +11,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
 from app.core.config import settings
-from app.core.security import generate_oauth_state, verify_oauth_state
+from app.core.security import generate_oauth_state, verify_oauth_state, hash_password, verify_password
 from app.core.auth import (
     get_current_user,
     create_user_session,
@@ -19,7 +19,7 @@ from app.core.auth import (
     SESSION_COOKIE_NAME,
 )
 from app.models.models import Account, AccountIdentity
-from app.schemas.schemas import AccountMeOut
+from app.schemas.schemas import AccountMeOut, UserRegister, UserLogin
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -34,24 +34,146 @@ def set_auth_cookie(response: Response, session_token: str) -> None:
         path="/"
     )
 
+async def generate_unique_tag(db: AsyncSession, username: str) -> str:
+    stmt = select(Account.tag).where(Account.username == username)
+    res = await db.execute(stmt)
+    existing_tags = set(res.scalars().all())
+
+    # 1. 0001〜9999からランダムに試行
+    for _ in range(50):
+        val = secrets.randbelow(9999) + 1
+        candidate = f"{val:04d}"
+        if candidate not in existing_tags:
+            return candidate
+
+    # 2. 衝突が多い場合は1から空きを探す
+    for val in range(1, 10000):
+        candidate = f"{val:04d}"
+        if candidate not in existing_tags:
+            return candidate
+
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail=f"ユーザー名 '{username}' のタグ番号（0001〜9999）が上限に達しています。別のユーザー名をお試しください。"
+    )
+
 async def generate_unique_username(db: AsyncSession, base_name: str) -> str:
     cleaned = re.sub(r"[^a-zA-Z0-9_]", "", base_name.lower())
     if not cleaned:
         cleaned = "user"
-    cleaned = cleaned[:24]
+    return cleaned[:24]
 
-    candidate = cleaned
-    counter = 1
-    while True:
-        stmt = select(Account).where(Account.username == candidate)
+@router.post("/register")
+async def register_account(
+    req_data: UserRegister,
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_db)
+):
+    clean_username = req_data.username.lower().strip()
+    tag = await generate_unique_tag(db, clean_username)
+    display_name = req_data.display_name.strip() if req_data.display_name else clean_username
+
+    account = Account(
+        username=clean_username,
+        tag=tag,
+        display_name=display_name[:64],
+        password_hash=hash_password(req_data.password),
+        last_login_at=datetime.datetime.utcnow(),
+    )
+    db.add(account)
+    await db.commit()
+    await db.refresh(account)
+
+    session = await create_user_session(db, account.id, request)
+    set_auth_cookie(response, session.session_token)
+
+    return {
+        "status": "ok",
+        "user": {
+            "id": account.id,
+            "username": account.username,
+            "tag": account.tag,
+            "full_username": account.full_username,
+            "display_name": account.display_name,
+        },
+        "session_token": session.session_token
+    }
+
+@router.post("/login")
+async def login_account(
+    login_data: UserLogin,
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_db)
+):
+    identifier = login_data.identifier.strip()
+    target_username = identifier
+    target_tag: Optional[str] = None
+
+    if "#" in identifier:
+        parts = identifier.split("#", 1)
+        target_username = parts[0].strip().lower()
+        target_tag = parts[1].strip()
+    else:
+        target_username = identifier.lower()
+
+    if target_tag:
+        stmt = (
+            select(Account)
+            .options(selectinload(Account.links))
+            .where(Account.username == target_username, Account.tag == target_tag, Account.deleted_at.is_(None))
+        )
         res = await db.execute(stmt)
-        if not res.scalars().first():
-            return candidate
-        random_suffix = secrets.token_hex(2)
-        candidate = f"{cleaned[:20]}_{random_suffix}"
-        counter += 1
-        if counter > 10:
-            return f"user_{secrets.token_hex(4)}"
+        account = res.scalars().first()
+    else:
+        stmt = (
+            select(Account)
+            .options(selectinload(Account.links))
+            .where(Account.username == target_username, Account.deleted_at.is_(None))
+        )
+        res = await db.execute(stmt)
+        accounts = res.scalars().all()
+        if len(accounts) == 1:
+            account = accounts[0]
+        elif len(accounts) > 1:
+            matching = [acc for acc in accounts if verify_password(login_data.password, acc.password_hash)]
+            if len(matching) == 1:
+                account = matching[0]
+            elif len(matching) > 1:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="同名のユーザーが複数存在します。タグ番号を含めて入力してください（例: username#0001）"
+                )
+            else:
+                account = None
+        else:
+            account = None
+
+    if not account or not verify_password(login_data.password, account.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="ユーザー名またはパスワードが正しくありません"
+        )
+
+    account.last_login_at = datetime.datetime.utcnow()
+    await db.commit()
+    await db.refresh(account)
+
+    session = await create_user_session(db, account.id, request)
+    set_auth_cookie(response, session.session_token)
+
+    return {
+        "status": "ok",
+        "user": {
+            "id": account.id,
+            "username": account.username,
+            "tag": account.tag,
+            "full_username": account.full_username,
+            "display_name": account.display_name,
+        },
+        "session_token": session.session_token
+    }
 
 @router.get("/me", response_model=AccountMeOut)
 async def get_me(current_user: Account = Depends(get_current_user)):
@@ -187,8 +309,10 @@ async def discord_callback(
             account.avatar_url = avatar_url
     else:
         new_username = await generate_unique_username(db, discord_username)
+        tag = await generate_unique_tag(db, new_username)
         account = Account(
             username=new_username,
+            tag=tag,
             display_name=global_name[:64],
             avatar_url=avatar_url,
             discord_id=discord_user_id,
@@ -387,6 +511,7 @@ async def dev_login(
     if not account:
         account = Account(
             username="yuto",
+            tag="0001",
             display_name="yuto",
             bio="Fullstack Developer & Minecraft PvP Player. Building Linkord & Web projects.",
             theme_id="midnight",
@@ -402,6 +527,8 @@ async def dev_login(
         await db.refresh(account)
     elif account.deleted_at is not None:
         account.deleted_at = None
+        if not getattr(account, "tag", None):
+            account.tag = "0001"
         await db.commit()
         await db.refresh(account)
 

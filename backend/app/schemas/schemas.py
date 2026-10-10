@@ -33,6 +33,8 @@ class SocialLinkOut(SocialLinkBase):
 
 class ProfileOut(BaseModel):
     username: str
+    tag: str = "0001"
+    full_username: Optional[str] = None
     display_name: str
     bio: Optional[str] = None
     theme_id: str = "midnight"
@@ -70,6 +72,23 @@ class AccountMeOut(ProfileOut):
     last_login_at: datetime.datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+class UserRegister(BaseModel):
+    username: str = Field(..., min_length=3, max_length=24)
+    password: str = Field(..., min_length=6, max_length=128)
+    display_name: Optional[str] = Field(None, max_length=64)
+
+    @field_validator("username")
+    @classmethod
+    def validate_username(cls, v: str) -> str:
+        v = v.strip().lower()
+        if not re.match(r"^[a-zA-Z0-9_]+$", v):
+            raise ValueError("ユーザー名は半角英数字およびアンダースコア（_）のみ使用できます")
+        return v
+
+class UserLogin(BaseModel):
+    identifier: str = Field(..., min_length=1, max_length=36)
+    password: str = Field(..., min_length=1, max_length=128)
 
 class ProfileUpdate(BaseModel):
     display_name: Optional[str] = Field(None, max_length=64)
@@ -157,6 +176,7 @@ class ReportCreate(BaseModel):
 
 class FollowUserOut(BaseModel):
     username: str
+    tag: str = "0001"
     display_name: str
     avatar_url: Optional[str] = None
     bio: Optional[str] = None

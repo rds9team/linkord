@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     def get_admin_usernames(self) -> list[str]:
         return [u.strip() for u in self.ADMIN_USERNAMES.split(",") if u.strip()]
 
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=(".env", "../.env", "backend/.env"),
+        extra="ignore"
+    )
 
 settings = Settings()

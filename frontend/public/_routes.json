@@ -8,6 +8,8 @@
   "exclude": [
     "/assets/*",
     "/favicon.ico",
+    "/favicon.svg",
+    "/logo.svg",
     "/logo.png"
   ]
 }

@@ -72,11 +72,12 @@ export const logout = (): Promise<{ status: string }> => {
   });
 };
 
-export const fetchServers = (category?: string, search?: string): Promise<ServerData[]> => {
+export const fetchServers = (category?: string, search?: string, sort?: string): Promise<ServerData[]> => {
   return request<ServerData[]>('/api/servers', {
     params: {
       tag: category,
       search: search,
+      sort: sort,
     },
   });
 };
@@ -220,6 +221,22 @@ export const toggleProfileVisibility = (username: string): Promise<any> => {
 export const toggleServerVisibility = (slug: string): Promise<any> => {
   return request<any>(`/api/admin/servers/${encodeURIComponent(slug)}/visibility`, {
     method: 'PATCH',
+  });
+};
+
+export const updateProfileBadges = (
+  username: string,
+  badges: { has_supporter?: boolean; has_team?: boolean; has_founder?: boolean; has_discord_authed?: boolean }
+): Promise<any> => {
+  const params: Record<string, string> = {};
+  if (badges.has_supporter !== undefined) params.has_supporter = String(badges.has_supporter);
+  if (badges.has_team !== undefined) params.has_team = String(badges.has_team);
+  if (badges.has_founder !== undefined) params.has_founder = String(badges.has_founder);
+  if (badges.has_discord_authed !== undefined) params.has_discord_authed = String(badges.has_discord_authed);
+
+  return request<any>(`/api/admin/profiles/${encodeURIComponent(username)}/badges`, {
+    method: 'PATCH',
+    params,
   });
 };
 

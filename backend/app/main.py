@@ -20,6 +20,8 @@ async def ensure_schema_updated(conn):
             await conn.exec_driver_sql("ALTER TABLE accounts ADD COLUMN music_url VARCHAR(512);")
         if "video_url" not in columns:
             await conn.exec_driver_sql("ALTER TABLE accounts ADD COLUMN video_url VARCHAR(512);")
+        if "hide_followers" not in columns:
+            await conn.exec_driver_sql("ALTER TABLE accounts ADD COLUMN hide_followers BOOLEAN DEFAULT 0;")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

@@ -130,6 +130,45 @@ async def toggle_server_visibility(
         "message": f"{target.name} の公開状態を {'公開' if target.is_public else '非公開'} に変更しました"
     }
 
+@router.patch("/profiles/{username}/badges")
+async def update_profile_badges(
+    username: str,
+    has_supporter: Optional[bool] = None,
+    has_team: Optional[bool] = None,
+    has_founder: Optional[bool] = None,
+    has_discord_authed: Optional[bool] = None,
+    admin: Account = Depends(require_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    stmt = select(Account).where(Account.username == username)
+    res = await db.execute(stmt)
+    target = res.scalars().first()
+    if not target:
+        raise HTTPException(status_code=404, detail="対象ユーザーが見つかりません")
+
+    if has_supporter is not None:
+        target.has_supporter = has_supporter
+    if has_team is not None:
+        target.has_team = has_team
+    if has_founder is not None:
+        target.has_founder = has_founder
+    if has_discord_authed is not None:
+        target.has_discord_authed = has_discord_authed
+
+    await db.commit()
+    await db.refresh(target)
+    return {
+        "status": "ok",
+        "username": target.username,
+        "badges": {
+            "has_discord_authed": target.has_discord_authed,
+            "has_supporter": target.has_supporter,
+            "has_team": target.has_team,
+            "has_founder": target.has_founder,
+        },
+        "message": f"{target.username} のバッジ情報を更新しました"
+    }
+
 @router.get("/donations", response_model=List[DonationOut])
 async def list_donations(
     status_filter: Optional[str] = Query(None, alias="status"),

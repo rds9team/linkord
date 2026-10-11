@@ -59,6 +59,7 @@ export const Settings: React.FC = () => {
   const [themeMode, setThemeMode] = useState<'dark' | 'light'>('dark');
   const [themeId, setThemeId] = useState('midnight');
   const [hideBadges, setHideBadges] = useState(false);
+  const [hideFollowers, setHideFollowers] = useState(false);
   const [minecraftId, setMinecraftId] = useState('');
   const [saved, setSaved] = useState(false);
 
@@ -76,6 +77,7 @@ export const Settings: React.FC = () => {
         setThemeMode(data.theme_mode === 'light' ? 'light' : 'dark');
         setThemeId(data.theme_id || 'midnight');
         setHideBadges(!!data.hide_badges);
+        setHideFollowers(!!data.hide_followers);
         setMinecraftId(data.minecraft_uuid || '');
       } catch (err: any) {
         if (err.message && (err.message.includes('401') || err.message.includes('Not authenticated'))) {
@@ -168,6 +170,7 @@ export const Settings: React.FC = () => {
         theme_id: themeId,
         theme_mode: themeMode,
         hide_badges: hideBadges,
+        hide_followers: hideFollowers,
         minecraft_uuid: minecraftId,
       };
 
@@ -578,6 +581,17 @@ export const Settings: React.FC = () => {
               type="checkbox"
               checked={hideBadges}
               onChange={(e) => setHideBadges(e.target.checked)}
+              className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 bg-slate-900 border-white/10"
+            />
+          </div>
+
+          {/* Followers Display Option */}
+          <div className="pt-2 border-t border-white/5 flex items-center justify-between">
+            <span className="text-xs text-slate-300">フォロワー数を非表示にする</span>
+            <input
+              type="checkbox"
+              checked={hideFollowers}
+              onChange={(e) => setHideFollowers(e.target.checked)}
               className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 bg-slate-900 border-white/10"
             />
           </div>

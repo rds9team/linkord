@@ -23,6 +23,7 @@ export interface ProfileData {
   has_team: boolean;
   has_founder: boolean;
   hide_badges: boolean;
+  hide_followers?: boolean;
   discord_id?: string;
   minecraft_uuid?: string;
   analytics_id?: string;
@@ -74,6 +75,7 @@ export interface ProfileUpdateData {
   minecraft_uuid?: string;
   analytics_id?: string;
   hide_badges?: boolean;
+  hide_followers?: boolean;
 }
 
 export interface ReportData {

@@ -397,27 +397,31 @@ export const Profile: React.FC = () => {
                 <span>@{profile.username}</span>
                 {profile.tag && <span className="text-purple-400 font-semibold opacity-90">#{profile.tag}</span>}
               </p>
-              <button
-                onClick={() => {
-                  setFollowModalType('followers');
-                  setIsFollowModalOpen(true);
-                }}
-                className="text-[11px] text-slate-400 hover:text-white flex items-center gap-1 font-medium bg-white/5 hover:bg-white/10 px-2 py-0.5 rounded-full transition cursor-pointer"
-                title="フォロワー一覧を表示"
-              >
-                <Users className="w-3 h-3 text-slate-400" />
-                <span className="font-semibold text-slate-200">{followersCount}</span> フォロワー
-              </button>
-              <button
-                onClick={() => {
-                  setFollowModalType('following');
-                  setIsFollowModalOpen(true);
-                }}
-                className="text-[11px] text-slate-400 hover:text-white flex items-center gap-1 font-medium bg-white/5 hover:bg-white/10 px-2 py-0.5 rounded-full transition cursor-pointer"
-                title="フォロー中一覧を表示"
-              >
-                <span className="font-semibold text-slate-200">{profile.following_count || 0}</span> フォロー中
-              </button>
+              {!profile.hide_followers && (
+                <>
+                  <button
+                    onClick={() => {
+                      setFollowModalType('followers');
+                      setIsFollowModalOpen(true);
+                    }}
+                    className="text-[11px] text-slate-400 hover:text-white flex items-center gap-1 font-medium bg-white/5 hover:bg-white/10 px-2 py-0.5 rounded-full transition cursor-pointer"
+                    title="フォロワー一覧を表示"
+                  >
+                    <Users className="w-3 h-3 text-slate-400" />
+                    <span className="font-semibold text-slate-200">{followersCount}</span> フォロワー
+                  </button>
+                  <button
+                    onClick={() => {
+                      setFollowModalType('following');
+                      setIsFollowModalOpen(true);
+                    }}
+                    className="text-[11px] text-slate-400 hover:text-white flex items-center gap-1 font-medium bg-white/5 hover:bg-white/10 px-2 py-0.5 rounded-full transition cursor-pointer"
+                    title="フォロー中一覧を表示"
+                  >
+                    <span className="font-semibold text-slate-200">{profile.following_count || 0}</span> フォロー中
+                  </button>
+                </>
+              )}
               {currentUser?.username !== profile.username && (
                 <button
                   onClick={handleToggleFollow}
@@ -562,17 +566,19 @@ export const Profile: React.FC = () => {
               <Eye className="w-3.5 h-3.5" />
               <span>{(profile.views_count || 1).toLocaleString()}</span>
             </span>
-            <button
-              onClick={() => {
-                setFollowModalType('followers');
-                setIsFollowModalOpen(true);
-              }}
-              className="flex items-center gap-1 hover:text-white transition cursor-pointer"
-              title="フォロワー一覧を表示"
-            >
-              <Users className="w-3.5 h-3.5" />
-              <span>{followersCount.toLocaleString()}</span>
-            </button>
+            {!profile.hide_followers && (
+              <button
+                onClick={() => {
+                  setFollowModalType('followers');
+                  setIsFollowModalOpen(true);
+                }}
+                className="flex items-center gap-1 hover:text-white transition cursor-pointer"
+                title="フォロワー一覧を表示"
+              >
+                <Users className="w-3.5 h-3.5" />
+                <span>{followersCount.toLocaleString()}</span>
+              </button>
+            )}
             <span className="flex items-center gap-1" title="ブースト数">
               <Flame className="w-3.5 h-3.5 text-amber-500" />
               <span className="text-amber-500 font-bold">{boostCount}</span>

@@ -51,6 +51,7 @@ class ProfileOut(BaseModel):
     has_team: bool = False
     has_founder: bool = False
     hide_badges: bool = False
+    hide_followers: bool = False
     
     # Links & Integrations
     links: List[SocialLinkOut] = []
@@ -106,6 +107,7 @@ class ProfileUpdate(BaseModel):
     minecraft_uuid: Optional[str] = Field(None, max_length=64)
     analytics_id: Optional[str] = Field(None, max_length=32)
     hide_badges: Optional[bool] = None
+    hide_followers: Optional[bool] = None
 
     @field_validator("avatar_url", "background_url", "music_url", "video_url")
     @classmethod

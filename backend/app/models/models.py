@@ -29,6 +29,7 @@ class Account(Base):
     has_team = Column(Boolean, default=False, nullable=False)
     has_founder = Column(Boolean, default=False, nullable=False)
     hide_badges = Column(Boolean, default=False, nullable=False)
+    hide_followers = Column(Boolean, default=False, nullable=False)
     
     # External integrations
     discord_id = Column(String(64), unique=True, index=True, nullable=True)

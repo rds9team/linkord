@@ -10,6 +10,7 @@ import {
   toggleServerVisibility,
   fetchAdminDonations,
   resolveAdminDonation,
+  updateProfileBadges,
 } from '../api/client';
 import { AdminStats, ReportItem, DonationItem } from '../types';
 import { useTitle } from '../hooks/useTitle';
@@ -31,6 +32,12 @@ export const Admin: React.FC = () => {
   const [targetUsername, setTargetUsername] = useState('');
   const [targetSlug, setTargetSlug] = useState('');
   const [visibilityLoading, setVisibilityLoading] = useState(false);
+
+  // Badge assignment inputs
+  const [badgeUsername, setBadgeUsername] = useState('');
+  const [badgeType, setBadgeType] = useState<'supporter' | 'team' | 'founder' | 'authed'>('supporter');
+  const [badgeAction, setBadgeAction] = useState<boolean>(true);
+  const [badgeLoading, setBadgeLoading] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -117,6 +124,26 @@ export const Admin: React.FC = () => {
       setMessage({ text: err.message || 'サーバーの変更に失敗しました', type: 'error' });
     } finally {
       setVisibilityLoading(false);
+    }
+  };
+
+  const handleUpdateBadge = async () => {
+    if (!badgeUsername.trim()) return;
+    setBadgeLoading(true);
+    try {
+      const payload: Record<string, boolean> = {};
+      if (badgeType === 'supporter') payload.has_supporter = badgeAction;
+      if (badgeType === 'team') payload.has_team = badgeAction;
+      if (badgeType === 'founder') payload.has_founder = badgeAction;
+      if (badgeType === 'authed') payload.has_discord_authed = badgeAction;
+
+      const res = await updateProfileBadges(badgeUsername.trim(), payload);
+      setMessage({ text: res.message || 'バッジ情報を更新しました', type: 'success' });
+      setBadgeUsername('');
+    } catch (err: any) {
+      setMessage({ text: err.message || 'バッジの更新に失敗しました', type: 'error' });
+    } finally {
+      setBadgeLoading(false);
     }
   };
 
@@ -275,6 +302,52 @@ export const Admin: React.FC = () => {
             >
               <EyeOff className="w-3.5 h-3.5" />
               <span>切替</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Manual Badge Management Card */}
+        <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/10 md:col-span-2">
+          <h3 className="text-sm font-bold text-white mb-2 flex items-center gap-2">
+            <BadgeCheck className="w-4 h-4 text-amber-400" />
+            <span>ユーザーバッジの直接付与・剥奪</span>
+          </h3>
+          <p className="text-xs text-slate-400 mb-4">
+            特定のユーザーに対して Supporter, Team, Founder, Authed などのバッジを直接付与または解除します。
+          </p>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <input
+              type="text"
+              placeholder="username (例: yuto)"
+              value={badgeUsername}
+              onChange={(e) => setBadgeUsername(e.target.value)}
+              className="flex-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500"
+            />
+            <select
+              value={badgeType}
+              onChange={(e: any) => setBadgeType(e.target.value)}
+              className="px-3 py-2 rounded-xl bg-slate-900 border border-white/10 text-xs text-white focus:outline-none focus:border-purple-500"
+            >
+              <option value="supporter">Supporter バッジ</option>
+              <option value="team">Team バッジ</option>
+              <option value="founder">Founder バッジ</option>
+              <option value="authed">Authed バッジ</option>
+            </select>
+            <select
+              value={badgeAction ? 'grant' : 'revoke'}
+              onChange={(e) => setBadgeAction(e.target.value === 'grant')}
+              className="px-3 py-2 rounded-xl bg-slate-900 border border-white/10 text-xs text-white focus:outline-none focus:border-purple-500"
+            >
+              <option value="grant">付与 (True)</option>
+              <option value="revoke">剥奪 (False)</option>
+            </select>
+            <button
+              onClick={handleUpdateBadge}
+              disabled={!badgeUsername || badgeLoading}
+              className="px-5 py-2 rounded-xl text-xs font-semibold bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white transition flex items-center justify-center gap-1"
+            >
+              <BadgeCheck className="w-3.5 h-3.5" />
+              <span>バッジ更新</span>
             </button>
           </div>
         </div>

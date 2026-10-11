@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Flame, Sparkles, Compass, ExternalLink, Loader2, Plus, Users, User, ArrowRight, Eye } from 'lucide-react';
+import { Search, Flame, Sparkles, Compass, ExternalLink, Loader2, Plus, Users, User, ArrowRight, Eye, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { fetchServers, searchProfiles } from '../api/client';
 import { ServerData, ProfileSearchResult } from '../types';
@@ -11,7 +11,7 @@ export const Discover: React.FC = () => {
   useTitle('発見');
   const [mainCategory, setMainCategory] = useState<'servers' | 'users'>('servers');
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState<'popular' | 'new' | 'minecraft'>('popular');
+  const [activeTab, setActiveTab] = useState<'popular' | 'trending' | 'new' | 'minecraft'>('popular');
   const [servers, setServers] = useState<ServerData[]>([]);
   const [users, setUsers] = useState<ProfileSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -26,7 +26,8 @@ export const Discover: React.FC = () => {
         try {
           setLoading(true);
           const tag = activeTab === 'minecraft' ? 'Minecraft' : undefined;
-          const data = await fetchServers(tag, searchTerm || undefined);
+          const sortParam = activeTab === 'trending' ? 'boost' : activeTab === 'new' ? 'new' : 'popular';
+          const data = await fetchServers(tag, searchTerm || undefined, sortParam);
           if (isMounted) {
             setServers(data || []);
           }
@@ -152,6 +153,13 @@ export const Discover: React.FC = () => {
           >
             <Flame className="w-3.5 h-3.5 text-amber-400" />
             <span>人気ランキング</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('trending')}
+            className={`px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap ${activeTab === 'trending' ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/20' : 'bg-white/5 text-slate-400 hover:text-white'}`}
+          >
+            <TrendingUp className="w-3.5 h-3.5 text-rose-400" />
+            <span>急上昇 (ブースト順)</span>
           </button>
           <button
             onClick={() => setActiveTab('new')}

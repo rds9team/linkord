@@ -85,9 +85,13 @@ async def list_servers(
         stmt = stmt.order_by(Server.member_count.desc())
 
     result = await db.execute(stmt)
-    servers = result.scalars().all()
+    servers = list(result.scalars().all())
     for s in servers:
         s.boosts_count = await get_server_boosts_count(db, s.id)
+
+    if sort == "boost":
+        servers.sort(key=lambda s: s.boosts_count, reverse=True)
+
     return servers
 
 @router.post("", response_model=ServerOut, status_code=status.HTTP_201_CREATED)

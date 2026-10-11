@@ -271,6 +271,7 @@ export const submitDonation = (data: {
   passcode?: string;
   amount?: number;
   message?: string;
+  is_anonymous?: boolean;
 }): Promise<DonationItem> => {
   return request<DonationItem>('/api/donations', {
     method: 'POST',
@@ -291,6 +292,37 @@ export const resolveAdminDonation = (
   return request<DonationItem>(`/api/admin/donations/${id}/resolve`, {
     method: 'POST',
     body: JSON.stringify(data),
+  });
+};
+
+export interface PublicSupporterItem {
+  id: number;
+  donor_name: string;
+  donor_username?: string | null;
+  donor_avatar?: string | null;
+  amount?: number | null;
+  message?: string | null;
+  created_at: string;
+}
+
+export const fetchPublicSupporters = (): Promise<PublicSupporterItem[]> => {
+  return request<PublicSupporterItem[]>('/api/donations/supporters');
+};
+
+export interface AdminAuditLogItem {
+  id: number;
+  admin_id?: number | null;
+  admin_username?: string | null;
+  action: string;
+  target_type: string;
+  target_id: string;
+  details?: string | null;
+  created_at: string;
+}
+
+export const fetchAdminAuditLogs = (limit: number = 50): Promise<AdminAuditLogItem[]> => {
+  return request<AdminAuditLogItem[]>('/api/admin/audit-logs', {
+    params: { limit: String(limit) },
   });
 };
 

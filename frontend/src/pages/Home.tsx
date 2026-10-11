@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Sparkles, ArrowRight, ShieldCheck, Zap, Server, Gamepad2, Heart } from 'lucide-react';
+import { Sparkles, ArrowRight, ShieldCheck, Zap, Server, Gamepad2, Heart, Users } from 'lucide-react';
 import { useTitle } from '../hooks/useTitle';
+import { SupportModal } from '../components/SupportModal';
 
 export const Home: React.FC = () => {
   useTitle();
+  const [isSupportOpen, setIsSupportOpen] = useState(false);
+  const [supportTab, setSupportTab] = useState<'form' | 'supporters'>('form');
   return (
     <div className="flex flex-col items-center justify-center pt-8 sm:pt-16 pb-20 px-4 max-w-4xl mx-auto text-center relative z-10">
       
@@ -130,12 +133,41 @@ export const Home: React.FC = () => {
       {/* Support Box */}
       <div className="p-6 rounded-2xl bg-purple-500/5 dark:bg-gradient-to-r dark:from-purple-900/20 dark:to-sky-900/20 border border-purple-400/20 dark:border-purple-500/20 max-w-xl mx-auto w-full">
         <Heart className="w-6 h-6 text-rose-500 dark:text-rose-400 mx-auto mb-2" />
-        <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-3">
+        <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-4">
           Linkordのドメイン代・サーバー代などの維持にご協力ください。支援は任意で、支援しなくてもすべての基本機能を利用できます。
         </p>
-        <span className="text-[11px] font-semibold text-purple-600 dark:text-purple-300">PayPay送金リンクによる開発支援を受け付けています</span>
+        <div className="flex flex-wrap items-center justify-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => {
+              setSupportTab('form');
+              setIsSupportOpen(true);
+            }}
+            className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs transition shadow-md shadow-rose-600/20 flex items-center gap-1.5"
+          >
+            <Heart className="w-3.5 h-3.5 fill-current" />
+            <span>PayPayで支援する</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setSupportTab('supporters');
+              setIsSupportOpen(true);
+            }}
+            className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-700 dark:text-slate-300 border border-black/10 dark:border-white/10 font-semibold text-xs transition flex items-center gap-1.5"
+          >
+            <Users className="w-3.5 h-3.5" />
+            <span>サポーター一覧を見る</span>
+          </button>
+        </div>
       </div>
 
+      {/* Support Modal */}
+      <SupportModal
+        isOpen={isSupportOpen}
+        onClose={() => setIsSupportOpen(false)}
+        defaultTab={supportTab}
+      />
     </div>
   );
 };

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, AlertTriangle, Users, Server, CheckCircle2, XCircle, Clock, Eye, EyeOff, Search, Loader2, Heart, ExternalLink, BadgeCheck } from 'lucide-react';
+import { Shield, AlertTriangle, Users, Server, CheckCircle2, XCircle, Clock, Eye, EyeOff, Search, Loader2, Heart, ExternalLink, BadgeCheck, FileText } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
   checkAdminAccess,
@@ -11,6 +11,8 @@ import {
   fetchAdminDonations,
   resolveAdminDonation,
   updateProfileBadges,
+  fetchAdminAuditLogs,
+  AdminAuditLogItem,
 } from '../api/client';
 import { AdminStats, ReportItem, DonationItem } from '../types';
 import { useTitle } from '../hooks/useTitle';
@@ -20,11 +22,13 @@ export const Admin: React.FC = () => {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<AdminStats | null>(null);
-  const [activeTab, setActiveTab] = useState<'reports' | 'donations'>('donations');
+  const [activeTab, setActiveTab] = useState<'reports' | 'donations' | 'audit'>('donations');
   const [reports, setReports] = useState<ReportItem[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('pending');
   const [donations, setDonations] = useState<DonationItem[]>([]);
   const [donationFilter, setDonationFilter] = useState<string>('pending');
+  const [auditLogs, setAuditLogs] = useState<AdminAuditLogItem[]>([]);
+  const [loadingAudit, setLoadingAudit] = useState(false);
   const [actionLoading, setActionLoading] = useState<Record<number, boolean>>({});
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
@@ -124,6 +128,18 @@ export const Admin: React.FC = () => {
       setMessage({ text: err.message || 'サーバーの変更に失敗しました', type: 'error' });
     } finally {
       setVisibilityLoading(false);
+    }
+  };
+
+  const loadAuditLogs = async () => {
+    setLoadingAudit(true);
+    try {
+      const data = await fetchAdminAuditLogs();
+      setAuditLogs(data);
+    } catch (err: any) {
+      setMessage({ text: err.message || '監査ログの取得に失敗しました', type: 'error' });
+    } finally {
+      setLoadingAudit(false);
     }
   };
 
@@ -388,6 +404,21 @@ export const Admin: React.FC = () => {
             </span>
           )}
         </button>
+
+        <button
+          onClick={() => {
+            setActiveTab('audit');
+            loadAuditLogs();
+          }}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all ${
+            activeTab === 'audit'
+              ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
+              : 'bg-white/5 text-slate-400 hover:text-white hover:bg-white/10'
+          }`}
+        >
+          <FileText className="w-4 h-4" />
+          <span>監査ログ</span>
+        </button>
       </div>
 
       {/* Donations Section */}
@@ -650,6 +681,76 @@ export const Admin: React.FC = () => {
           </div>
         )}
       </div>
+      )}
+
+      {/* Audit Logs Section */}
+      {activeTab === 'audit' && (
+        <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/10 mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div>
+              <h2 className="text-base font-bold text-white mb-1 flex items-center gap-2">
+                <FileText className="w-4 h-4 text-blue-400" />
+                <span>管理者操作ログ（監査ログ）</span>
+              </h2>
+              <p className="text-xs text-slate-400">
+                管理者が実行した操作（バッジ付与、公開停止、支援承認など）の履歴です。
+              </p>
+            </div>
+            <button
+              onClick={loadAuditLogs}
+              disabled={loadingAudit}
+              className="px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-semibold text-slate-300 transition flex items-center gap-1.5 self-start sm:self-auto"
+            >
+              <Clock className="w-3.5 h-3.5" />
+              <span>更新</span>
+            </button>
+          </div>
+
+          {loadingAudit ? (
+            <div className="text-center py-12 text-slate-400 flex items-center justify-center gap-2">
+              <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
+              <span className="text-xs">ログを読み込み中...</span>
+            </div>
+          ) : auditLogs.length === 0 ? (
+            <div className="text-center py-12 text-slate-400 space-y-2">
+              <FileText className="w-8 h-8 mx-auto text-slate-600" />
+              <p className="text-xs">まだ操作履歴がありません</p>
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {auditLogs.map((log) => (
+                <div
+                  key={log.id}
+                  className="p-3.5 rounded-xl bg-white/[0.02] border border-white/5 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-white/10 transition"
+                >
+                  <div className="space-y-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[10px] font-mono">
+                        {log.action}
+                      </span>
+                      <span className="text-slate-400 font-mono text-[11px]">
+                        {log.target_type}: <strong className="text-white">{log.target_id}</strong>
+                      </span>
+                      {log.admin_username && (
+                        <span className="text-slate-500 text-[10px]">
+                          by @{log.admin_username}
+                        </span>
+                      )}
+                    </div>
+                    {log.details && (
+                      <p className="text-[11px] text-slate-300 font-mono bg-black/30 px-2 py-1 rounded border border-white/5 truncate max-w-xl">
+                        {log.details}
+                      </p>
+                    )}
+                  </div>
+                  <span className="text-[10px] text-slate-500 font-mono shrink-0">
+                    {new Date(log.created_at).toLocaleString('ja-JP')}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

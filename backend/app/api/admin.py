@@ -8,10 +8,28 @@ from sqlalchemy.orm import selectinload
 from app.core.database import get_db
 from app.core.config import settings
 from app.core.auth import get_current_user
-from app.models.models import Account, Server, Report, Donation
-from app.schemas.schemas import ReportOut, ReportUpdate, AdminStatsOut, DonationOut, DonationResolve
+from app.models.models import Account, Server, Report, Donation, AuditLog
+from app.schemas.schemas import ReportOut, ReportUpdate, AdminStatsOut, DonationOut, DonationResolve, AuditLogOut
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+
+async def log_audit_action(
+    db: AsyncSession,
+    admin_id: int,
+    action: str,
+    target_type: str,
+    target_id: str | int,
+    details: Optional[str] = None
+):
+    audit = AuditLog(
+        admin_id=admin_id,
+        action=action,
+        target_type=target_type,
+        target_id=str(target_id),
+        details=details,
+        created_at=datetime.datetime.utcnow()
+    )
+    db.add(audit)
 
 async def require_admin_user(current_user: Account = Depends(get_current_user)) -> Account:
     admin_usernames = settings.get_admin_usernames()
@@ -101,6 +119,10 @@ async def toggle_profile_visibility(
         raise HTTPException(status_code=404, detail="対象ユーザーが見つかりません")
 
     target.is_public = not target.is_public
+    await log_audit_action(
+        db, admin.id, "toggle_profile_visibility", "profile", username,
+        f"is_public={'公開' if target.is_public else '非公開'}"
+    )
     await db.commit()
     return {
         "status": "ok",
@@ -122,6 +144,10 @@ async def toggle_server_visibility(
         raise HTTPException(status_code=404, detail="対象サーバーが見つかりません")
 
     target.is_public = not target.is_public
+    await log_audit_action(
+        db, admin.id, "toggle_server_visibility", "server", slug,
+        f"is_public={'公開' if target.is_public else '非公開'}"
+    )
     await db.commit()
     return {
         "status": "ok",
@@ -146,15 +172,24 @@ async def update_profile_badges(
     if not target:
         raise HTTPException(status_code=404, detail="対象ユーザーが見つかりません")
 
+    changes = []
     if has_supporter is not None:
         target.has_supporter = has_supporter
+        changes.append(f"supporter={has_supporter}")
     if has_team is not None:
         target.has_team = has_team
+        changes.append(f"team={has_team}")
     if has_founder is not None:
         target.has_founder = has_founder
+        changes.append(f"founder={has_founder}")
     if has_discord_authed is not None:
         target.has_discord_authed = has_discord_authed
+        changes.append(f"discord_authed={has_discord_authed}")
 
+    await log_audit_action(
+        db, admin.id, "update_profile_badges", "profile", username,
+        ", ".join(changes)
+    )
     await db.commit()
     await db.refresh(target)
     return {
@@ -227,6 +262,10 @@ async def resolve_donation(
         if data.admin_note:
             donation.admin_note = data.admin_note
 
+    await log_audit_action(
+        db, admin.id, f"donation_{data.action}", "donation", donation_id,
+        f"donor={donation.donor_name}, amount={donation.amount}, note={data.admin_note or ''}"
+    )
     await db.commit()
     await db.refresh(donation)
 
@@ -235,3 +274,25 @@ async def resolve_donation(
         d_out.donor_username = donation.account.username
         d_out.donor_avatar = donation.account.avatar_url
     return d_out
+
+@router.get("/audit-logs", response_model=List[AuditLogOut])
+async def list_audit_logs(
+    limit: int = 50,
+    admin: Account = Depends(require_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    stmt = (
+        select(AuditLog)
+        .options(selectinload(AuditLog.admin))
+        .order_by(AuditLog.created_at.desc())
+        .limit(min(limit, 100))
+    )
+    res = await db.execute(stmt)
+    logs = res.scalars().all()
+    out = []
+    for l in logs:
+        log_out = AuditLogOut.model_validate(l)
+        if l.admin:
+            log_out.admin_username = l.admin.username
+        out.append(log_out)
+    return out

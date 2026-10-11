@@ -233,16 +233,17 @@ class AdminStatsOut(BaseModel):
     pending_donations: int = 0
 
 class DonationCreate(BaseModel):
-    paypay_url: str = Field(..., max_length=256)
+    paypay_url: str = Field(..., max_length=512)
     passcode: Optional[str] = Field(None, max_length=16)
     amount: Optional[int] = Field(None, ge=1)
     message: Optional[str] = Field(None, max_length=500)
+    is_anonymous: bool = False
 
     @field_validator("paypay_url")
     @classmethod
     def validate_paypay_url(cls, v: str) -> str:
         v = v.strip()
-        if not re.match(r"^https://pay\.paypay\.ne\.jp/[a-zA-Z0-9_\-\.\/]+$", v):
+        if not re.match(r"^https://pay\.paypay\.ne\.jp/[a-zA-Z0-9_\-\.\/\?=&%#]+$", v):
             raise ValueError("有効なPayPay送金リンク（https://pay.paypay.ne.jp/...）を入力してください")
         return v
 
@@ -254,6 +255,7 @@ class DonationOut(BaseModel):
     passcode: Optional[str] = None
     amount: Optional[int] = None
     message: Optional[str] = None
+    is_anonymous: bool = False
     status: str
     admin_note: Optional[str] = None
     created_at: datetime.datetime
@@ -263,7 +265,30 @@ class DonationOut(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+class SupporterPublicOut(BaseModel):
+    id: int
+    donor_name: str
+    donor_username: Optional[str] = None
+    donor_avatar: Optional[str] = None
+    amount: Optional[int] = None
+    message: Optional[str] = None
+    created_at: datetime.datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
 class DonationResolve(BaseModel):
     action: str = Field(..., pattern="^(approve|reject)$")
     admin_note: Optional[str] = None
+
+class AuditLogOut(BaseModel):
+    id: int
+    admin_id: Optional[int] = None
+    admin_username: Optional[str] = None
+    action: str
+    target_type: str
+    target_id: str
+    details: Optional[str] = None
+    created_at: datetime.datetime
+
+    model_config = ConfigDict(from_attributes=True)
 

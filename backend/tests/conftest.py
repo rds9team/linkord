@@ -3,11 +3,18 @@ import datetime
 import os
 from sqlalchemy import select
 from app.core.config import settings
-from app.core.database import AsyncSessionLocal
+from app.core.database import engine, Base, AsyncSessionLocal
 from app.models.models import Account, UserSession
+from app.main import ensure_schema_updated
+import pytest
 
 settings.TESTING = True
 os.environ["TESTING"] = "1"
+
+async def init_test_db():
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+        await ensure_schema_updated(conn)
 
 async def create_test_account_and_session(
     username: str = "yuto",

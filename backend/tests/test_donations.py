@@ -2,12 +2,11 @@ import pytest
 from httpx import AsyncClient, ASGITransport
 from app.main import app
 from app.core.database import engine, Base
-from tests.conftest import create_test_account_and_session
+from tests.conftest import create_test_account_and_session, init_test_db
 
 @pytest.mark.asyncio
 async def test_paypay_donation_and_admin_flow():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    await init_test_db()
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
@@ -77,6 +76,20 @@ async def test_paypay_donation_and_admin_flow():
             me_after = await user_ac.get("/api/auth/me")
             assert me_after.status_code == 200
             assert me_after.json()["has_supporter"] is True
+
+            # 7. Check public supporters list
+            supporters_res = await ac.get("/api/donations/supporters")
+            assert supporters_res.status_code == 200
+            sup_data = supporters_res.json()
+            assert len(sup_data) >= 1
+            assert any(s["donor_username"] == "donation_user" for s in sup_data)
+
+            # 8. Check admin audit logs
+            audit_res = await admin_ac.get("/api/admin/audit-logs")
+            assert audit_res.status_code == 200
+            audit_data = audit_res.json()
+            assert len(audit_data) >= 1
+            assert any(log["action"] == "donation_approve" for log in audit_data)
 
         finally:
             settings.ADMIN_USERNAMES = orig_admins

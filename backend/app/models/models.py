@@ -183,14 +183,28 @@ class Donation(Base):
     id = Column(Integer, primary_key=True, index=True)
     account_id = Column(Integer, ForeignKey("accounts.id", ondelete="SET NULL"), nullable=True, index=True)
     donor_name = Column(String(64), nullable=False)
-    paypay_url = Column(String(256), nullable=False)
+    paypay_url = Column(String(512), nullable=False)
     passcode = Column(String(16), nullable=True)
     amount = Column(Integer, nullable=True)
     message = Column(Text, nullable=True)
+    is_anonymous = Column(Boolean, default=False, nullable=False)
     status = Column(String(32), default="pending", nullable=False) # pending, approved, rejected
     admin_note = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
     resolved_at = Column(DateTime, nullable=True)
 
     account = relationship("Account", back_populates="donations")
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    admin_id = Column(Integer, ForeignKey("accounts.id", ondelete="SET NULL"), nullable=True, index=True)
+    action = Column(String(64), nullable=False) # resolve_donation, toggle_visibility, update_badges, delete_media, etc.
+    target_type = Column(String(32), nullable=False) # donation, profile, server, user, media
+    target_id = Column(String(128), nullable=False)
+    details = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
+
+    admin = relationship("Account", foreign_keys=[admin_id])
 

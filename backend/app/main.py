@@ -30,6 +30,13 @@ async def ensure_schema_updated(conn):
         if "access_token" not in columns_ident:
             await conn.exec_driver_sql("ALTER TABLE account_identities ADD COLUMN access_token VARCHAR(512);")
 
+    # Check donations table columns
+    result_donations = await conn.exec_driver_sql("PRAGMA table_info(donations);")
+    columns_donations = [row[1] for row in result_donations.fetchall()]
+    if columns_donations:
+        if "is_anonymous" not in columns_donations:
+            await conn.exec_driver_sql("ALTER TABLE donations ADD COLUMN is_anonymous BOOLEAN DEFAULT 0;")
+
 async def ensure_defaults(conn):
     # Ensure rds9 admin account exists with founder badge
     res = await conn.exec_driver_sql("SELECT id FROM accounts WHERE username = 'rds9';")

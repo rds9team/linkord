@@ -10,7 +10,9 @@ import {
   toggleServerVisibility,
   fetchAdminDonations,
   resolveAdminDonation,
+  deleteAdminDonation,
   updateProfileBadges,
+  batchUpdateBadges,
   fetchAdminAuditLogs,
   fetchAnnouncements,
   createAdminAnnouncement,
@@ -40,11 +42,12 @@ export const Admin: React.FC = () => {
   const [targetSlug, setTargetSlug] = useState('');
   const [visibilityLoading, setVisibilityLoading] = useState(false);
 
-  // Badge assignment inputs
-  const [badgeUsername, setBadgeUsername] = useState('');
+  // Badge assignment inputs (supports single or multiple usernames)
+  const [badgeUsernames, setBadgeUsernames] = useState('');
   const [badgeType, setBadgeType] = useState<'supporter' | 'team' | 'founder' | 'authed'>('supporter');
   const [badgeAction, setBadgeAction] = useState<boolean>(true);
   const [badgeLoading, setBadgeLoading] = useState(false);
+
 
   // Announcements inputs and list
   const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([]);
@@ -177,6 +180,22 @@ export const Admin: React.FC = () => {
     }
   };
 
+  const handleDeleteDonation = async (donationId: number) => {
+    if (!confirm(`支援申請 #${donationId} を完全に削除しますか？`)) return;
+    setActionLoading((prev) => ({ ...prev, [donationId]: true }));
+    try {
+      await deleteAdminDonation(donationId);
+      setDonations((prev) => prev.filter((d) => d.id !== donationId));
+      setMessage({ text: `支援申請 #${donationId} を削除しました`, type: 'success' });
+      const statsData = await fetchAdminStats();
+      setStats(statsData);
+    } catch (err: any) {
+      setMessage({ text: err.message || '支援の削除に失敗しました', type: 'error' });
+    } finally {
+      setActionLoading((prev) => ({ ...prev, [donationId]: false }));
+    }
+  };
+
   const handleToggleProfile = async (username: string) => {
     setVisibilityLoading(true);
     try {
@@ -216,20 +235,31 @@ export const Admin: React.FC = () => {
   };
 
   const handleUpdateBadge = async () => {
-    if (!badgeUsername.trim()) return;
+    const names = badgeUsernames
+      .split(/[\n,、]+/)
+      .map((s) => s.trim().replace(/^@/, ''))
+      .filter(Boolean);
+    if (names.length === 0) {
+      setMessage({ text: '対象のユーザー名を入力してください', type: 'error' });
+      return;
+    }
     setBadgeLoading(true);
     try {
-      const payload: Record<string, boolean> = {};
+      const payload: any = { usernames: names };
       if (badgeType === 'supporter') payload.has_supporter = badgeAction;
       if (badgeType === 'team') payload.has_team = badgeAction;
       if (badgeType === 'founder') payload.has_founder = badgeAction;
       if (badgeType === 'authed') payload.has_discord_authed = badgeAction;
 
-      const res = await updateProfileBadges(badgeUsername.trim(), payload);
-      setMessage({ text: res.message || 'バッジ情報を更新しました', type: 'success' });
-      setBadgeUsername('');
+      const res = await batchUpdateBadges(payload);
+      let feedback = res.message;
+      if (res.not_found_users && res.not_found_users.length > 0) {
+        feedback += ` (未検出: ${res.not_found_users.join(', ')})`;
+      }
+      setMessage({ text: feedback, type: 'success' });
+      setBadgeUsernames('');
     } catch (err: any) {
-      setMessage({ text: err.message || 'バッジの更新に失敗しました', type: 'error' });
+      setMessage({ text: err.message || 'バッジの一括更新に失敗しました', type: 'error' });
     } finally {
       setBadgeLoading(false);
     }
@@ -394,49 +424,60 @@ export const Admin: React.FC = () => {
           </div>
         </div>
 
-        {/* Manual Badge Management Card */}
+        {/* Manual Badge Management Card (Batch Support) */}
         <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/10 md:col-span-2">
-          <h3 className="text-sm font-bold text-white mb-2 flex items-center gap-2">
-            <BadgeCheck className="w-4 h-4 text-amber-400" />
-            <span>ユーザーバッジの直接付与・剥奪</span>
-          </h3>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <BadgeCheck className="w-4 h-4 text-amber-400" />
+              <span>ユーザーバッジの一括付与・剥奪（複数指定対応）</span>
+            </h3>
+            <span className="text-[10px] text-amber-400/80 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 font-mono">
+              複数指定可能
+            </span>
+          </div>
           <p className="text-xs text-slate-400 mb-4">
-            特定のユーザーに対して Supporter, Team, Founder, Authed などのバッジを直接付与または解除します。
+            対象ユーザーに対して Supporter, Team, Founder, Authed などのバッジを一括付与または一括解除します。複数人を指定する場合はカンマ（,）または改行で区切ってください。
           </p>
-          <div className="flex flex-col sm:flex-row gap-2">
-            <input
-              type="text"
-              placeholder="username (例: yuto)"
-              value={badgeUsername}
-              onChange={(e) => setBadgeUsername(e.target.value)}
-              className="flex-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500"
+          <div className="space-y-3">
+            <textarea
+              rows={2}
+              placeholder="ユーザー名を指定 (例: yuto, user1, user2 または 1行に1人ずつ改行入力)"
+              value={badgeUsernames}
+              onChange={(e) => setBadgeUsernames(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 font-mono resize-y"
             />
-            <select
-              value={badgeType}
-              onChange={(e: any) => setBadgeType(e.target.value)}
-              className="px-3 py-2 rounded-xl bg-slate-900 border border-white/10 text-xs text-white focus:outline-none focus:border-purple-500"
-            >
-              <option value="supporter">Supporter バッジ</option>
-              <option value="team">Team バッジ</option>
-              <option value="founder">Founder バッジ</option>
-              <option value="authed">Authed バッジ</option>
-            </select>
-            <select
-              value={badgeAction ? 'grant' : 'revoke'}
-              onChange={(e) => setBadgeAction(e.target.value === 'grant')}
-              className="px-3 py-2 rounded-xl bg-slate-900 border border-white/10 text-xs text-white focus:outline-none focus:border-purple-500"
-            >
-              <option value="grant">付与 (True)</option>
-              <option value="revoke">剥奪 (False)</option>
-            </select>
-            <button
-              onClick={handleUpdateBadge}
-              disabled={!badgeUsername || badgeLoading}
-              className="px-5 py-2 rounded-xl text-xs font-semibold bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white transition flex items-center justify-center gap-1"
-            >
-              <BadgeCheck className="w-3.5 h-3.5" />
-              <span>バッジ更新</span>
-            </button>
+            <div className="flex flex-col sm:flex-row gap-2 justify-end">
+              <select
+                value={badgeType}
+                onChange={(e: any) => setBadgeType(e.target.value)}
+                className="px-3 py-2 rounded-xl bg-slate-900 border border-white/10 text-xs text-white focus:outline-none focus:border-amber-500"
+              >
+                <option value="supporter">Supporter バッジ</option>
+                <option value="team">Team バッジ</option>
+                <option value="founder">Founder バッジ</option>
+                <option value="authed">Authed バッジ</option>
+              </select>
+              <select
+                value={badgeAction ? 'grant' : 'revoke'}
+                onChange={(e) => setBadgeAction(e.target.value === 'grant')}
+                className="px-3 py-2 rounded-xl bg-slate-900 border border-white/10 text-xs text-white focus:outline-none focus:border-amber-500"
+              >
+                <option value="grant">一括付与 (True)</option>
+                <option value="revoke">一括剥奪 (False)</option>
+              </select>
+              <button
+                onClick={handleUpdateBadge}
+                disabled={!badgeUsernames.trim() || badgeLoading}
+                className="px-5 py-2 rounded-xl text-xs font-semibold bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white transition flex items-center justify-center gap-1.5 shadow-md shadow-amber-600/20"
+              >
+                {badgeLoading ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <BadgeCheck className="w-3.5 h-3.5" />
+                )}
+                <span>一括バッジ更新</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -628,7 +669,7 @@ export const Admin: React.FC = () => {
                         <button
                           onClick={() => handleResolveDonation(d.id, 'approve')}
                           disabled={actionLoading[d.id]}
-                          className="px-3 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white transition flex items-center gap-1"
+                          className="px-3 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white transition flex items-center gap-1 shadow-md shadow-emerald-600/20"
                           title="受取完了とし、Supporterバッジを付与"
                         >
                           <BadgeCheck className="w-3.5 h-3.5" />
@@ -638,12 +679,27 @@ export const Admin: React.FC = () => {
                           onClick={() => handleResolveDonation(d.id, 'reject')}
                           disabled={actionLoading[d.id]}
                           className="px-3 py-2 rounded-xl text-xs font-bold bg-white/5 hover:bg-rose-500/20 hover:text-rose-300 disabled:opacity-50 text-slate-400 transition flex items-center gap-1"
+                          title="申請を却下"
                         >
                           <XCircle className="w-3.5 h-3.5" />
                           <span>却下</span>
                         </button>
                       </>
                     )}
+
+                    <button
+                      onClick={() => handleDeleteDonation(d.id)}
+                      disabled={actionLoading[d.id]}
+                      className={`px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1 ${
+                        d.status === 'rejected'
+                          ? 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30'
+                          : 'bg-white/5 hover:bg-rose-500/20 hover:text-rose-300 text-slate-400'
+                      }`}
+                      title="申請を完全に削除"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>{d.status === 'rejected' ? '却下を削除' : '削除'}</span>
+                    </button>
                   </div>
                 </div>
               ))}

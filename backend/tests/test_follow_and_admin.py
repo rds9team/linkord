@@ -116,6 +116,18 @@ async def test_follow_list_and_search_and_admin():
             res_vis = await admin_client.patch(f"/api/admin/profiles/{user2_uname}/visibility")
             assert res_vis.status_code == 200
             assert res_vis.json()["is_public"] is False
+
+            # 9. Batch update badges for multiple users
+            res_batch = await admin_client.post("/api/admin/profiles/batch-badges", json={
+                "usernames": [user2_uname, "non_existent_xyz"],
+                "has_supporter": True,
+                "has_team": True
+            })
+            assert res_batch.status_code == 200
+            batch_data = res_batch.json()
+            assert batch_data["updated_count"] == 1
+            assert user2_uname in batch_data["updated_users"]
+            assert "non_existent_xyz" in batch_data["not_found_users"]
         finally:
             settings.ADMIN_USERNAMES = original_admins
 

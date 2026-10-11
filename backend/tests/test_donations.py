@@ -91,5 +91,22 @@ async def test_paypay_donation_and_admin_flow():
             assert len(audit_data) >= 1
             assert any(log["action"] == "donation_approve" for log in audit_data)
 
+            # 9. Reject and Delete donation
+            reject_res = await admin_ac.post(f"/api/admin/donations/{donation_id}/resolve", json={
+                "action": "reject",
+                "admin_note": "無効な申請"
+            })
+            assert reject_res.status_code == 200
+            assert reject_res.json()["status"] == "rejected"
+
+            delete_res = await admin_ac.delete(f"/api/admin/donations/{donation_id}")
+            assert delete_res.status_code == 200
+            assert delete_res.json()["status"] == "ok"
+
+            # Check it is actually deleted
+            check_del = await admin_ac.delete(f"/api/admin/donations/{donation_id}")
+            assert check_del.status_code == 404
+
         finally:
             settings.ADMIN_USERNAMES = orig_admins
+

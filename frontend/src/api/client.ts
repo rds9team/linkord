@@ -113,12 +113,16 @@ export interface DiscordGuildItem {
   name: string;
   icon_url?: string | null;
   owner: boolean;
+  can_manage: boolean;
   permissions: number;
+  is_registered?: boolean;
+  registered_slug?: string | null;
 }
 
 export const fetchMyGuilds = (): Promise<{
   connected: boolean;
   guilds: DiscordGuildItem[];
+  auth_url?: string | null;
   message?: string;
 }> => {
   return request(`/api/servers/my-guilds`);
@@ -349,6 +353,35 @@ export const deleteAdminAnnouncement = (id: number): Promise<{ status: string; m
     method: 'DELETE',
   });
 };
+
+export const deleteAdminDonation = (id: number): Promise<{ status: string; message: string }> => {
+  return request<{ status: string; message: string }>(`/api/admin/donations/${id}`, {
+    method: 'DELETE',
+  });
+};
+
+export interface BatchBadgesPayload {
+  usernames: string[];
+  has_supporter?: boolean;
+  has_team?: boolean;
+  has_founder?: boolean;
+  has_discord_authed?: boolean;
+}
+
+export interface BatchBadgesResult {
+  updated_count: number;
+  updated_users: string[];
+  not_found_users: string[];
+  message: string;
+}
+
+export const batchUpdateBadges = (data: BatchBadgesPayload): Promise<BatchBadgesResult> => {
+  return request<BatchBadgesResult>('/api/admin/profiles/batch-badges', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+};
+
 
 
 

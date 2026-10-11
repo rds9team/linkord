@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Server as ServerIcon, Upload, Loader2, Sparkles, CheckCircle2, Users, Shield } from 'lucide-react';
+import { X, Server as ServerIcon, Upload, Loader2, Sparkles, CheckCircle2, Users, Shield, Search, Crown, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { createServer, uploadMedia, inspectDiscordInvite, fetchMyGuilds, DiscordGuildItem } from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -35,19 +35,25 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
   const [myGuilds, setMyGuilds] = useState<DiscordGuildItem[]>([]);
   const [loadingGuilds, setLoadingGuilds] = useState(false);
   const [selectedGuildId, setSelectedGuildId] = useState<string | null>(null);
+  const [guildSearch, setGuildSearch] = useState('');
+  const [authUrl, setAuthUrl] = useState<string | null>(null);
+  const [connected, setConnected] = useState<boolean>(true);
 
   useEffect(() => {
     if (isOpen && user) {
       setLoadingGuilds(true);
       fetchMyGuilds()
         .then((res) => {
-          if (res.connected && res.guilds) {
+          setConnected(res.connected);
+          if (res.auth_url) setAuthUrl(res.auth_url);
+          if (res.guilds && Array.isArray(res.guilds)) {
             setMyGuilds(res.guilds);
           } else {
             setMyGuilds([]);
           }
         })
         .catch(() => {
+          setConnected(false);
           setMyGuilds([]);
         })
         .finally(() => {
@@ -243,65 +249,132 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-            {/* Manageable Guilds Picker */}
+            {/* Manageable Guilds Picker (Enhanced with Search and Badges) */}
             {loadingGuilds ? (
-              <div className="flex items-center gap-2 p-3 rounded-xl bg-white/[0.02] border border-white/5 text-slate-400 text-[11px]">
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-purple-400" />
-                <span>管理中のDiscordサーバーを取得中...</span>
+              <div className="flex items-center gap-2 p-3.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs">
+                <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
+                <span>Discord所属サーバー一覧を取得中...</span>
               </div>
             ) : myGuilds.length > 0 ? (
-              <div className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-semibold text-indigo-300 flex items-center gap-1.5">
-                    <Shield className="w-3.5 h-3.5" />
-                    <span>管理中のDiscordサーバーから選択</span>
+              <div className="p-3.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 space-y-2.5">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <span className="font-bold text-indigo-300 flex items-center gap-1.5">
+                    <Shield className="w-4 h-4 text-indigo-400" />
+                    <span>Discordサーバー一覧から選択</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-mono">
+                      {myGuilds.length}件
+                    </span>
                   </span>
-                  <span className="text-[10px] text-indigo-400/80 font-mono">
-                    {myGuilds.length}件
-                  </span>
+
+                  {myGuilds.length > 3 && (
+                    <div className="relative">
+                      <Search className="w-3 h-3 absolute left-2 top-2 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="サーバー名で検索..."
+                        value={guildSearch}
+                        onChange={(e) => setGuildSearch(e.target.value)}
+                        className="pl-6 pr-2 py-1 rounded-lg bg-black/40 border border-white/10 text-[11px] text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 w-36"
+                      />
+                    </div>
+                  )}
                 </div>
-                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
-                  {myGuilds.map((g) => {
-                    const isSelected = selectedGuildId === g.id;
-                    return (
-                      <button
-                        key={g.id}
-                        type="button"
-                        onClick={() => handleSelectGuild(g)}
-                        className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-left shrink-0 transition text-xs ${
-                          isSelected
-                            ? 'bg-indigo-600/30 border-indigo-500 text-white font-semibold'
-                            : 'bg-white/5 border-white/10 hover:bg-white/10 text-slate-300 hover:border-white/20'
-                        }`}
-                        title={g.name}
-                      >
-                        {g.icon_url ? (
-                          <img
-                            src={g.icon_url}
-                            alt=""
-                            className="w-5 h-5 rounded-md object-cover"
-                          />
-                        ) : (
-                          <div className="w-5 h-5 rounded-md bg-slate-700 flex items-center justify-center text-[10px] font-bold text-slate-300">
-                            {g.name.slice(0, 1)}
+
+                <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1 scrollbar-thin">
+                  {myGuilds
+                    .filter((g) => !guildSearch.trim() || g.name.toLowerCase().includes(guildSearch.toLowerCase().trim()))
+                    .map((g) => {
+                      const isSelected = selectedGuildId === g.id;
+                      return (
+                        <button
+                          key={g.id}
+                          type="button"
+                          onClick={() => handleSelectGuild(g)}
+                          className={`w-full flex items-center justify-between p-2 rounded-xl border text-left transition text-xs ${
+                            isSelected
+                              ? 'bg-indigo-600/30 border-indigo-500 text-white shadow-sm'
+                              : 'bg-white/[0.03] border-white/5 hover:bg-white/[0.08] text-slate-300 hover:border-white/10'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            {g.icon_url ? (
+                              <img
+                                src={g.icon_url}
+                                alt=""
+                                className="w-7 h-7 rounded-lg object-cover shrink-0 ring-1 ring-white/10"
+                              />
+                            ) : (
+                              <div className="w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center text-xs font-bold text-indigo-300 shrink-0 border border-white/10">
+                                {g.name.slice(0, 1)}
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <div className="font-bold truncate text-white">{g.name}</div>
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                {g.owner ? (
+                                  <span className="text-[10px] text-amber-300 bg-amber-500/10 px-1 rounded flex items-center gap-0.5 font-semibold">
+                                    <Crown className="w-2.5 h-2.5" />
+                                    オーナー
+                                  </span>
+                                ) : g.can_manage ? (
+                                  <span className="text-[10px] text-indigo-300 bg-indigo-500/10 px-1 rounded flex items-center gap-0.5 font-semibold">
+                                    <Shield className="w-2.5 h-2.5" />
+                                    管理者
+                                  </span>
+                                ) : null}
+                                {g.is_registered && (
+                                  <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-1 rounded font-semibold">
+                                    掲載中
+                                  </span>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                        )}
-                        <span className="max-w-[130px] truncate">{g.name}</span>
-                        {isSelected && (
-                          <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
-                        )}
-                      </button>
-                    );
-                  })}
+
+                          {isSelected ? (
+                            <div className="flex items-center gap-1 text-[11px] font-bold text-indigo-300 bg-indigo-500/20 px-2 py-0.5 rounded-lg shrink-0">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                              <span>選択中</span>
+                            </div>
+                          ) : (
+                            <span className="text-[11px] text-slate-500 shrink-0">選択</span>
+                          )}
+                        </button>
+                      );
+                    })}
                 </div>
-                <div className="flex items-center gap-1.5 text-[11px] text-indigo-300 mt-2 bg-indigo-500/10 px-2.5 py-1.5 rounded-lg border border-indigo-500/20">
-                  <Shield className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                  <span>
-                    サーバーを選択後、Discordアプリで該当サーバーの「招待を作成」からリンクをコピーして下の招待URL欄に貼り付けてください（自動で全情報が同期されます）。
+
+                {selectedGuildId && (
+                  <div className="text-[11px] text-indigo-300 bg-indigo-500/15 p-2.5 rounded-xl border border-indigo-500/30 flex items-start gap-2">
+                    <Sparkles className="w-3.5 h-3.5 text-indigo-400 shrink-0 mt-0.5" />
+                    <span>
+                      サーバーを選択しました！Discordアプリでこのサーバーの「招待を作成」からリンクを取得し、下の招待URL欄に貼り付けてください。
+                    </span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="p-3.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-xs">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="font-bold text-indigo-300 flex items-center gap-1.5">
+                    <Shield className="w-4 h-4 text-indigo-400" />
+                    <span>Discordサーバー連携</span>
                   </span>
                 </div>
+                <p className="text-[11px] text-slate-300 mb-2.5 leading-relaxed">
+                  Discordと連携すると、所属しているサーバー一覧からワンクリックでサーバー情報を自動入力できます。
+                </p>
+                {authUrl && (
+                  <a
+                    href={authUrl}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition shadow-md shadow-indigo-600/30"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>Discordと連携してサーバーを取得</span>
+                  </a>
+                )}
               </div>
-            ) : null}
+            )}
 
             {/* Invite URL (Primary) */}
             <div className="p-3 rounded-xl bg-purple-500/5 border border-purple-500/20">

@@ -311,3 +311,17 @@ class AnnouncementCreate(BaseModel):
     type: str = Field("info", max_length=32)
     link_url: Optional[str] = Field(None, max_length=512)
 
+class BatchBadgesUpdate(BaseModel):
+    usernames: List[str]
+    has_supporter: Optional[bool] = None
+    has_team: Optional[bool] = None
+    has_founder: Optional[bool] = None
+    has_discord_authed: Optional[bool] = None
+
+class BatchBadgesResult(BaseModel):
+    updated_count: int
+    updated_users: List[str]
+    not_found_users: List[str]
+    message: str
+
+

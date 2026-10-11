@@ -10,6 +10,9 @@ from app.core.auth import get_current_user, get_optional_current_user, get_clien
 from app.models.models import Server, Boost, Account, AccountIdentity
 from app.schemas.schemas import ServerOut, ServerCreate, ServerUpdate
 
+from app.core.config import settings
+from app.core.security import generate_oauth_state
+
 router = APIRouter(prefix="/servers", tags=["servers"])
 
 @router.get("/my-guilds")
@@ -17,6 +20,19 @@ async def get_my_guilds(
     current_user: Account = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
+    def get_discord_auth_url() -> Optional[str]:
+        if not settings.DISCORD_CLIENT_ID:
+            return None
+        state = generate_oauth_state("discord")
+        return (
+            f"https://discord.com/api/oauth2/authorize?"
+            f"client_id={settings.DISCORD_CLIENT_ID}&"
+            f"redirect_uri={settings.DISCORD_REDIRECT_URI}&"
+            f"response_type=code&"
+            f"scope=identify%20email%20guilds&"
+            f"state={state}"
+        )
+
     stmt = select(AccountIdentity).where(
         AccountIdentity.account_id == current_user.id,
         AccountIdentity.provider == "discord"
@@ -24,10 +40,13 @@ async def get_my_guilds(
     res = await db.execute(stmt)
     identity = res.scalars().first()
 
+    auth_url = get_discord_auth_url()
+
     if not identity or not identity.access_token:
         return {
             "connected": False,
             "guilds": [],
+            "auth_url": auth_url,
             "message": "Discordアカウントが連携されていないか、ギルド取得権限がありません。"
         }
 
@@ -35,45 +54,64 @@ async def get_my_guilds(
     headers = {"Authorization": f"Bearer {identity.access_token}"}
 
     try:
+        # すでに登録済みのギルドIDをマップ化
+        reg_stmt = select(Server.guild_id, Server.slug).where(Server.guild_id.isnot(None))
+        reg_res = await db.execute(reg_stmt)
+        registered_map = {row[0]: row[1] for row in reg_res.all()}
+
         async with httpx.AsyncClient(timeout=8.0) as client:
             resp = await client.get(url, headers=headers)
             if resp.status_code == 200:
                 data = resp.json()
-                manageable_guilds = []
+                guilds = []
                 for g in data:
                     perms = int(g.get("permissions") or 0)
-                    is_admin = bool(g.get("owner")) or bool(perms & 0x8) or bool(perms & 0x20)
-                    if is_admin:
-                        gid = str(g.get("id"))
-                        icon_hash = g.get("icon")
-                        icon_url = f"https://cdn.discordapp.com/icons/{gid}/{icon_hash}.png" if icon_hash else None
-                        manageable_guilds.append({
-                            "id": gid,
-                            "name": g.get("name"),
-                            "icon_url": icon_url,
-                            "owner": bool(g.get("owner")),
-                            "permissions": perms,
-                        })
+                    is_owner = bool(g.get("owner"))
+                    can_manage = is_owner or bool(perms & 0x8) or bool(perms & 0x20)
+                    gid = str(g.get("id"))
+                    icon_hash = g.get("icon")
+                    ext = "gif" if icon_hash and icon_hash.startswith("a_") else "png"
+                    icon_url = f"https://cdn.discordapp.com/icons/{gid}/{icon_hash}.{ext}" if icon_hash else None
+
+                    is_registered = gid in registered_map
+                    guilds.append({
+                        "id": gid,
+                        "name": g.get("name"),
+                        "icon_url": icon_url,
+                        "owner": is_owner,
+                        "can_manage": can_manage,
+                        "permissions": perms,
+                        "is_registered": is_registered,
+                        "registered_slug": registered_map.get(gid) if is_registered else None,
+                    })
+
+                # ソート: 管理可能(owner優先) -> その他
+                guilds.sort(key=lambda x: (not x["can_manage"], not x["owner"], x["name"].lower()))
+
                 return {
                     "connected": True,
-                    "guilds": manageable_guilds
+                    "guilds": guilds,
+                    "auth_url": auth_url,
                 }
             elif resp.status_code == 401:
                 return {
                     "connected": False,
                     "guilds": [],
-                    "message": "Discordの認証セッションが失効しています。再度Discordログインを行ってください。"
+                    "auth_url": auth_url,
+                    "message": "Discordの認証セッションが失効しています。再度Discord連携を行ってください。"
                 }
             else:
                 return {
                     "connected": True,
                     "guilds": [],
+                    "auth_url": auth_url,
                     "message": f"Discord APIエラー ({resp.status_code})"
                 }
     except Exception as exc:
         return {
             "connected": True,
             "guilds": [],
+            "auth_url": auth_url,
             "message": f"Discordギルド情報の通信に失敗しました: {exc}"
         }
 

@@ -9,7 +9,16 @@ from app.core.database import get_db
 from app.core.config import settings
 from app.core.auth import get_current_user
 from app.models.models import Account, Server, Report, Donation, AuditLog
-from app.schemas.schemas import ReportOut, ReportUpdate, AdminStatsOut, DonationOut, DonationResolve, AuditLogOut
+from app.schemas.schemas import (
+    ReportOut,
+    ReportUpdate,
+    AdminStatsOut,
+    DonationOut,
+    DonationResolve,
+    AuditLogOut,
+    BatchBadgesUpdate,
+    BatchBadgesResult,
+)
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -209,6 +218,62 @@ async def update_profile_badges(
         "message": f"{target.username} のバッジ情報を更新しました"
     }
 
+@router.post("/profiles/batch-badges", response_model=BatchBadgesResult)
+async def batch_update_badges(
+    data: BatchBadgesUpdate,
+    admin: Account = Depends(require_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    raw_names = [u.strip().lstrip("@") for u in data.usernames if u.strip()]
+    unique_names = list(dict.fromkeys(raw_names))
+    if not unique_names:
+        raise HTTPException(status_code=400, detail="対象ユーザー名が指定されていません")
+
+    updated_users = []
+    not_found_users = []
+    changes_desc = []
+    if data.has_supporter is not None:
+        changes_desc.append(f"supporter={data.has_supporter}")
+    if data.has_team is not None:
+        changes_desc.append(f"team={data.has_team}")
+    if data.has_founder is not None:
+        changes_desc.append(f"founder={data.has_founder}")
+    if data.has_discord_authed is not None:
+        changes_desc.append(f"discord_authed={data.has_discord_authed}")
+
+    for name in unique_names:
+        stmt = select(Account).where(Account.username == name.lower())
+        res = await db.execute(stmt)
+        user = res.scalars().first()
+        if not user:
+            not_found_users.append(name)
+            continue
+
+        if data.has_supporter is not None:
+            user.has_supporter = data.has_supporter
+        if data.has_team is not None:
+            user.has_team = data.has_team
+        if data.has_founder is not None:
+            user.has_founder = data.has_founder
+        if data.has_discord_authed is not None:
+            user.has_discord_authed = data.has_discord_authed
+
+        updated_users.append(user.username)
+
+    if updated_users:
+        await log_audit_action(
+            db, admin.id, "batch_update_badges", "profile", ", ".join(updated_users[:10]),
+            f"count={len(updated_users)}, changes={', '.join(changes_desc)}"
+        )
+        await db.commit()
+
+    return BatchBadgesResult(
+        updated_count=len(updated_users),
+        updated_users=updated_users,
+        not_found_users=not_found_users,
+        message=f"{len(updated_users)} 名のユーザーのバッジ情報を更新しました"
+    )
+
 @router.get("/donations", response_model=List[DonationOut])
 async def list_donations(
     status_filter: Optional[str] = Query(None, alias="status"),
@@ -279,6 +344,28 @@ async def resolve_donation(
         d_out.donor_username = donation.account.username
         d_out.donor_avatar = donation.account.avatar_url
     return d_out
+
+@router.delete("/donations/{donation_id}")
+async def delete_donation(
+    donation_id: int,
+    admin: Account = Depends(require_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    stmt = select(Donation).where(Donation.id == donation_id)
+    res = await db.execute(stmt)
+    donation = res.scalars().first()
+    if not donation:
+        raise HTTPException(status_code=404, detail="支援申請が見つかりません")
+
+    donor_info = f"donor={donation.donor_name}, amount={donation.amount}, status={donation.status}"
+    await db.delete(donation)
+    await log_audit_action(
+        db, admin.id, "donation_delete", "donation", donation_id,
+        donor_info
+    )
+    await db.commit()
+    return {"status": "ok", "message": f"支援申請 #{donation_id} を削除しました"}
+
 
 @router.get("/audit-logs", response_model=List[AuditLogOut])
 async def list_audit_logs(

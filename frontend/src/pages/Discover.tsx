@@ -80,10 +80,10 @@ export const Discover: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight mb-2">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-2">
             見つける・探す
           </h1>
-          <p className="text-xs sm:text-sm text-slate-400">
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
             気になるコミュニティやプレイヤーを発見して、新しいつながりを作ろう。
           </p>
         </div>
@@ -91,7 +91,7 @@ export const Discover: React.FC = () => {
           <div>
             <button
               onClick={() => setIsCreateModalOpen(true)}
-              className="px-4 py-2.5 rounded-xl text-xs font-semibold bg-purple-600 hover:bg-purple-500 text-white transition flex items-center gap-1.5 shadow-lg shadow-purple-600/30 whitespace-nowrap"
+              className="px-4 py-2.5 rounded-xl text-xs font-semibold bg-purple-600 hover:bg-purple-500 text-white transition flex items-center gap-1.5 shadow-lg shadow-purple-600/30 whitespace-nowrap cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>サーバーを掲載する</span>
@@ -101,16 +101,16 @@ export const Discover: React.FC = () => {
       </div>
 
       {/* Main Mode Toggle: Servers vs Users */}
-      <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-white/[0.04] border border-white/10 w-fit mb-6">
+      <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-slate-200/70 dark:bg-white/[0.04] border border-slate-300/80 dark:border-white/10 w-fit mb-6">
         <button
           onClick={() => {
             setMainCategory('servers');
             setSearchTerm('');
           }}
-          className={`flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-bold transition ${
+          className={`flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
             mainCategory === 'servers'
               ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
-              : 'text-slate-400 hover:text-white'
+              : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
           }`}
         >
           <Compass className="w-4 h-4" />
@@ -121,10 +121,10 @@ export const Discover: React.FC = () => {
             setMainCategory('users');
             setSearchTerm('');
           }}
-          className={`flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-bold transition ${
+          className={`flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
             mainCategory === 'users'
               ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
-              : 'text-slate-400 hover:text-white'
+              : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
           }`}
         >
           <Users className="w-4 h-4" />
@@ -134,13 +134,13 @@ export const Discover: React.FC = () => {
 
       {/* Search Bar */}
       <div className="relative mb-6">
-        <Search className="w-5 h-5 text-slate-500 absolute left-4 top-1/2 -translate-y-1/2" />
+        <Search className="w-5 h-5 text-slate-400 dark:text-slate-500 absolute left-4 top-1/2 -translate-y-1/2" />
         <input
           type="text"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           placeholder={mainCategory === 'servers' ? 'サーバー名、タグ、キーワードで検索...' : 'ユーザー名、表示名、自己紹介で検索...'}
-          className="w-full pl-12 pr-4 py-3 rounded-2xl bg-white/[0.04] border border-white/10 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 transition"
+          className="w-full pl-12 pr-4 py-3 rounded-2xl bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 text-sm text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-purple-500 transition shadow-sm"
         />
       </div>
 
@@ -149,30 +149,30 @@ export const Discover: React.FC = () => {
         <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2">
           <button
             onClick={() => setActiveTab('popular')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap ${activeTab === 'popular' ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/20' : 'bg-white/5 text-slate-400 hover:text-white'}`}
+            className={`px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${activeTab === 'popular' ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/20' : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 dark:border-transparent dark:bg-white/5 dark:text-slate-400 dark:hover:text-white'}`}
           >
-            <Flame className="w-3.5 h-3.5 text-amber-400" />
+            <Flame className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
             <span>人気ランキング</span>
           </button>
           <button
             onClick={() => setActiveTab('trending')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap ${activeTab === 'trending' ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/20' : 'bg-white/5 text-slate-400 hover:text-white'}`}
+            className={`px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${activeTab === 'trending' ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/20' : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 dark:border-transparent dark:bg-white/5 dark:text-slate-400 dark:hover:text-white'}`}
           >
-            <TrendingUp className="w-3.5 h-3.5 text-rose-400" />
+            <TrendingUp className="w-3.5 h-3.5 text-rose-500 dark:text-rose-400" />
             <span>急上昇 (ブースト順)</span>
           </button>
           <button
             onClick={() => setActiveTab('new')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap ${activeTab === 'new' ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/20' : 'bg-white/5 text-slate-400 hover:text-white'}`}
+            className={`px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${activeTab === 'new' ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/20' : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 dark:border-transparent dark:bg-white/5 dark:text-slate-400 dark:hover:text-white'}`}
           >
-            <Sparkles className="w-3.5 h-3.5 text-sky-400" />
+            <Sparkles className="w-3.5 h-3.5 text-sky-500 dark:text-sky-400" />
             <span>新着サーバー</span>
           </button>
           <button
             onClick={() => setActiveTab('minecraft')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap ${activeTab === 'minecraft' ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/20' : 'bg-white/5 text-slate-400 hover:text-white'}`}
+            className={`px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${activeTab === 'minecraft' ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/20' : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 dark:border-transparent dark:bg-white/5 dark:text-slate-400 dark:hover:text-white'}`}
           >
-            <Compass className="w-3.5 h-3.5 text-emerald-400" />
+            <Compass className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
             <span>Minecraft</span>
           </button>
         </div>
@@ -215,7 +215,7 @@ export const Discover: React.FC = () => {
               return (
                 <div
                   key={server.id}
-                  className="p-5 rounded-2xl bg-white/[0.03] border border-white/[0.06] hover:border-white/15 transition flex flex-col justify-between"
+                  className="p-5 rounded-2xl bg-white/80 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/[0.06] hover:border-purple-400/40 dark:hover:border-white/15 transition flex flex-col justify-between shadow-sm"
                 >
                   <div>
                     <div className="flex items-center justify-between mb-3">
@@ -229,45 +229,45 @@ export const Discover: React.FC = () => {
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <Link to={`/server/${server.slug}`} className="font-bold text-white hover:text-purple-300 transition text-sm">
+                            <Link to={`/server/${server.slug}`} className="font-bold text-slate-900 dark:text-white hover:text-purple-600 dark:hover:text-purple-300 transition text-sm">
                               {server.name}
                             </Link>
                             {isOfficial && (
-                              <span className="text-[9px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded font-semibold">
+                              <span className="text-[9px] bg-purple-500/10 text-purple-600 dark:bg-purple-500/20 dark:text-purple-300 px-1.5 py-0.5 rounded font-semibold">
                                 Official
                               </span>
                             )}
                           </div>
-                          <p className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                             <span>{server.member_count.toLocaleString()} メンバー</span>
                           </p>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-1 text-xs font-mono text-amber-400 bg-amber-500/10 px-2 py-1 rounded-lg">
+                      <div className="flex items-center gap-1 text-xs font-mono text-amber-500 dark:text-amber-400 bg-amber-500/10 px-2 py-1 rounded-lg">
                         <Flame className="w-3.5 h-3.5" />
                         <span>{server.boosts_count !== undefined ? server.boosts_count : 0}</span>
                       </div>
                     </div>
 
-                    <p className="text-xs text-slate-300 leading-relaxed mb-4 line-clamp-2">
+                    <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-4 line-clamp-2">
                       {server.description || '説明はありません'}
                     </p>
 
                     <div className="flex flex-wrap gap-1.5 mb-4">
                       {tagsList.map(tag => (
-                        <span key={tag} className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-white/5 text-slate-400">
+                        <span key={tag} className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 dark:bg-white/5 dark:text-slate-400">
                           #{tag}
                         </span>
                       ))}
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 pt-3 border-t border-white/5">
+                  <div className="flex items-center gap-2 pt-3 border-t border-slate-100 dark:border-white/5">
                     <Link
                       to={`/server/${server.slug}`}
-                      className="flex-1 py-2 rounded-xl text-xs font-semibold bg-white/5 hover:bg-white/10 text-white transition text-center"
+                      className="flex-1 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-white/5 dark:hover:bg-white/10 dark:text-white transition text-center"
                     >
                       詳細を見る
                     </Link>
@@ -299,11 +299,11 @@ export const Discover: React.FC = () => {
               <Link
                 key={u.username}
                 to={`/@${u.username}`}
-                className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06] hover:border-purple-500/30 hover:bg-white/[0.05] transition flex flex-col justify-between group"
+                className="p-4 rounded-2xl bg-white/80 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/[0.06] hover:border-purple-400/40 dark:hover:border-purple-500/30 hover:bg-white dark:hover:bg-white/[0.05] transition flex flex-col justify-between shadow-sm group"
               >
                 <div>
                   <div className="flex items-start gap-3 mb-3">
-                    <div className="w-12 h-12 rounded-xl overflow-hidden bg-[#21262d] border border-white/10 flex-shrink-0">
+                    <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-100 dark:bg-[#21262d] border border-slate-200 dark:border-white/10 flex-shrink-0">
                       {u.avatar_url ? (
                         <img src={u.avatar_url} alt={u.display_name} className="w-full h-full object-cover" />
                       ) : (
@@ -314,13 +314,13 @@ export const Discover: React.FC = () => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="font-bold text-white text-sm group-hover:text-purple-300 transition truncate">
+                        <span className="font-bold text-slate-900 dark:text-white text-sm group-hover:text-purple-600 dark:group-hover:text-purple-300 transition truncate">
                           {u.display_name}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-400 truncate flex items-center font-mono">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 truncate flex items-center font-mono">
                         <span>@{u.username}</span>
-                        {u.tag && <span className="text-purple-400 font-semibold opacity-90">#{u.tag}</span>}
+                        {u.tag && <span className="text-purple-600 dark:text-purple-400 font-semibold opacity-90">#{u.tag}</span>}
                       </p>
                       <div className="mt-1">
                         <Badges
@@ -334,13 +334,13 @@ export const Discover: React.FC = () => {
                   </div>
 
                   {u.bio && (
-                    <p className="text-xs text-slate-300 line-clamp-2 leading-relaxed mb-3">
+                    <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-2 leading-relaxed mb-3">
                       {u.bio}
                     </p>
                   )}
                 </div>
 
-                <div className="flex items-center justify-between pt-3 border-t border-white/5 text-[11px] text-slate-400 font-mono">
+                <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-white/5 text-[11px] text-slate-400 font-mono">
                   <div className="flex items-center gap-3">
                     <span className="flex items-center gap-1">
                       <Users className="w-3 h-3 text-slate-400" />

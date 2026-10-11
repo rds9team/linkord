@@ -15,14 +15,14 @@ export const Home: React.FC = () => {
       </div>
 
       {/* Main Catchphrase */}
-      <h1 className="text-4xl sm:text-6xl font-extrabold text-white tracking-tight leading-tight sm:leading-tight mb-6">
+      <h1 className="text-4xl sm:text-6xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight sm:leading-tight mb-6">
         Discordの活動を、<br />
-        <span className="bg-gradient-to-r from-purple-400 via-sky-300 to-indigo-300 bg-clip-text text-transparent">
+        <span className="bg-gradient-to-r from-purple-600 via-sky-500 to-indigo-600 dark:from-purple-400 dark:via-sky-300 dark:to-indigo-300 bg-clip-text text-transparent">
           ひとつのプロフィールに。
         </span>
       </h1>
 
-      <p className="text-sm sm:text-base text-slate-300 max-w-xl mx-auto mb-8 leading-relaxed">
+      <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 max-w-xl mx-auto mb-8 leading-relaxed">
         Discordのリアルタイムステータス、Minecraftの戦績、所属サーバー、SNSリンクをスタイリッシュにまとめよう。完全無料で誰でも利用できます。
       </p>
 
@@ -37,7 +37,7 @@ export const Home: React.FC = () => {
         </Link>
         <Link
           to="/discover"
-          className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold text-sm transition"
+          className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-slate-200/80 hover:bg-slate-300/80 text-slate-800 border border-slate-300 dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 dark:text-white font-bold text-sm transition"
         >
           サーバーを探す
         </Link>
@@ -96,44 +96,44 @@ export const Home: React.FC = () => {
 
       {/* Features Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full text-left mb-12">
-        <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/[0.06] backdrop-blur-md hover:border-purple-500/30 transition group">
+        <div className="p-5 rounded-2xl bg-white/70 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/[0.06] backdrop-blur-md hover:border-purple-500/40 transition shadow-sm group">
           <div className="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition">
-            <Zap className="w-5 h-5 text-purple-400" />
+            <Zap className="w-5 h-5 text-purple-500 dark:text-purple-400" />
           </div>
-          <h3 className="text-sm font-bold text-white mb-1">リアルタイムプレゼンス & BGM</h3>
-          <p className="text-xs text-slate-400 leading-relaxed">
+          <h3 className="text-sm font-bold text-slate-800 dark:text-white mb-1">リアルタイムプレゼンス & BGM</h3>
+          <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
             Lanyard連携でSpotifyの再生状況やDiscordステータスを即時反映。カスタムBGMや背景動画ループも設定可能。
           </p>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/[0.06] backdrop-blur-md hover:border-emerald-500/30 transition group">
+        <div className="p-5 rounded-2xl bg-white/70 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/[0.06] backdrop-blur-md hover:border-emerald-500/40 transition shadow-sm group">
           <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition">
-            <Gamepad2 className="w-5 h-5 text-emerald-400" />
+            <Gamepad2 className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
           </div>
-          <h3 className="text-sm font-bold text-white mb-1">Minecraft PlayHive戦績</h3>
-          <p className="text-xs text-slate-400 leading-relaxed">
+          <h3 className="text-sm font-bold text-slate-800 dark:text-white mb-1">Minecraft PlayHive戦績</h3>
+          <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
             BedWarsやSkyWarsなどの戦績・キルレ・勝利数を公式APIから安全に取得してプロフィールに美しくカード表示。
           </p>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/[0.06] backdrop-blur-md hover:border-sky-500/30 transition group">
+        <div className="p-5 rounded-2xl bg-white/70 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/[0.06] backdrop-blur-md hover:border-sky-500/40 transition shadow-sm group">
           <div className="w-9 h-9 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center mb-3 group-hover:scale-110 transition">
-            <Server className="w-5 h-5 text-sky-400" />
+            <Server className="w-5 h-5 text-sky-500 dark:text-sky-400" />
           </div>
-          <h3 className="text-sm font-bold text-white mb-1">サーバー掲示板・ブースト</h3>
-          <p className="text-xs text-slate-400 leading-relaxed">
+          <h3 className="text-sm font-bold text-slate-800 dark:text-white mb-1">サーバー掲示板・ブースト</h3>
+          <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
             Discord招待リンクを入力するだけで簡単掲載。ワンクリックのメンバー数同期や1時間ごとのブーストで発見を促進。
           </p>
         </div>
       </div>
 
       {/* Support Box */}
-      <div className="p-6 rounded-2xl bg-gradient-to-r from-purple-900/20 to-sky-900/20 border border-purple-500/20 max-w-xl mx-auto w-full">
-        <Heart className="w-6 h-6 text-rose-400 mx-auto mb-2" />
-        <p className="text-xs text-slate-300 leading-relaxed mb-3">
+      <div className="p-6 rounded-2xl bg-purple-500/5 dark:bg-gradient-to-r dark:from-purple-900/20 dark:to-sky-900/20 border border-purple-400/20 dark:border-purple-500/20 max-w-xl mx-auto w-full">
+        <Heart className="w-6 h-6 text-rose-500 dark:text-rose-400 mx-auto mb-2" />
+        <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-3">
           Linkordのドメイン代・サーバー代などの維持にご協力ください。支援は任意で、支援しなくてもすべての基本機能を利用できます。
         </p>
-        <span className="text-[11px] font-semibold text-purple-300">PayPay送金リンクによる開発支援を受け付けています</span>
+        <span className="text-[11px] font-semibold text-purple-600 dark:text-purple-300">PayPay送金リンクによる開発支援を受け付けています</span>
       </div>
 
     </div>

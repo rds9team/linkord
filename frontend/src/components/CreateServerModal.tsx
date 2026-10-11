@@ -34,8 +34,9 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
   if (!isOpen) return null;
 
   const handleInspectInvite = async (inviteInput?: string) => {
-    const targetInvite = (inviteInput !== undefined ? inviteInput : inviteUrl).trim();
+    let targetInvite = (inviteInput !== undefined ? inviteInput : inviteUrl).trim();
     if (!targetInvite) return;
+    targetInvite = targetInvite.split('?')[0].split('#')[0].replace(/\/+$/, '');
 
     try {
       setInspecting(true);
@@ -47,16 +48,19 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
         setName(res.name);
       }
       if (!slug || inspectSuccess) {
-        // Auto-generate safe slug from guild name or code
-        const safeSlug = (res.name || res.code)
+        // Auto-generate safe slug from guild name or code, with fallback for non-ASCII names
+        const cleanedNameSlug = (res.name || '')
           .toLowerCase()
           .replace(/[^a-z0-9_-]/g, '-')
           .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '')
           .slice(0, 30);
-        if (safeSlug.length >= 3) {
-          setSlug(safeSlug);
+        if (cleanedNameSlug.length >= 3) {
+          setSlug(cleanedNameSlug);
+        } else if (res.code && res.code.length >= 3) {
+          setSlug(res.code.toLowerCase().slice(0, 30));
         } else {
-          setSlug(`server-${res.code.slice(0, 8)}`);
+          setSlug(`server-${Math.random().toString(36).substring(2, 8)}`);
         }
       }
       if (res.icon_url && (!iconUrl || inspectSuccess)) {
@@ -108,6 +112,24 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
       return;
     }
 
+    if (!name.trim()) {
+      setError('サーバー名を入力してください');
+      return;
+    }
+
+    let finalInvite = inviteUrl.trim();
+    if (!finalInvite) {
+      setError('招待URLを入力してください');
+      return;
+    }
+    if (!finalInvite.startsWith('http://') && !finalInvite.startsWith('https://')) {
+      if (finalInvite.startsWith('discord.gg/') || finalInvite.startsWith('discord.com/')) {
+        finalInvite = `https://${finalInvite}`;
+      } else {
+        finalInvite = `https://discord.gg/${finalInvite}`;
+      }
+    }
+
     if (!slug.match(/^[a-zA-Z0-9_-]{3,48}$/)) {
       setError('識別URL(slug)は3〜48文字の半角英数字・ハイフン・アンダースコアで入力してください');
       return;
@@ -119,7 +141,7 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
       const newServer = await createServer({
         slug: slug.trim(),
         name: name.trim(),
-        invite_url: inviteUrl.trim(),
+        invite_url: finalInvite,
         icon_url: iconUrl.trim() || undefined,
         description: description.trim() || undefined,
         tags: tags.trim(),

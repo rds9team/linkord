@@ -22,8 +22,10 @@ class SocialLinkBase(BaseModel):
     @classmethod
     def check_url_scheme(cls, v: str) -> str:
         v = v.strip()
+        if not v:
+            raise ValueError("URLを入力してください")
         if not (v.startswith("http://") or v.startswith("https://")):
-            raise ValueError("URLはhttp://またはhttps://で始まる必要があります")
+            v = f"https://{v}"
         return v
 
 class SocialLinkOut(SocialLinkBase):
@@ -144,8 +146,13 @@ class ServerCreate(BaseModel):
     @classmethod
     def check_invite_url(cls, v: str) -> str:
         v = v.strip()
+        if not v:
+            raise ValueError("招待URLを入力してください")
         if not (v.startswith("http://") or v.startswith("https://")):
-            raise ValueError("招待URLはhttp://またはhttps://で始まる必要があります")
+            if v.startswith("discord.gg/") or v.startswith("discord.com/"):
+                v = f"https://{v}"
+            else:
+                v = f"https://discord.gg/{v}"
         return v
 
     @field_validator("icon_url")

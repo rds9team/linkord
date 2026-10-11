@@ -45,33 +45,49 @@ const THEME_ACCENTS: Record<string, { glow: string; border: string; badge: strin
   clean: { glow: 'bg-slate-500/10', border: 'border-slate-500/20', badge: 'bg-slate-500/20 text-slate-300' },
 };
 
-const getSocialIcon = (iconName: string) => {
-  const icon = iconName.toLowerCase();
-  switch (icon) {
-    case 'discord':
-      return <MessageSquare className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />;
-    case 'github':
-      return <Github className="w-5 h-5 text-slate-700 dark:text-slate-200" />;
-    case 'twitter':
-    case 'x':
-      return <Twitter className="w-5 h-5 text-sky-500 dark:text-sky-400" />;
-    case 'qiita':
-    case 'code':
-      return <Code className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />;
-    case 'youtube':
-      return <Youtube className="w-5 h-5 text-rose-500" />;
-    case 'twitch':
-      return <Twitch className="w-5 h-5 text-purple-400" />;
-    case 'telegram':
-      return <Send className="w-5 h-5 text-sky-400" />;
-    default:
-      return <Globe className="w-5 h-5 text-slate-400" />;
+const normalizeLinkUrl = (url?: string): string | null => {
+  if (!url) return null;
+  let trimmed = url.trim();
+  if (!trimmed || trimmed === '#') return null;
+  if (!/^https?:\/\//i.test(trimmed)) {
+    // Prevent javascript: or data: dangerous pseudo-schemes
+    if (/^[a-zA-Z0-9_-]+:/.test(trimmed)) {
+      return null;
+    }
+    trimmed = `https://${trimmed}`;
   }
+  return trimmed;
+};
+
+const getSocialIcon = (iconName: string, url?: string) => {
+  const icon = (iconName || '').toLowerCase();
+  const lowerUrl = (url || '').toLowerCase();
+  if (icon === 'discord' || lowerUrl.includes('discord.com') || lowerUrl.includes('discord.gg')) {
+    return <MessageSquare className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />;
+  }
+  if (icon === 'github' || lowerUrl.includes('github.com')) {
+    return <Github className="w-5 h-5 text-slate-700 dark:text-slate-200" />;
+  }
+  if (icon === 'twitter' || icon === 'x' || lowerUrl.includes('x.com') || lowerUrl.includes('twitter.com')) {
+    return <Twitter className="w-5 h-5 text-sky-500 dark:text-sky-400" />;
+  }
+  if (icon === 'qiita' || lowerUrl.includes('qiita.com')) {
+    return <Code className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />;
+  }
+  if (icon === 'youtube' || lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
+    return <Youtube className="w-5 h-5 text-rose-500" />;
+  }
+  if (icon === 'twitch' || lowerUrl.includes('twitch.tv')) {
+    return <Twitch className="w-5 h-5 text-purple-400" />;
+  }
+  if (icon === 'telegram' || lowerUrl.includes('t.me')) {
+    return <Send className="w-5 h-5 text-sky-400" />;
+  }
+  return <Globe className="w-5 h-5 text-slate-400" />;
 };
 
 const isSafeHttpUrl = (url?: string): boolean => {
-  if (!url) return false;
-  return /^https?:\/\//i.test(url.trim());
+  return normalizeLinkUrl(url) !== null;
 };
 
 export const Profile: React.FC = () => {
@@ -475,16 +491,16 @@ export const Profile: React.FC = () => {
             return (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
                 {displayLinks.map((link, idx) => {
-                  const safe = isSafeHttpUrl(link.url);
+                  const safeUrl = normalizeLinkUrl(link.url);
                   return (
                     <a
                       key={link.id || idx}
-                      href={safe ? link.url : '#'}
-                      target={safe ? '_blank' : undefined}
-                      rel={safe ? 'noopener noreferrer' : undefined}
+                      href={safeUrl || '#'}
+                      target={safeUrl ? '_blank' : undefined}
+                      rel={safeUrl ? 'noopener noreferrer' : undefined}
                       className={`rounded-xl p-2.5 flex items-center justify-center gap-2 transition hover:scale-[1.02] ${isLight ? 'glass-card-light' : 'glass-card-dark'}`}
                     >
-                      {getSocialIcon(link.icon || link.title)}
+                      {getSocialIcon(link.icon || link.title, link.url)}
                       <span className="text-[11px] text-slate-700 dark:text-slate-300 font-semibold truncate max-w-[100px]">
                         {link.title}
                       </span>

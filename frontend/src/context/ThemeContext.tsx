@@ -15,9 +15,6 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       const saved = localStorage.getItem('linkord_global_theme');
       if (saved === 'dark' || saved === 'light') return saved;
-      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
-        return 'light';
-      }
     } catch {
       // Fallback
     }

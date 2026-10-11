@@ -16,7 +16,8 @@ router = APIRouter(prefix="/servers", tags=["servers"])
 @router.get("/inspect-invite")
 async def inspect_discord_invite(invite: str = Query(..., description="Discord invite URL or code")):
     raw_invite = invite.strip()
-    match = re.search(r"(?:discord\.gg/|discord\.com/invite/)?([a-zA-Z0-9_-]+)$", raw_invite)
+    clean = raw_invite.split("?")[0].split("#")[0].rstrip("/")
+    match = re.search(r"(?:discord\.gg/|discord\.com/invite/)?([a-zA-Z0-9_-]+)$", clean)
     if not match:
         raise HTTPException(status_code=400, detail="無効なDiscord招待URLまたはコードです")
     
@@ -119,7 +120,8 @@ async def create_server(
     member_count = 0
     real_icon_url = data.icon_url
     clean_invite = data.invite_url.strip()
-    match = re.search(r"(?:discord\.gg/|discord\.com/invite/)?([a-zA-Z0-9_-]+)$", clean_invite)
+    clean_code_src = clean_invite.split("?")[0].split("#")[0].rstrip("/")
+    match = re.search(r"(?:discord\.gg/|discord\.com/invite/)?([a-zA-Z0-9_-]+)$", clean_code_src)
     if match:
         code = match.group(1)
         clean_invite = f"https://discord.gg/{code}"

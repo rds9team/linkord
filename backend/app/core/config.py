@@ -3,6 +3,7 @@ from typing import Optional
 
 class Settings(BaseSettings):
     APP_ENV: str = "development"
+    TESTING: bool = False
     SECRET_KEY: str = "linkord_dev_secret_key_32_characters_minimum"
     FRONTEND_URL: str = "http://localhost:5173"
     API_URL: str = "http://localhost:8000"

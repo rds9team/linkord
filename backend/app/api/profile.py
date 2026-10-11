@@ -10,7 +10,6 @@ from app.core.database import get_db
 from app.core.auth import get_current_user, get_optional_current_user, get_client_ip
 from app.models.models import Account, ProfileBoost, Follow, SocialLink
 from app.schemas.schemas import ProfileOut, ProfileUpdate, FollowUserOut, ProfileSearchResult
-from app.services.discord_notify import notify_boost_discord
 
 router = APIRouter(prefix="/profile", tags=["profile"])
 
@@ -312,12 +311,6 @@ async def boost_profile(
     )
     db.add(boost)
     await db.commit()
-
-    await notify_boost_discord(
-        target_name=target_account.display_name or f"@{target_account.username}",
-        target_type="profile",
-        booster_account=current_user
-    )
 
     return {"status": "ok", "message": f"{target_account.display_name} をブーストしました！"}
 

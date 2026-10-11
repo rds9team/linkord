@@ -1,9 +1,24 @@
+import sys
+import os
 import datetime
 import httpx
 from typing import Optional
 from app.core.config import settings
 
+# 日本標準時 (JST, UTC+9:00) タイムゾーン定義
+JST = datetime.timezone(datetime.timedelta(hours=9), name="JST")
+
+def is_testing_environment() -> bool:
+    """テスト実行時やテスト環境フラグが立っている場合はWebhook送信を完全に抑止する"""
+    return (
+        "pytest" in sys.modules
+        or os.environ.get("TESTING") == "1"
+        or getattr(settings, "TESTING", False)
+    )
+
 async def send_discord_webhook(embed: dict):
+    if is_testing_environment():
+        return
     webhook_url = settings.DISCORD_DONATION_WEBHOOK_URL
     if not webhook_url:
         return
@@ -19,6 +34,9 @@ async def notify_donation_discord(donation, donor_account=None):
     if donor_account:
         donor_display = f"{donor_account.display_name} (@{donor_account.full_username})"
 
+    # 日本標準時 (JST, UTC+9) で日時を算出
+    now_jst = datetime.datetime.now(JST)
+
     embed = {
         "title": "💸 新しいPayPay応援・支援が届きました！",
         "description": (
@@ -26,37 +44,21 @@ async def notify_donation_discord(donation, donor_account=None):
             f"**送金リンク**: [PayPayで受け取る]({donation.paypay_url})\n"
             f"**パスコード**: `{donation.passcode or '設定なし'}`\n"
             f"**金額目安**: {f'¥{donation.amount:,}' if donation.amount else '未指定'}\n"
-            f"**メッセージ**: {donation.message or 'なし'}\n\n"
+            f"**メッセージ**: {donation.message or 'なし'}\n"
+            f"**日時**: {now_jst.strftime('%Y-%m-%d %H:%M:%S JST')}\n\n"
             f"管理パネルから確認・バッジ付与を行ってください。"
         ),
         "color": 0xFF0033,  # PayPay Red
-        "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+        "timestamp": now_jst.isoformat(),
         "footer": {
-            "text": "Linkord 応援・支援通知システム"
+            "text": "Linkord 応援・支援通知システム (JST)"
         }
     }
     await send_discord_webhook(embed)
 
 async def notify_boost_discord(target_name: str, target_type: str, booster_account=None):
-    booster_display = "匿名ユーザー"
-    if booster_account:
-        booster_display = f"{booster_account.display_name} (@{booster_account.full_username})"
-
-    type_label = "プロフィール" if target_type == "profile" else "Discordサーバー"
-    color = 0xF59E0B if target_type == "profile" else 0x9333EA  # Amber for profile, Purple for server
-
-    embed = {
-        "title": f"🔥 新しい{type_label}の応援（ブースト）がありました！",
-        "description": (
-            f"**対象**: **{target_name}** ({type_label})\n"
-            f"**応援者**: {booster_display}\n"
-            f"**日時**: {datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}\n\n"
-            f"熱い応援が届きました！🚀"
-        ),
-        "color": color,
-        "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
-        "footer": {
-            "text": "Linkord 応援・ブースト通知システム"
-        }
-    }
-    await send_discord_webhook(embed)
+    """
+    ブースト通知は停止（ユーザー要望: ブースト通知はいらん、PayPayだけにしてくれ）
+    呼び出し元の互換性のためにシグネチャを残し、何もしない（no-op）。
+    """
+    return

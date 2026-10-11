@@ -1,8 +1,13 @@
 import secrets
 import datetime
+import os
 from sqlalchemy import select
+from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.models.models import Account, UserSession
+
+settings.TESTING = True
+os.environ["TESTING"] = "1"
 
 async def create_test_account_and_session(
     username: str = "yuto",

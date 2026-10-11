@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { X, Server as ServerIcon, Upload, Loader2, Sparkles, CheckCircle2, Users } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Server as ServerIcon, Upload, Loader2, Sparkles, CheckCircle2, Users, Shield } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { createServer, uploadMedia, inspectDiscordInvite } from '../api/client';
+import { createServer, uploadMedia, inspectDiscordInvite, fetchMyGuilds, DiscordGuildItem } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
 interface CreateServerModalProps {
@@ -30,6 +30,50 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
   const [inspectSuccess, setInspectSuccess] = useState(false);
   const [serverStats, setServerStats] = useState<{ member_count: number; presence_count: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Guilds from Discord OAuth2
+  const [myGuilds, setMyGuilds] = useState<DiscordGuildItem[]>([]);
+  const [loadingGuilds, setLoadingGuilds] = useState(false);
+  const [selectedGuildId, setSelectedGuildId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen && user) {
+      setLoadingGuilds(true);
+      fetchMyGuilds()
+        .then((res) => {
+          if (res.connected && res.guilds) {
+            setMyGuilds(res.guilds);
+          } else {
+            setMyGuilds([]);
+          }
+        })
+        .catch(() => {
+          setMyGuilds([]);
+        })
+        .finally(() => {
+          setLoadingGuilds(false);
+        });
+    }
+  }, [isOpen, user]);
+
+  const handleSelectGuild = (guild: DiscordGuildItem) => {
+    setSelectedGuildId(guild.id);
+    setName(guild.name);
+    if (guild.icon_url) {
+      setIconUrl(guild.icon_url);
+    }
+    const cleanSlug = guild.name
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 30);
+    if (cleanSlug.length >= 3) {
+      setSlug(cleanSlug);
+    } else {
+      setSlug(`server-${guild.id.slice(-6)}`);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -192,6 +236,63 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+            {/* Manageable Guilds Picker */}
+            {loadingGuilds ? (
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-white/[0.02] border border-white/5 text-slate-400 text-[11px]">
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-purple-400" />
+                <span>管理中のDiscordサーバーを取得中...</span>
+              </div>
+            ) : myGuilds.length > 0 ? (
+              <div className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-semibold text-indigo-300 flex items-center gap-1.5">
+                    <Shield className="w-3.5 h-3.5" />
+                    <span>管理中のDiscordサーバーから選択</span>
+                  </span>
+                  <span className="text-[10px] text-indigo-400/80 font-mono">
+                    {myGuilds.length}件
+                  </span>
+                </div>
+                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
+                  {myGuilds.map((g) => {
+                    const isSelected = selectedGuildId === g.id;
+                    return (
+                      <button
+                        key={g.id}
+                        type="button"
+                        onClick={() => handleSelectGuild(g)}
+                        className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-left shrink-0 transition text-xs ${
+                          isSelected
+                            ? 'bg-indigo-600/30 border-indigo-500 text-white font-semibold'
+                            : 'bg-white/5 border-white/10 hover:bg-white/10 text-slate-300 hover:border-white/20'
+                        }`}
+                        title={g.name}
+                      >
+                        {g.icon_url ? (
+                          <img
+                            src={g.icon_url}
+                            alt=""
+                            className="w-5 h-5 rounded-md object-cover"
+                          />
+                        ) : (
+                          <div className="w-5 h-5 rounded-md bg-slate-700 flex items-center justify-center text-[10px] font-bold text-slate-300">
+                            {g.name.slice(0, 1)}
+                          </div>
+                        )}
+                        <span className="max-w-[130px] truncate">{g.name}</span>
+                        {isSelected && (
+                          <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1.5">
+                  ※ サーバーをクリックすると名前・アイコン・slugが自動入力されます
+                </p>
+              </div>
+            ) : null}
+
             {/* Invite URL (Primary) */}
             <div className="p-3 rounded-xl bg-purple-500/5 border border-purple-500/20">
               <label className="block font-semibold text-purple-300 mb-1">

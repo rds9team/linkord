@@ -80,6 +80,11 @@ async def get_playhive_stats(identifier: str, gamemode: str = "bed"):
     if cache_key in _CACHE:
         ts, data = _CACHE[cache_key]
         if now - ts < CACHE_TTL:
+            if "losses" not in data or "win_rate" not in data:
+                p = data.get("played", 0)
+                v = data.get("victories", 0)
+                data["losses"] = max(0, p - v)
+                data["win_rate"] = round((v / p) * 100, 1) if p > 0 else 0.0
             return {"source": "cache", "data": data, "cached_at": ts}
 
     # Fetch from official PlayHive public API (OpenAPI v0)
@@ -123,6 +128,11 @@ async def get_playhive_stats(identifier: str, gamemode: str = "bed"):
     except Exception:
         if cache_key in _CACHE:
             ts, data = _CACHE[cache_key]
+            if "losses" not in data or "win_rate" not in data:
+                p = data.get("played", 0)
+                v = data.get("victories", 0)
+                data["losses"] = max(0, p - v)
+                data["win_rate"] = round((v / p) * 100, 1) if p > 0 else 0.0
             return {"source": "stale_cache", "data": data, "cached_at": ts}
 
     # If player has no stats or API unavailable
@@ -136,6 +146,8 @@ async def get_playhive_stats(identifier: str, gamemode: str = "bed"):
             "deaths": 0,
             "victories": 0,
             "played": 0,
+            "losses": 0,
+            "win_rate": 0.0,
             "xp": 0,
             "kd": 0.0,
             "prestige": 0,

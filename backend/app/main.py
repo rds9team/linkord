@@ -23,6 +23,45 @@ async def ensure_schema_updated(conn):
         if "hide_followers" not in columns:
             await conn.exec_driver_sql("ALTER TABLE accounts ADD COLUMN hide_followers BOOLEAN DEFAULT 0;")
 
+    # Check account_identities table columns
+    result_ident = await conn.exec_driver_sql("PRAGMA table_info(account_identities);")
+    columns_ident = [row[1] for row in result_ident.fetchall()]
+    if columns_ident:
+        if "access_token" not in columns_ident:
+            await conn.exec_driver_sql("ALTER TABLE account_identities ADD COLUMN access_token VARCHAR(512);")
+
+async def ensure_defaults(conn):
+    # Ensure rds9 admin account exists with founder badge
+    res = await conn.exec_driver_sql("SELECT id FROM accounts WHERE username = 'rds9';")
+    rds9_row = res.fetchone()
+    if not rds9_row:
+        await conn.exec_driver_sql("""
+            INSERT INTO accounts (username, tag, display_name, has_founder, has_team, has_supporter, has_discord_authed, created_at, updated_at, last_login_at)
+            VALUES ('rds9', '0001', 'rds9', 1, 1, 1, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+        """)
+        res = await conn.exec_driver_sql("SELECT id FROM accounts WHERE username = 'rds9';")
+        rds9_row = res.fetchone()
+    else:
+        await conn.exec_driver_sql("UPDATE accounts SET has_founder = 1, has_team = 1, has_supporter = 1, has_discord_authed = 1 WHERE username = 'rds9';")
+
+    rds9_id = rds9_row[0] if rds9_row else 1
+
+    # Ensure official server exists with https://discord.gg/AMKjxRYKGF
+    res_srv = await conn.exec_driver_sql("SELECT id FROM servers WHERE slug = 'rds9-community';")
+    if not res_srv.fetchone():
+        await conn.exec_driver_sql(f"""
+            INSERT INTO servers (owner_id, slug, name, description, invite_url, icon_url, tags, language, member_count, is_public, created_at, updated_at)
+            VALUES ({rds9_id}, 'rds9-community', 'rds9 bots', 'RDS9 / Linkord 公式コミュニティサーバーです。開発の最新情報やボットのサポートを受けられます。', 'https://discord.gg/AMKjxRYKGF', 'https://cdn.discordapp.com/icons/1554788753317437450/4ff6888edb79fcf0aea4c7ff6c270b68.png', 'Official,Discord,Bot,Community', 'ja', 21, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+        """)
+    else:
+        await conn.exec_driver_sql("""
+            UPDATE servers
+            SET invite_url = 'https://discord.gg/AMKjxRYKGF',
+                icon_url = 'https://cdn.discordapp.com/icons/1554788753317437450/4ff6888edb79fcf0aea4c7ff6c270b68.png',
+                name = 'rds9 bots'
+            WHERE slug = 'rds9-community';
+        """)
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Auto-create tables on startup for rapid development
@@ -30,6 +69,10 @@ async def lifespan(app: FastAPI):
         await conn.run_sync(Base.metadata.create_all)
         try:
             await ensure_schema_updated(conn)
+        except Exception:
+            pass
+        try:
+            await ensure_defaults(conn)
         except Exception:
             pass
     yield

@@ -7,11 +7,76 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_
 from app.core.database import get_db
 from app.core.auth import get_current_user, get_optional_current_user, get_client_ip
-from app.models.models import Server, Boost, Account
+from app.models.models import Server, Boost, Account, AccountIdentity
 from app.schemas.schemas import ServerOut, ServerCreate, ServerUpdate
 from app.services.discord_notify import notify_boost_discord
 
 router = APIRouter(prefix="/servers", tags=["servers"])
+
+@router.get("/my-guilds")
+async def get_my_guilds(
+    current_user: Account = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    stmt = select(AccountIdentity).where(
+        AccountIdentity.account_id == current_user.id,
+        AccountIdentity.provider == "discord"
+    )
+    res = await db.execute(stmt)
+    identity = res.scalars().first()
+
+    if not identity or not identity.access_token:
+        return {
+            "connected": False,
+            "guilds": [],
+            "message": "Discordアカウントが連携されていないか、ギルド取得権限がありません。"
+        }
+
+    url = "https://discord.com/api/v10/users/@me/guilds"
+    headers = {"Authorization": f"Bearer {identity.access_token}"}
+
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            resp = await client.get(url, headers=headers)
+            if resp.status_code == 200:
+                data = resp.json()
+                manageable_guilds = []
+                for g in data:
+                    perms = int(g.get("permissions") or 0)
+                    is_admin = bool(g.get("owner")) or bool(perms & 0x8) or bool(perms & 0x20)
+                    if is_admin:
+                        gid = str(g.get("id"))
+                        icon_hash = g.get("icon")
+                        icon_url = f"https://cdn.discordapp.com/icons/{gid}/{icon_hash}.png" if icon_hash else None
+                        manageable_guilds.append({
+                            "id": gid,
+                            "name": g.get("name"),
+                            "icon_url": icon_url,
+                            "owner": bool(g.get("owner")),
+                            "permissions": perms,
+                        })
+                return {
+                    "connected": True,
+                    "guilds": manageable_guilds
+                }
+            elif resp.status_code == 401:
+                return {
+                    "connected": False,
+                    "guilds": [],
+                    "message": "Discordの認証セッションが失効しています。再度Discordログインを行ってください。"
+                }
+            else:
+                return {
+                    "connected": True,
+                    "guilds": [],
+                    "message": f"Discord APIエラー ({resp.status_code})"
+                }
+    except Exception as exc:
+        return {
+            "connected": True,
+            "guilds": [],
+            "message": f"Discordギルド情報の通信に失敗しました: {exc}"
+        }
 
 @router.get("/inspect-invite")
 async def inspect_discord_invite(invite: str = Query(..., description="Discord invite URL or code")):

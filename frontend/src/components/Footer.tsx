@@ -46,7 +46,7 @@ export const Footer: React.FC = () => {
             <span>管理</span>
           </Link>
           <a
-            href="https://discord.gg/example1"
+            href="https://discord.gg/AMKjxRYKGF"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:opacity-80 transition flex items-center gap-1 text-indigo-500 font-medium"

@@ -192,7 +192,7 @@ def discord_login():
         f"client_id={settings.DISCORD_CLIENT_ID}&"
         f"redirect_uri={settings.DISCORD_REDIRECT_URI}&"
         f"response_type=code&"
-        f"scope=identify%20email&"
+        f"scope=identify%20email%20guilds&"
         f"state={state}"
     )
     return {"url": discord_auth_url}
@@ -303,6 +303,8 @@ async def discord_callback(
     identity = res.scalars().first()
 
     if identity and identity.account:
+        identity.access_token = access_token
+        identity.provider_username = discord_username
         account = identity.account
         account.last_login_at = datetime.datetime.utcnow()
         account.has_discord_authed = True
@@ -365,7 +367,8 @@ async def discord_callback(
             account_id=account.id,
             provider="discord",
             provider_user_id=discord_user_id,
-            provider_username=discord_username
+            provider_username=discord_username,
+            access_token=access_token,
         )
         db.add(identity)
 

@@ -69,6 +69,7 @@ class AccountIdentity(Base):
     provider = Column(String(32), nullable=False) # discord, google, email
     provider_user_id = Column(String(128), nullable=False)
     provider_username = Column(String(128), nullable=True)
+    access_token = Column(String(512), nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
 
     __table_args__ = (

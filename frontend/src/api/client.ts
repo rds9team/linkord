@@ -108,6 +108,22 @@ export const inspectDiscordInvite = (invite: string): Promise<{
   });
 };
 
+export interface DiscordGuildItem {
+  id: string;
+  name: string;
+  icon_url?: string | null;
+  owner: boolean;
+  permissions: number;
+}
+
+export const fetchMyGuilds = (): Promise<{
+  connected: boolean;
+  guilds: DiscordGuildItem[];
+  message?: string;
+}> => {
+  return request(`/api/servers/my-guilds`);
+};
+
 export const syncServerDiscordStats = (slug: string): Promise<{ status: string; member_count: number; icon_url?: string; message: string }> => {
   return request<{ status: string; member_count: number; icon_url?: string; message: string }>(`/api/servers/${encodeURIComponent(slug)}/sync`, {
     method: 'POST',

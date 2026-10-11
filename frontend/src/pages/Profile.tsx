@@ -590,25 +590,36 @@ export const Profile: React.FC = () => {
             ) : (
               <>
                 {/* Win Rate Banner with Progress Bar */}
-                <div className={`p-2.5 rounded-xl mb-2.5 ${isLight ? 'bg-slate-200/50' : 'bg-white/[0.03]'}`}>
-                  <div className="flex items-center justify-between text-[11px] mb-1.5 font-semibold">
-                    <span className="flex items-center gap-1.5 text-emerald-500">
-                      <span>🏆 勝率</span>
-                      <span className="font-mono font-extrabold text-xs">
-                        {mcData?.win_rate !== undefined ? `${mcData.win_rate}%` : '0.0%'}
-                      </span>
-                    </span>
-                    <span className="text-[10px] font-mono text-slate-400">
-                      {mcData?.victories ?? 0}勝 / {mcData?.losses ?? 0}敗 ({mcData?.played ?? 0}戦)
-                    </span>
-                  </div>
-                  <div className="w-full bg-slate-300 dark:bg-white/10 h-1.5 rounded-full overflow-hidden">
-                    <div
-                      className="bg-gradient-to-r from-emerald-500 to-teal-400 h-full rounded-full transition-all duration-500"
-                      style={{ width: `${Math.min(100, Math.max(0, mcData?.win_rate || 0))}%` }}
-                    />
-                  </div>
-                </div>
+                {(() => {
+                  const played = Number(mcData?.played || 0);
+                  const victories = Number(mcData?.victories || 0);
+                  const losses = mcData?.losses !== undefined ? Number(mcData.losses) : Math.max(0, played - victories);
+                  const winRate = mcData?.win_rate !== undefined
+                    ? Number(mcData.win_rate)
+                    : (played > 0 ? Number(((victories / played) * 100).toFixed(1)) : 0.0);
+
+                  return (
+                    <div className={`p-2.5 rounded-xl mb-2.5 ${isLight ? 'bg-slate-200/50' : 'bg-white/[0.03]'}`}>
+                      <div className="flex items-center justify-between text-[11px] mb-1.5 font-semibold">
+                        <span className="flex items-center gap-1.5 text-emerald-500">
+                          <span>🏆 勝率</span>
+                          <span className="font-mono font-extrabold text-xs">
+                            {winRate.toFixed(1)}%
+                          </span>
+                        </span>
+                        <span className="text-[10px] font-mono text-slate-400">
+                          {victories.toLocaleString()}勝 / {losses.toLocaleString()}敗 ({played.toLocaleString()}戦)
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-300 dark:bg-white/10 h-1.5 rounded-full overflow-hidden">
+                        <div
+                          className="bg-gradient-to-r from-emerald-500 to-teal-400 h-full rounded-full transition-all duration-500"
+                          style={{ width: `${Math.min(100, Math.max(0, winRate))}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* 6-Grid Battle Stats */}
                 <div className="grid grid-cols-3 gap-1.5 text-center mb-1">
@@ -669,19 +680,6 @@ export const Profile: React.FC = () => {
               <Eye className="w-3.5 h-3.5" />
               <span>{(profile.views_count || 1).toLocaleString()}</span>
             </span>
-            {!profile.hide_followers && (
-              <button
-                onClick={() => {
-                  setFollowModalType('followers');
-                  setIsFollowModalOpen(true);
-                }}
-                className="flex items-center gap-1 hover:text-white transition cursor-pointer"
-                title="フォロワー一覧を表示"
-              >
-                <Users className="w-3.5 h-3.5" />
-                <span>{followersCount.toLocaleString()}</span>
-              </button>
-            )}
             <span className="flex items-center gap-1" title="ブースト数">
               <Flame className="w-3.5 h-3.5 text-amber-500" />
               <span className="text-amber-500 font-bold">{boostCount}</span>

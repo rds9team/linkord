@@ -290,6 +290,11 @@ async def discord_callback(
         f"https://cdn.discordapp.com/avatars/{discord_user_id}/{avatar_hash}.png"
         if avatar_hash else None
     )
+    banner_hash = user_data.get("banner")
+    banner_url = None
+    if banner_hash:
+        b_ext = "gif" if banner_hash.startswith("a_") else "png"
+        banner_url = f"https://cdn.discordapp.com/banners/{discord_user_id}/{banner_hash}.{b_ext}?size=1024"
 
     stmt = (
         select(AccountIdentity)
@@ -312,6 +317,8 @@ async def discord_callback(
             account.discord_id = discord_user_id
         if avatar_url and not account.avatar_url:
             account.avatar_url = avatar_url
+        if banner_url and not account.background_url:
+            account.background_url = banner_url
         if discord_email:
             account.email = discord_email
     else:
@@ -330,6 +337,8 @@ async def discord_callback(
                 account.discord_id = discord_user_id
             if avatar_url and not account.avatar_url:
                 account.avatar_url = avatar_url
+            if banner_url and not account.background_url:
+                account.background_url = banner_url
         else:
             # Discordのユーザー名（pomeloユニーク）をそのまま小文字で使用
             clean_username = discord_username.lower().strip()
@@ -355,6 +364,7 @@ async def discord_callback(
                 tag=None, # Discord連携ユーザーはタグなし
                 display_name=global_name[:64],
                 avatar_url=avatar_url,
+                background_url=banner_url,
                 email=discord_email,
                 discord_id=discord_user_id,
                 has_discord_authed=True,

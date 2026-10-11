@@ -1,4 +1,4 @@
-import { ProfileData, ProfileUpdateData, ServerData, ServerCreateData, ReportData, FollowUser, ProfileSearchResult, ReportItem, AdminStats, DonationItem } from '../types';
+import { ProfileData, ProfileUpdateData, ServerData, ServerCreateData, ReportData, FollowUser, ProfileSearchResult, ReportItem, AdminStats, DonationItem, AnnouncementItem } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
@@ -325,5 +325,30 @@ export const fetchAdminAuditLogs = (limit: number = 50): Promise<AdminAuditLogIt
     params: { limit: String(limit) },
   });
 };
+
+export const fetchAnnouncements = (limit: number = 20): Promise<AnnouncementItem[]> => {
+  return request<AnnouncementItem[]>('/api/announcements', {
+    params: { limit: String(limit) },
+  });
+};
+
+export const createAdminAnnouncement = (data: {
+  title: string;
+  content: string;
+  type?: string;
+  link_url?: string;
+}): Promise<AnnouncementItem> => {
+  return request<AnnouncementItem>('/api/announcements', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+};
+
+export const deleteAdminAnnouncement = (id: number): Promise<{ status: string; message: string }> => {
+  return request<{ status: string; message: string }>(`/api/announcements/${id}`, {
+    method: 'DELETE',
+  });
+};
+
 
 

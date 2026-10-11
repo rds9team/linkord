@@ -121,6 +121,7 @@ class ServerOut(BaseModel):
     id: int
     slug: str
     name: str
+    guild_id: Optional[str] = None
     description: Optional[str] = None
     icon_url: Optional[str] = None
     invite_url: str
@@ -136,6 +137,7 @@ class ServerOut(BaseModel):
 class ServerCreate(BaseModel):
     slug: str = Field(..., max_length=48)
     name: str = Field(..., max_length=64)
+    guild_id: Optional[str] = None
     description: Optional[str] = None
     icon_url: Optional[str] = None
     invite_url: str = Field(..., max_length=512)
@@ -291,4 +293,21 @@ class AuditLogOut(BaseModel):
     created_at: datetime.datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+class AnnouncementOut(BaseModel):
+    id: int
+    title: str
+    content: str
+    type: str = "info"
+    link_url: Optional[str] = None
+    is_active: bool = True
+    created_at: datetime.datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+class AnnouncementCreate(BaseModel):
+    title: str = Field(..., max_length=128)
+    content: str
+    type: str = Field("info", max_length=32)
+    link_url: Optional[str] = Field(None, max_length=512)
 

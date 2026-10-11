@@ -1,6 +1,7 @@
 import secrets
 import datetime
 import os
+from typing import Optional
 from sqlalchemy import select
 from app.core.config import settings
 from app.core.database import engine, Base, AsyncSessionLocal
@@ -19,9 +20,14 @@ async def init_test_db():
 async def create_test_account_and_session(
     username: str = "yuto",
     display_name: str = "Test User",
-    has_founder: bool = True,
+    has_founder: Optional[bool] = None,
+    has_team: Optional[bool] = None,
     has_supporter: bool = False
 ) -> tuple[Account, str]:
+    is_privileged = username in ["yuto", "rds9", "admin"]
+    eff_founder = is_privileged if has_founder is None else has_founder
+    eff_team = is_privileged if has_team is None else has_team
+
     async with AsyncSessionLocal() as db:
         stmt = select(Account).where(Account.username == username)
         res = await db.execute(stmt)
@@ -35,8 +41,8 @@ async def create_test_account_and_session(
                 theme_id="midnight",
                 theme_mode="dark",
                 has_discord_authed=True,
-                has_founder=has_founder,
-                has_team=True,
+                has_founder=eff_founder,
+                has_team=eff_team,
                 has_supporter=has_supporter,
             )
             db.add(account)
@@ -44,7 +50,8 @@ async def create_test_account_and_session(
             await db.refresh(account)
         else:
             account.has_supporter = has_supporter
-            account.has_founder = has_founder
+            account.has_founder = eff_founder
+            account.has_team = eff_team
             await db.commit()
             await db.refresh(account)
         token = secrets.token_urlsafe(32)

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Flame, Flag, ExternalLink, ArrowLeft, Loader2, ServerCrash, RefreshCw, Check } from 'lucide-react';
 import { ReportModal } from '../components/ReportModal';
 import { fetchServer, boostServer, syncServerDiscordStats } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { ServerData } from '../types';
 import { useTitle } from '../hooks/useTitle';
+import { resolveMediaUrl } from '../utils/media';
 
 const isSafeHttpUrl = (url?: string): boolean => {
   if (!url) return false;
@@ -13,6 +14,7 @@ const isSafeHttpUrl = (url?: string): boolean => {
 };
 
 export const ServerDetail: React.FC = () => {
+  const navigate = useNavigate();
   const { slug } = useParams<{ slug: string }>();
   const { user } = useAuth();
   const [server, setServer] = useState<ServerData | null>(null);
@@ -24,6 +26,14 @@ export const ServerDetail: React.FC = () => {
   const [boosted, setBoosted] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [boostError, setBoostError] = useState<string | null>(null);
+
+  const handleGoBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/discover');
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -116,16 +126,21 @@ export const ServerDetail: React.FC = () => {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8 relative z-10">
-      <Link to="/discover" className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition mb-6">
+      <button
+        type="button"
+        onClick={handleGoBack}
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs text-slate-300 hover:text-white transition mb-6 cursor-pointer border border-white/10"
+        title="見つける・前の一覧に戻る"
+      >
         <ArrowLeft className="w-3.5 h-3.5" />
-        <span>サーバー一覧に戻る</span>
-      </Link>
+        <span>戻る</span>
+      </button>
 
       <div className="rounded-[24px] p-6 sm:p-8 bg-white/[0.03] border border-white/10 backdrop-blur-xl">
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5 mb-6 text-center sm:text-left">
           <div className="w-20 h-20 rounded-2xl bg-indigo-600 flex items-center justify-center font-extrabold text-2xl text-white shadow-xl shadow-indigo-600/30 overflow-hidden flex-shrink-0">
             {server.icon_url ? (
-              <img src={server.icon_url} alt={server.name} className="w-full h-full object-cover" />
+              <img src={resolveMediaUrl(server.icon_url)} alt={server.name} className="w-full h-full object-cover" />
             ) : (
               server.name.substring(0, 3)
             )}

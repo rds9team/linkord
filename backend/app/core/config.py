@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     STORAGE_PROVIDER: str = "local"
     UPLOAD_DIR: str = "./uploads"
 
-    ADMIN_USERNAMES: str = "admin,rds9"
+    ADMIN_USERNAMES: str = "admin,rds9,yuto,yuto0926space"
 
     def get_admin_usernames(self) -> list[str]:
         return [u.strip() for u in self.ADMIN_USERNAMES.split(",") if u.strip()]

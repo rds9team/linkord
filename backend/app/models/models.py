@@ -96,6 +96,7 @@ class Server(Base):
     owner_id = Column(Integer, ForeignKey("accounts.id", ondelete="CASCADE"), nullable=False)
     slug = Column(String(48), unique=True, index=True, nullable=False)
     name = Column(String(64), nullable=False)
+    guild_id = Column(String(64), nullable=True, index=True)
     description = Column(Text, nullable=True)
     icon_url = Column(String(512), nullable=True)
     invite_url = Column(String(512), nullable=False)
@@ -207,4 +208,15 @@ class AuditLog(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
 
     admin = relationship("Account", foreign_keys=[admin_id])
+
+class Announcement(Base):
+    __tablename__ = "announcements"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(128), nullable=False)
+    content = Column(Text, nullable=False)
+    type = Column(String(32), default="info", nullable=False) # info, update, warning, event
+    link_url = Column(String(512), nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
 

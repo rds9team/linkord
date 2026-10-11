@@ -40,6 +40,7 @@ export interface ServerData {
   id: number;
   slug: string;
   name: string;
+  guild_id?: string;
   description?: string;
   icon_url?: string;
   invite_url: string;
@@ -55,6 +56,7 @@ export interface ServerData {
 export interface ServerCreateData {
   slug: string;
   name: string;
+  guild_id?: string;
   description?: string;
   icon_url?: string;
   invite_url: string;
@@ -150,5 +152,15 @@ export interface DonationItem {
   resolved_at?: string | null;
   donor_username?: string | null;
   donor_avatar?: string | null;
+}
+
+export interface AnnouncementItem {
+  id: number;
+  title: string;
+  content: string;
+  type: 'info' | 'update' | 'warning' | 'event' | string;
+  link_url?: string | null;
+  is_active: boolean;
+  created_at: string;
 }
 

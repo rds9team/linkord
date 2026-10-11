@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, AlertTriangle, Users, Server, CheckCircle2, XCircle, Clock, Eye, EyeOff, Search, Loader2, Heart, ExternalLink, BadgeCheck, FileText } from 'lucide-react';
+import { Shield, AlertTriangle, Users, Server, CheckCircle2, XCircle, Clock, Eye, EyeOff, Search, Loader2, Heart, ExternalLink, BadgeCheck, FileText, Bell, Trash2, Megaphone, Send, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
   checkAdminAccess,
@@ -12,9 +12,12 @@ import {
   resolveAdminDonation,
   updateProfileBadges,
   fetchAdminAuditLogs,
+  fetchAnnouncements,
+  createAdminAnnouncement,
+  deleteAdminAnnouncement,
   AdminAuditLogItem,
 } from '../api/client';
-import { AdminStats, ReportItem, DonationItem } from '../types';
+import { AdminStats, ReportItem, DonationItem, AnnouncementItem } from '../types';
 import { useTitle } from '../hooks/useTitle';
 
 export const Admin: React.FC = () => {
@@ -22,7 +25,7 @@ export const Admin: React.FC = () => {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<AdminStats | null>(null);
-  const [activeTab, setActiveTab] = useState<'reports' | 'donations' | 'audit'>('donations');
+  const [activeTab, setActiveTab] = useState<'reports' | 'donations' | 'announcements' | 'audit'>('donations');
   const [reports, setReports] = useState<ReportItem[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('pending');
   const [donations, setDonations] = useState<DonationItem[]>([]);
@@ -43,21 +46,53 @@ export const Admin: React.FC = () => {
   const [badgeAction, setBadgeAction] = useState<boolean>(true);
   const [badgeLoading, setBadgeLoading] = useState(false);
 
+  // Announcements inputs and list
+  const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([]);
+  const [loadingAnnouncements, setLoadingAnnouncements] = useState(false);
+  const [newAnnounceTitle, setNewAnnounceTitle] = useState('');
+  const [newAnnounceContent, setNewAnnounceContent] = useState('');
+  const [newAnnounceType, setNewAnnounceType] = useState<'info' | 'update' | 'warning' | 'event'>('info');
+  const [newAnnounceLink, setNewAnnounceLink] = useState('');
+  const [creatingAnnounce, setCreatingAnnounce] = useState(false);
+
+  const loadAnnouncements = async () => {
+    try {
+      setLoadingAnnouncements(true);
+      const items = await fetchAnnouncements(50);
+      setAnnouncements(items || []);
+    } catch {
+      setAnnouncements([]);
+    } finally {
+      setLoadingAnnouncements(false);
+    }
+  };
+
   useEffect(() => {
     const init = async () => {
       try {
         setLoading(true);
         const adminCheck = await checkAdminAccess();
-        setIsAdmin(adminCheck.is_admin);
+        if (!adminCheck || !adminCheck.is_admin) {
+          setIsAdmin(false);
+          return;
+        }
+        setIsAdmin(true);
 
-        const [statsData, reportsData, donationsData] = await Promise.all([
-          fetchAdminStats(),
-          fetchAdminReports(statusFilter || undefined),
-          fetchAdminDonations(donationFilter || undefined),
-        ]);
-        setStats(statsData);
-        setReports(reportsData);
-        setDonations(donationsData);
+        // Fetch dashboard data independently so individual endpoint errors do not revoke admin UI
+        try {
+          const [statsData, reportsData, donationsData, annData] = await Promise.allSettled([
+            fetchAdminStats(),
+            fetchAdminReports(statusFilter || undefined),
+            fetchAdminDonations(donationFilter || undefined),
+            fetchAnnouncements(50),
+          ]);
+          if (statsData.status === 'fulfilled') setStats(statsData.value);
+          if (reportsData.status === 'fulfilled') setReports(reportsData.value);
+          if (donationsData.status === 'fulfilled') setDonations(donationsData.value);
+          if (annData.status === 'fulfilled') setAnnouncements(annData.value);
+        } catch (fetchErr: any) {
+          console.error('Admin data load warning:', fetchErr);
+        }
       } catch {
         setIsAdmin(false);
       } finally {
@@ -67,6 +102,43 @@ export const Admin: React.FC = () => {
 
     init();
   }, [statusFilter, donationFilter]);
+
+  const handleCreateAnnouncement = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAnnounceTitle.trim() || !newAnnounceContent.trim()) {
+      setMessage({ text: 'タイトルと本文を入力してください', type: 'error' });
+      return;
+    }
+    try {
+      setCreatingAnnounce(true);
+      const created = await createAdminAnnouncement({
+        title: newAnnounceTitle.trim(),
+        content: newAnnounceContent.trim(),
+        type: newAnnounceType,
+        link_url: newAnnounceLink.trim() || undefined,
+      });
+      setAnnouncements((prev) => [created, ...prev]);
+      setNewAnnounceTitle('');
+      setNewAnnounceContent('');
+      setNewAnnounceLink('');
+      setMessage({ text: '全ユーザー向けにお知らせを配信しました！', type: 'success' });
+    } catch (err: any) {
+      setMessage({ text: err.message || 'お知らせの配信に失敗しました', type: 'error' });
+    } finally {
+      setCreatingAnnounce(false);
+    }
+  };
+
+  const handleDeleteAnnouncement = async (id: number) => {
+    if (!confirm(`お知らせ #${id} を削除しますか？`)) return;
+    try {
+      await deleteAdminAnnouncement(id);
+      setAnnouncements((prev) => prev.filter((a) => a.id !== id));
+      setMessage({ text: `お知らせ #${id} を削除しました`, type: 'success' });
+    } catch (err: any) {
+      setMessage({ text: err.message || '削除に失敗しました', type: 'error' });
+    }
+  };
 
   const handleUpdateStatus = async (reportId: number, newStatus: string) => {
     setActionLoading((prev) => ({ ...prev, [reportId]: true }));
@@ -401,6 +473,26 @@ export const Admin: React.FC = () => {
           {(stats?.pending_reports ?? 0) > 0 && (
             <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-amber-400 text-amber-950 font-black">
               {stats?.pending_reports}
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => {
+            setActiveTab('announcements');
+            loadAnnouncements();
+          }}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all ${
+            activeTab === 'announcements'
+              ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
+              : 'bg-white/5 text-slate-400 hover:text-white hover:bg-white/10'
+          }`}
+        >
+          <Bell className="w-4 h-4" />
+          <span>お知らせ配信</span>
+          {announcements.length > 0 && (
+            <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-emerald-400 text-emerald-950 font-black">
+              {announcements.length}
             </span>
           )}
         </button>
@@ -750,6 +842,167 @@ export const Admin: React.FC = () => {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Announcements Section */}
+      {activeTab === 'announcements' && (
+        <div className="space-y-6 mb-8">
+          {/* Create Announcement Form */}
+          <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/10">
+            <h2 className="text-base font-bold text-white mb-1 flex items-center gap-2">
+              <Megaphone className="w-4 h-4 text-emerald-400" />
+              <span>全ユーザー向けお知らせの新規作成 & 配信</span>
+            </h2>
+            <p className="text-xs text-slate-400 mb-5">
+              ここで配信したお知らせは、全ユーザーのヘッダー通知ベル（通知ボックス）にリアルタイムで届きます。
+            </p>
+
+            <form onSubmit={handleCreateAnnouncement} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    タイトル <span className="text-rose-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="例: v1.2 アップデートのお知らせ"
+                    value={newAnnounceTitle}
+                    onChange={(e) => setNewAnnounceTitle(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    種別
+                  </label>
+                  <select
+                    value={newAnnounceType}
+                    onChange={(e) => setNewAnnounceType(e.target.value as any)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-white/10 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  >
+                    <option value="info">お知らせ (Info)</option>
+                    <option value="update">アップデート (Update)</option>
+                    <option value="warning">重要 (Warning)</option>
+                    <option value="event">イベント (Event)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  詳細リンクURL (任意)
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://linkord.net/..."
+                  value={newAnnounceLink}
+                  onChange={(e) => setNewAnnounceLink(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  本文 <span className="text-rose-400">*</span>
+                </label>
+                <textarea
+                  required
+                  rows={4}
+                  placeholder="お知らせの本文を入力してください..."
+                  value={newAnnounceContent}
+                  onChange={(e) => setNewAnnounceContent(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 resize-y"
+                />
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  type="submit"
+                  disabled={creatingAnnounce || !newAnnounceTitle.trim() || !newAnnounceContent.trim()}
+                  className="px-5 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white transition flex items-center gap-1.5 shadow-lg shadow-emerald-600/20 cursor-pointer"
+                >
+                  {creatingAnnounce ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Send className="w-4 h-4" />
+                  )}
+                  <span>全ユーザーへお知らせを配信する</span>
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Announcements History */}
+          <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/10">
+            <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+              <Bell className="w-4 h-4 text-emerald-400" />
+              <span>配信済みお知らせ一覧 ({announcements.length}件)</span>
+            </h3>
+
+            {loadingAnnouncements ? (
+              <div className="text-center py-10 text-slate-400 flex items-center justify-center gap-2">
+                <Loader2 className="w-5 h-5 animate-spin text-emerald-500" />
+                <span className="text-xs">お知らせを読み込み中...</span>
+              </div>
+            ) : announcements.length === 0 ? (
+              <div className="text-center py-10 text-slate-400 space-y-2">
+                <Bell className="w-8 h-8 mx-auto text-slate-600" />
+                <p className="text-xs">まだ配信されたお知らせはありません</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {announcements.map((item) => (
+                  <div
+                    key={item.id}
+                    className="p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:border-white/10 transition flex flex-col sm:flex-row sm:items-start justify-between gap-4"
+                  >
+                    <div className="space-y-1.5 min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                          #{item.id}
+                        </span>
+                        <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-md bg-white/10 text-slate-300">
+                          {item.type}
+                        </span>
+                        <h4 className="text-xs font-bold text-white">
+                          {item.title}
+                        </h4>
+                      </div>
+                      <p className="text-xs text-slate-300 whitespace-pre-wrap leading-relaxed">
+                        {item.content}
+                      </p>
+                      {item.link_url && (
+                        <a
+                          href={item.link_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-[11px] text-purple-400 hover:underline"
+                        >
+                          <span>{item.link_url}</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
+                    </div>
+                    <div className="flex items-center sm:flex-col items-end gap-2 shrink-0">
+                      <span className="text-[10px] text-slate-500 font-mono">
+                        {new Date(item.created_at).toLocaleString('ja-JP')}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteAnnouncement(item.id)}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer"
+                        title="お知らせを削除"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

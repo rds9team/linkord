@@ -207,6 +207,7 @@ async def create_server(
         owner_id=current_user.id,
         slug=data.slug,
         name=data.name,
+        guild_id=data.guild_id or (guild_id if 'guild_id' in locals() else None),
         description=data.description,
         icon_url=real_icon_url,
         invite_url=clean_invite,

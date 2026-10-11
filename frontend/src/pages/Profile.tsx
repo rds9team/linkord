@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   MessageSquare, Github, Twitter, Code, Music, Eye, Flame, Flag, Heart,
   Loader2, UserX, ExternalLink, Globe, Youtube, Twitch, Send, UserPlus, UserCheck, Users,
-  Volume2, VolumeX, Play, Pause, Plus
+  Volume2, VolumeX, Play, Pause, Plus, ArrowLeft
 } from 'lucide-react';
 import { Badges } from '../components/Badges';
 import { ReportModal } from '../components/ReportModal';
@@ -15,6 +15,7 @@ import { useTitle } from '../hooks/useTitle';
 import { fetchProfile, boostProfile, toggleFollow, fetchMinecraftStats } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { resolveMediaUrl } from '../utils/media';
 import { ProfileData } from '../types';
 
 const PLAYHIVE_MODES = [
@@ -91,6 +92,7 @@ const isSafeHttpUrl = (url?: string): boolean => {
 };
 
 export const Profile: React.FC = () => {
+  const navigate = useNavigate();
   const { username: rawUsername = 'yuto' } = useParams<{ username: string }>();
   const username = rawUsername.startsWith('@') ? rawUsername.slice(1) : rawUsername;
   const { user: currentUser } = useAuth();
@@ -99,6 +101,15 @@ export const Profile: React.FC = () => {
   const [notFound, setNotFound] = useState(false);
   const [isDeleted, setIsDeleted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [bannerError, setBannerError] = useState(false);
+
+  const handleGoBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/discover');
+    }
+  };
 
   useTitle(
     notFound
@@ -300,7 +311,7 @@ export const Profile: React.FC = () => {
       {profile.video_url && (
         <div className="fixed inset-0 w-full h-full pointer-events-none z-0 overflow-hidden">
           <video
-            src={profile.video_url}
+            src={resolveMediaUrl(profile.video_url)}
             autoPlay
             loop
             muted
@@ -319,9 +330,23 @@ export const Profile: React.FC = () => {
         </>
       )}
 
-      {/* Profile Creator / Viewer Theme & Audio Switcher Bar */}
+      {/* Profile Header & Smart Back Navigation Bar */}
       <div className="w-full max-w-lg mb-3 flex items-center justify-between px-2 text-xs relative z-10">
-        <span className="font-mono text-slate-400">linkord.net/@{profile.username}</span>
+        <button
+          type="button"
+          onClick={handleGoBack}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition cursor-pointer ${
+            isLight
+              ? 'bg-white/80 hover:bg-white border-slate-300 text-slate-700 hover:text-slate-900 shadow-sm'
+              : 'bg-white/5 hover:bg-white/10 border-white/10 text-slate-300 hover:text-white'
+          }`}
+          title="見つける・前の一覧に戻る"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span className="text-[11px] font-semibold">戻る</span>
+        </button>
+
+        <span className="font-mono text-slate-400 text-[11px]">linkord.net/@{profile.username}</span>
         
         <div className="flex items-center gap-2">
           {/* Audio Status Pill */}
@@ -344,33 +369,47 @@ export const Profile: React.FC = () => {
       </div>
 
       {/* Main Profile Panel */}
-      <main className={`w-full max-w-lg rounded-[28px] overflow-hidden relative z-10 transition duration-300 ${isLight ? 'glass-panel-light' : 'glass-panel-dark'} ${!isLight ? themeAccent.border : ''}`}>
-        
-        {/* Profile Cover / Background Banner */}
-        {profile.background_url ? (
-          <div className="w-full h-32 relative overflow-hidden bg-slate-900 border-b border-white/10">
-            <img src={profile.background_url} alt="Cover" className="w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-          </div>
-        ) : null}
+      {(() => {
+        const resolvedBanner = resolveMediaUrl(profile.background_url) || (
+          lanyardData?.discord_user?.banner
+            ? `https://cdn.discordapp.com/banners/${profile.discord_id || lanyardData.discord_user.id}/${lanyardData.discord_user.banner}.${lanyardData.discord_user.banner.startsWith('a_') ? 'gif' : 'png'}?size=1024`
+            : undefined
+        );
+        const hasBanner = Boolean(resolvedBanner && !bannerError);
 
-        <div className="p-6">
-          {/* Top: Avatar & User Info */}
-          <div className={`flex flex-col sm:flex-row items-center sm:items-start gap-4 mb-5 ${profile.background_url ? '-mt-12' : ''}`}>
-            <div className="relative group flex-shrink-0">
-              <div className="w-24 h-24 rounded-2xl overflow-hidden border-2 border-slate-300 dark:border-white/20 shadow-xl bg-slate-800 flex items-center justify-center">
-                {profile.avatar_url ? (
-                  <img
-                    src={profile.avatar_url}
-                    alt={profile.display_name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-white text-3xl font-extrabold">
-                    {profile.display_name.charAt(0).toUpperCase()}
-                  </div>
-                )}
+        return (
+          <main className={`w-full max-w-lg rounded-[28px] overflow-hidden relative z-10 transition duration-300 ${isLight ? 'glass-panel-light' : 'glass-panel-dark'} ${!isLight ? themeAccent.border : ''}`}>
+            
+            {/* Profile Cover / Background Banner */}
+            {hasBanner ? (
+              <div className="w-full h-32 sm:h-36 relative overflow-hidden bg-slate-900 border-b border-white/10">
+                <img
+                  src={resolvedBanner}
+                  alt="Cover"
+                  onError={() => setBannerError(true)}
+                  className="w-full h-full object-cover transition-opacity duration-300"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
               </div>
+            ) : null}
+
+            <div className="p-6">
+              {/* Top: Avatar & User Info */}
+              <div className={`flex flex-col sm:flex-row items-center sm:items-start gap-4 mb-5 ${hasBanner ? '-mt-12' : ''}`}>
+                <div className="relative group flex-shrink-0">
+                  <div className="w-24 h-24 rounded-2xl overflow-hidden border-2 border-slate-300 dark:border-white/20 shadow-xl bg-slate-800 flex items-center justify-center">
+                    {profile.avatar_url ? (
+                      <img
+                        src={resolveMediaUrl(profile.avatar_url)}
+                        alt={profile.display_name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-white text-3xl font-extrabold">
+                        {profile.display_name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                  </div>
               {/* Online Status Indicator based on Lanyard */}
               <div
                 className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-[3px] border-white dark:border-[#10121c] flex items-center justify-center ${
@@ -709,6 +748,8 @@ export const Profile: React.FC = () => {
 
         </div>
       </main>
+        );
+      })()}
 
       {/* Powered by Watermark */}
       <footer className="mt-4 text-center">

@@ -5,6 +5,8 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { SupportModal } from './SupportModal';
 import { LogoutModal } from './LogoutModal';
+import { NotificationBox } from './NotificationBox';
+import { resolveMediaUrl } from '../utils/media';
 
 export const Navbar: React.FC = () => {
   const { user, isAuthenticated, logout } = useAuth();
@@ -100,6 +102,9 @@ export const Navbar: React.FC = () => {
           )}
         </button>
 
+        {/* Notifications / Announcements Bell */}
+        <NotificationBox />
+
         {isAuthenticated && user ? (
           <div className="flex items-center gap-1 sm:gap-2 ml-1">
             <Link
@@ -112,7 +117,7 @@ export const Navbar: React.FC = () => {
             >
               {user.avatar_url ? (
                 <img
-                  src={user.avatar_url}
+                  src={resolveMediaUrl(user.avatar_url)}
                   alt={user.display_name}
                   className="w-5 h-5 rounded-full object-cover"
                 />

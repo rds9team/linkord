@@ -8,6 +8,7 @@ import { useTitle } from '../hooks/useTitle';
 import { useTheme } from '../context/ThemeContext';
 import { LogoutModal } from '../components/LogoutModal';
 import { ConfirmModal } from '../components/ConfirmModal';
+import { resolveMediaUrl } from '../utils/media';
 
 const PRESET_THEMES = [
   { id: 'midnight', name: 'Midnight (王道ダーク)' },
@@ -351,7 +352,7 @@ export const Settings: React.FC = () => {
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 rounded-2xl bg-slate-800 border border-white/10 overflow-hidden flex items-center justify-center relative flex-shrink-0">
                 {avatarUrl ? (
-                  <img src={avatarUrl} alt="Avatar Preview" className="w-full h-full object-cover" />
+                  <img src={resolveMediaUrl(avatarUrl)} alt="Avatar Preview" className="w-full h-full object-cover" />
                 ) : (
                   <User className="w-7 h-7 text-slate-500" />
                 )}
@@ -386,7 +387,7 @@ export const Settings: React.FC = () => {
             <div className="flex items-center gap-4">
               <div className="w-24 h-14 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10 overflow-hidden flex items-center justify-center relative flex-shrink-0">
                 {backgroundUrl ? (
-                  <img src={backgroundUrl} alt="Background Preview" className="w-full h-full object-cover" />
+                  <img src={resolveMediaUrl(backgroundUrl)} alt="Background Preview" className="w-full h-full object-cover" />
                 ) : (
                   <ImageIcon className="w-6 h-6 text-slate-400 dark:text-slate-500" />
                 )}
@@ -429,7 +430,7 @@ export const Settings: React.FC = () => {
             <div className="flex items-center gap-4">
               <div className="w-24 h-14 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10 overflow-hidden flex items-center justify-center relative flex-shrink-0">
                 {videoUrl ? (
-                  <video src={videoUrl} autoPlay loop muted playsInline className="w-full h-full object-cover" />
+                  <video src={resolveMediaUrl(videoUrl)} autoPlay loop muted playsInline className="w-full h-full object-cover" />
                 ) : (
                   <Film className="w-6 h-6 text-slate-400 dark:text-slate-500" />
                 )}
@@ -585,13 +586,13 @@ export const Settings: React.FC = () => {
                   {backgroundUrl && (
                     <div
                       className="absolute inset-0 bg-cover bg-center opacity-15 pointer-events-none"
-                      style={{ backgroundImage: `url(${backgroundUrl})` }}
+                      style={{ backgroundImage: `url(${resolveMediaUrl(backgroundUrl)})` }}
                     />
                   )}
                   <div className="relative z-10 flex items-center gap-3">
                     <div className={`w-12 h-12 rounded-xl border overflow-hidden flex items-center justify-center flex-shrink-0 ${isLightPreview ? 'bg-white border-slate-300' : 'bg-slate-800 border-white/10'}`}>
                       {avatarUrl ? (
-                        <img src={avatarUrl} alt="Preview" className="w-full h-full object-cover" />
+                        <img src={resolveMediaUrl(avatarUrl)} alt="Preview" className="w-full h-full object-cover" />
                       ) : (
                         <User className={`w-6 h-6 ${isLightPreview ? 'text-slate-400' : 'text-slate-500'}`} />
                       )}

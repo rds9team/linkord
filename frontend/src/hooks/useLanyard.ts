@@ -45,6 +45,8 @@ export interface LanyardData {
     avatar: string;
     discriminator: string;
     global_name?: string;
+    banner?: string;
+    banner_color?: string;
   };
   listening_to_spotify: boolean;
   spotify: LanyardSpotify | null;

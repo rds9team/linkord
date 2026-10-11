@@ -6,7 +6,7 @@ from app.core.database import engine, Base
 import os
 from fastapi.staticfiles import StaticFiles
 import app.models
-from app.api import auth, profile, server, minecraft, lanyard, report, media, admin, donations
+from app.api import auth, profile, server, minecraft, lanyard, report, media, admin, donations, announcements
 
 # Ensure uploads directory exists
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
@@ -36,6 +36,13 @@ async def ensure_schema_updated(conn):
     if columns_donations:
         if "is_anonymous" not in columns_donations:
             await conn.exec_driver_sql("ALTER TABLE donations ADD COLUMN is_anonymous BOOLEAN DEFAULT 0;")
+
+    # Check servers table columns
+    result_servers = await conn.exec_driver_sql("PRAGMA table_info(servers);")
+    columns_servers = [row[1] for row in result_servers.fetchall()]
+    if columns_servers:
+        if "guild_id" not in columns_servers:
+            await conn.exec_driver_sql("ALTER TABLE servers ADD COLUMN guild_id VARCHAR(64);")
 
 async def ensure_defaults(conn):
     # Ensure rds9 admin account exists with founder badge
@@ -144,6 +151,7 @@ app.include_router(report.router, prefix="/api")
 app.include_router(media.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
 app.include_router(donations.router, prefix="/api")
+app.include_router(announcements.router, prefix="/api")
 
 @app.get("/api/health")
 def health_check():

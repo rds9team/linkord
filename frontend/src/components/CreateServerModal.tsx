@@ -131,6 +131,12 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
     const val = e.target.value;
     setInviteUrl(val);
     setInspectSuccess(false);
+
+    // Auto-inspect when a valid invite pattern is pasted
+    const clean = val.trim();
+    if (clean.includes('discord.gg/') || clean.includes('discord.com/invite/') || (clean.length >= 6 && !clean.includes(' '))) {
+      handleInspectInvite(clean);
+    }
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -185,6 +191,7 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
       const newServer = await createServer({
         slug: slug.trim(),
         name: name.trim(),
+        guild_id: selectedGuildId || undefined,
         invite_url: finalInvite,
         icon_url: iconUrl.trim() || undefined,
         description: description.trim() || undefined,
@@ -287,9 +294,12 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
                     );
                   })}
                 </div>
-                <p className="text-[10px] text-slate-400 mt-1.5">
-                  ※ サーバーをクリックすると名前・アイコン・slugが自動入力されます
-                </p>
+                <div className="flex items-center gap-1.5 text-[11px] text-indigo-300 mt-2 bg-indigo-500/10 px-2.5 py-1.5 rounded-lg border border-indigo-500/20">
+                  <Shield className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                  <span>
+                    サーバーを選択後、Discordアプリで該当サーバーの「招待を作成」からリンクをコピーして下の招待URL欄に貼り付けてください（自動で全情報が同期されます）。
+                  </span>
+                </div>
               </div>
             ) : null}
 

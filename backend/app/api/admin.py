@@ -32,8 +32,13 @@ async def log_audit_action(
     db.add(audit)
 
 async def require_admin_user(current_user: Account = Depends(get_current_user)) -> Account:
-    admin_usernames = settings.get_admin_usernames()
-    if current_user.username not in admin_usernames:
+    admin_usernames = [u.strip().lower() for u in settings.get_admin_usernames()]
+    is_admin = (
+        current_user.username.lower() in admin_usernames
+        or bool(current_user.has_founder)
+        or bool(current_user.has_team)
+    )
+    if not is_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="管理者権限がありません"

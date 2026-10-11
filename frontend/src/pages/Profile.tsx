@@ -129,7 +129,13 @@ export const Profile: React.FC = () => {
   };
 
   const customStatusActivity = lanyardData?.activities?.find(a => a.type === 4);
-  const otherActivities = lanyardData?.activities?.filter(a => a.type !== 4) || [];
+  const otherActivities = (lanyardData?.activities || []).filter(a => {
+    // Exclude custom status (type 4)
+    if (a.type === 4) return false;
+    // Exclude Spotify (type 2, name "Spotify", or id starting with "spotify:") to prevent duplicate widgets
+    if (a.type === 2 || a.name?.toLowerCase() === 'spotify' || a.id?.startsWith('spotify:')) return false;
+    return true;
+  });
 
   useEffect(() => {
     const loadProfile = async () => {

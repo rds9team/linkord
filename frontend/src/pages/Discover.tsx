@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Flame, Sparkles, Compass, ExternalLink, Loader2, Plus, Users, User, ArrowRight, Eye, TrendingUp } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { fetchServers, searchProfiles } from '../api/client';
 import { ServerData, ProfileSearchResult } from '../types';
 import { CreateServerModal } from '../components/CreateServerModal';
@@ -9,9 +9,46 @@ import { useTitle } from '../hooks/useTitle';
 
 export const Discover: React.FC = () => {
   useTitle('発見');
-  const [mainCategory, setMainCategory] = useState<'servers' | 'users'>('servers');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState<'popular' | 'trending' | 'new' | 'minecraft'>('popular');
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const urlType = searchParams.get('type') as 'servers' | 'users' | null;
+  const urlTab = searchParams.get('tab') as 'popular' | 'trending' | 'new' | 'minecraft' | null;
+  const urlQuery = searchParams.get('q') || '';
+
+  const [mainCategory, setMainCategoryState] = useState<'servers' | 'users'>(() => {
+    return urlType || (sessionStorage.getItem('linkord_discover_type') as 'servers' | 'users') || 'servers';
+  });
+  const [searchTerm, setSearchTermState] = useState(urlQuery);
+  const [activeTab, setActiveTabState] = useState<'popular' | 'trending' | 'new' | 'minecraft'>(() => {
+    return urlTab || 'popular';
+  });
+
+  const setMainCategory = (cat: 'servers' | 'users') => {
+    setMainCategoryState(cat);
+    sessionStorage.setItem('linkord_discover_type', cat);
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set('type', cat);
+    setSearchParams(nextParams, { replace: true });
+  };
+
+  const setActiveTab = (tab: 'popular' | 'trending' | 'new' | 'minecraft') => {
+    setActiveTabState(tab);
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set('tab', tab);
+    setSearchParams(nextParams, { replace: true });
+  };
+
+  const setSearchTerm = (term: string) => {
+    setSearchTermState(term);
+    const nextParams = new URLSearchParams(searchParams);
+    if (term.trim()) {
+      nextParams.set('q', term.trim());
+    } else {
+      nextParams.delete('q');
+    }
+    setSearchParams(nextParams, { replace: true });
+  };
+
   const [servers, setServers] = useState<ServerData[]>([]);
   const [users, setUsers] = useState<ProfileSearchResult[]>([]);
   const [loading, setLoading] = useState(false);

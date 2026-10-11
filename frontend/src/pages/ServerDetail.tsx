@@ -28,7 +28,8 @@ export const ServerDetail: React.FC = () => {
   const [boostError, setBoostError] = useState<string | null>(null);
 
   const handleGoBack = () => {
-    if (window.history.length > 1) {
+    const prevPath = sessionStorage.getItem('linkord_prev_internal_path');
+    if (prevPath && prevPath !== window.location.pathname + window.location.search) {
       navigate(-1);
     } else {
       navigate('/discover');

@@ -104,7 +104,8 @@ export const Profile: React.FC = () => {
   const [bannerError, setBannerError] = useState(false);
 
   const handleGoBack = () => {
-    if (window.history.length > 1) {
+    const prevPath = sessionStorage.getItem('linkord_prev_internal_path');
+    if (prevPath && prevPath !== window.location.pathname + window.location.search) {
       navigate(-1);
     } else {
       navigate('/discover');

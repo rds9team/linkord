@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Navbar } from './components/Navbar';
+import { DiscordReauthBanner } from './components/DiscordReauthBanner';
 import { Footer } from './components/Footer';
 import { PageTransition } from './components/PageTransition';
 import { Home } from './pages/Home';
@@ -33,6 +34,7 @@ const AppContent: React.FC = () => {
       />
 
       <Navbar />
+      <DiscordReauthBanner />
 
       <PageTransition>
         <Routes>

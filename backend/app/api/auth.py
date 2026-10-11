@@ -14,6 +14,7 @@ from app.core.config import settings
 from app.core.security import generate_oauth_state, verify_oauth_state, hash_password, verify_password
 from app.core.auth import (
     get_current_user,
+    get_optional_current_user,
     create_user_session,
     delete_user_session,
     SESSION_COOKIE_NAME,
@@ -178,7 +179,22 @@ async def login_account(
     }
 
 @router.get("/me", response_model=AccountMeOut)
-async def get_me(current_user: Account = Depends(get_current_user)):
+async def get_me(
+    current_user: Account = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    stmt = select(AccountIdentity).where(
+        AccountIdentity.account_id == current_user.id,
+        AccountIdentity.provider == "discord"
+    )
+    res = await db.execute(stmt)
+    identity = res.scalars().first()
+    has_token = bool(identity and identity.access_token)
+
+    current_user.has_discord_token = has_token
+    current_user.needs_discord_reauth = not bool(
+        current_user.has_discord_authed and current_user.discord_id and has_token
+    )
     return current_user
 
 @router.get("/discord/login")
@@ -296,6 +312,9 @@ async def discord_callback(
         b_ext = "gif" if banner_hash.startswith("a_") else "png"
         banner_url = f"https://cdn.discordapp.com/banners/{discord_user_id}/{banner_hash}.{b_ext}?size=1024"
 
+    # すでにログイン中のユーザーがいる場合（誘導からの再連携・新規連携）
+    current_logged_in_user = await get_optional_current_user(request, db)
+
     stmt = (
         select(AccountIdentity)
         .options(selectinload(AccountIdentity.account).selectinload(Account.links))
@@ -307,7 +326,55 @@ async def discord_callback(
     res = await db.execute(stmt)
     identity = res.scalars().first()
 
-    if identity and identity.account:
+    if current_logged_in_user:
+        account = current_logged_in_user
+        account.last_login_at = datetime.datetime.utcnow()
+        account.has_discord_authed = True
+        account.discord_id = discord_user_id
+        if avatar_url and not account.avatar_url:
+            account.avatar_url = avatar_url
+        if banner_url and not account.background_url:
+            account.background_url = banner_url
+        if discord_email and not account.email:
+            account.email = discord_email
+
+        if identity:
+            identity.account_id = account.id
+            identity.access_token = access_token
+            identity.provider_username = discord_username
+        else:
+            acc_ident_stmt = select(AccountIdentity).where(
+                AccountIdentity.account_id == account.id,
+                AccountIdentity.provider == "discord"
+            )
+            acc_ident_res = await db.execute(acc_ident_stmt)
+            existing_my_identity = acc_ident_res.scalars().first()
+            if existing_my_identity:
+                existing_my_identity.provider_user_id = discord_user_id
+                existing_my_identity.provider_username = discord_username
+                existing_my_identity.access_token = access_token
+            else:
+                new_identity = AccountIdentity(
+                    account_id=account.id,
+                    provider="discord",
+                    provider_user_id=discord_user_id,
+                    provider_username=discord_username,
+                    access_token=access_token,
+                )
+                db.add(new_identity)
+
+        await db.commit()
+        await db.refresh(account)
+
+        session = await create_user_session(db, account.id, request)
+        redirect_response = RedirectResponse(
+            url=f"{settings.FRONTEND_URL}/settings?discord_linked=success",
+            status_code=status.HTTP_307_TEMPORARY_REDIRECT
+        )
+        set_auth_cookie(redirect_response, session.session_token)
+        return redirect_response
+
+    elif identity and identity.account:
         identity.access_token = access_token
         identity.provider_username = discord_username
         account = identity.account

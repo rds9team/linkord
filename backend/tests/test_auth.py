@@ -52,7 +52,7 @@ async def test_full_auth_and_api_flow():
             "slug": test_slug,
             "name": "Test Community",
             "description": "A community for testing",
-            "invite_url": "https://discord.gg/test",
+            "invite_url": f"https://discord.gg/authtest-{ts}",
             "tags": "test,gaming",
             "language": "ja"
         })

@@ -74,6 +74,8 @@ class ProfileOut(BaseModel):
 class AccountMeOut(ProfileOut):
     id: int
     email: Optional[str] = None
+    has_discord_token: bool = False
+    needs_discord_reauth: bool = False
     updated_at: datetime.datetime
     last_login_at: datetime.datetime
 

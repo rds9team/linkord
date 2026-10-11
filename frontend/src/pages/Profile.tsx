@@ -347,7 +347,9 @@ export const Profile: React.FC = () => {
           <span className="text-[11px] font-semibold">戻る</span>
         </button>
 
-        <span className="font-mono text-slate-400 text-[11px]">linkord.net/@{profile.username}</span>
+        <span className="font-mono text-slate-400 text-[11px] truncate max-w-[140px] sm:max-w-none text-center px-1">
+          linkord.net/@{profile.username}
+        </span>
         
         <div className="flex items-center gap-2">
           {/* Audio Status Pill */}
@@ -383,22 +385,22 @@ export const Profile: React.FC = () => {
             
             {/* Profile Cover / Background Banner */}
             {hasBanner ? (
-              <div className="w-full h-32 sm:h-36 relative overflow-hidden bg-slate-900 border-b border-white/10">
+              <div className="w-full h-36 sm:h-44 relative overflow-hidden bg-slate-900 border-b border-white/10">
                 <img
                   src={resolvedBanner}
                   alt="Cover"
                   onError={() => setBannerError(true)}
                   className="w-full h-full object-cover transition-opacity duration-300"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
               </div>
             ) : null}
 
-            <div className="p-6">
+            <div className={`px-6 pb-6 ${hasBanner ? 'pt-0' : 'pt-6'}`}>
               {/* Top: Avatar & User Info */}
-              <div className={`flex flex-col sm:flex-row items-center sm:items-start gap-4 mb-5 ${hasBanner ? '-mt-12' : ''}`}>
-                <div className="relative group flex-shrink-0">
-                  <div className="w-24 h-24 rounded-2xl overflow-hidden border-2 border-slate-300 dark:border-white/20 shadow-xl bg-slate-800 flex items-center justify-center">
+              <div className="flex flex-col sm:flex-row items-center sm:items-end gap-4 mb-5">
+                <div className={`relative group flex-shrink-0 z-10 ${hasBanner ? '-mt-14 sm:-mt-16' : ''}`}>
+                  <div className="w-24 h-24 rounded-2xl overflow-hidden border-2 border-slate-300 dark:border-white/20 shadow-2xl bg-slate-800 flex items-center justify-center ring-4 ring-[#08090d]/80">
                     {profile.avatar_url ? (
                       <img
                         src={resolveMediaUrl(profile.avatar_url)}
@@ -411,36 +413,36 @@ export const Profile: React.FC = () => {
                       </div>
                     )}
                   </div>
-              {/* Online Status Indicator based on Lanyard */}
-              <div
-                className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-[3px] border-white dark:border-[#10121c] flex items-center justify-center ${
-                  lanyardData?.discord_status === 'online'
-                    ? 'bg-emerald-500'
-                    : lanyardData?.discord_status === 'idle'
-                    ? 'bg-amber-500'
-                    : lanyardData?.discord_status === 'dnd'
-                    ? 'bg-rose-500'
-                    : 'bg-slate-500'
-                }`}
-                title={lanyardData?.discord_status ? `Discord: ${lanyardData.discord_status}` : 'オフライン'}
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
-              </div>
-            </div>
+                  {/* Online Status Indicator based on Lanyard */}
+                  <div
+                    className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-[3px] border-white dark:border-[#10121c] flex items-center justify-center ${
+                      lanyardData?.discord_status === 'online'
+                        ? 'bg-emerald-500'
+                        : lanyardData?.discord_status === 'idle'
+                        ? 'bg-amber-500'
+                        : lanyardData?.discord_status === 'dnd'
+                        ? 'bg-rose-500'
+                        : 'bg-slate-500'
+                    }`}
+                    title={lanyardData?.discord_status ? `Discord: ${lanyardData.discord_status}` : 'オフライン'}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
+                  </div>
+                </div>
 
-            <div className="flex-1 text-center sm:text-left min-w-0">
-              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1">
-                <h1 className="text-xl font-extrabold tracking-tight truncate">{profile.display_name}</h1>
-              {/* Badges in User's Requested Uniform Pill Style */}
-              {!profile.hide_badges && (
-                <Badges
-                  hasDiscordAuthed={profile.has_discord_authed}
-                  hasFounder={profile.has_founder}
-                  hasTeam={profile.has_team}
-                  hasSupporter={profile.has_supporter}
-                />
-              )}
-            </div>
+                <div className="flex-1 text-center sm:text-left min-w-0 pt-1 sm:pt-0">
+                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1.5">
+                    <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight truncate text-white">{profile.display_name}</h1>
+                    {/* Badges in User's Requested Uniform Pill Style */}
+                    {!profile.hide_badges && (
+                      <Badges
+                        hasDiscordAuthed={profile.has_discord_authed}
+                        hasFounder={profile.has_founder}
+                        hasTeam={profile.has_team}
+                        hasSupporter={profile.has_supporter}
+                      />
+                    )}
+                  </div>
 
             <div className="flex items-center justify-center sm:justify-start gap-2.5 mb-2 flex-wrap">
               <p className="font-mono text-xs text-slate-500 dark:text-slate-400 flex items-center">

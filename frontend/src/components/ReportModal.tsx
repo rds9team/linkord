@@ -50,16 +50,17 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
       <div className="w-full max-w-md bg-slate-900 border border-white/10 rounded-2xl p-6 shadow-2xl relative">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-white"
-        >
-          <X className="w-5 h-5" />
-        </button>
-
-        <div className="flex items-center gap-2 mb-4 text-rose-400">
-          <AlertTriangle className="w-5 h-5" />
-          <h2 className="text-base font-bold text-white">通報フォーム</h2>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2 text-rose-400">
+            <AlertTriangle className="w-5 h-5" />
+            <h2 className="text-base font-bold text-white">通報フォーム</h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
 
         {submitted ? (

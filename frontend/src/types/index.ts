@@ -19,6 +19,8 @@ export interface ProfileData {
   music_url?: string;
   video_url?: string;
   has_discord_authed: boolean;
+  has_discord_token?: boolean;
+  needs_discord_reauth?: boolean;
   has_supporter: boolean;
   has_team: boolean;
   has_founder: boolean;

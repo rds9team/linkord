@@ -68,6 +68,11 @@ async def get_my_guilds(
                     perms = int(g.get("permissions") or 0)
                     is_owner = bool(g.get("owner"))
                     can_manage = is_owner or bool(perms & 0x8) or bool(perms & 0x20)
+                    
+                    # オーナー権限または管理者権限（ADMINISTRATOR/MANAGE_GUILD）がないサーバーは除外
+                    if not can_manage:
+                        continue
+
                     gid = str(g.get("id"))
                     icon_hash = g.get("icon")
                     ext = "gif" if icon_hash and icon_hash.startswith("a_") else "png"
@@ -85,8 +90,8 @@ async def get_my_guilds(
                         "registered_slug": registered_map.get(gid) if is_registered else None,
                     })
 
-                # ソート: 管理可能(owner優先) -> その他
-                guilds.sort(key=lambda x: (not x["can_manage"], not x["owner"], x["name"].lower()))
+                # ソート: オーナー優先 -> 名前順
+                guilds.sort(key=lambda x: (not x["owner"], x["name"].lower()))
 
                 return {
                     "connected": True,
@@ -241,11 +246,65 @@ async def create_server(
         except Exception:
             pass
 
+    target_guild_id = data.guild_id or (guild_id if 'guild_id' in locals() else None)
+    if target_guild_id:
+        # 重複掲載チェック
+        dup_stmt = select(Server).where(Server.guild_id == str(target_guild_id))
+        dup_res = await db.execute(dup_stmt)
+        existing_srv = dup_res.scalars().first()
+        if existing_srv:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"このDiscordサーバーは既に掲載されています (slug: {existing_srv.slug})"
+            )
+
+        # ユーザーのDiscordアクセス権限（オーナーまたは管理者）を検証
+        ident_stmt = select(AccountIdentity).where(
+            AccountIdentity.account_id == current_user.id,
+            AccountIdentity.provider == "discord"
+        )
+        ident_res = await db.execute(ident_stmt)
+        identity = ident_res.scalars().first()
+
+        if identity and identity.access_token:
+            try:
+                async with httpx.AsyncClient(timeout=5.0) as client:
+                    g_res = await client.get(
+                        "https://discord.com/api/v10/users/@me/guilds",
+                        headers={"Authorization": f"Bearer {identity.access_token}"}
+                    )
+                    if g_res.status_code == 200:
+                        user_guilds = g_res.json()
+                        matched = next((g for g in user_guilds if str(g.get("id")) == str(target_guild_id)), None)
+                        if matched:
+                            g_perms = int(matched.get("permissions") or 0)
+                            is_owner = bool(matched.get("owner"))
+                            has_admin = is_owner or bool(g_perms & 0x8) or bool(g_perms & 0x20)
+                            if not has_admin:
+                                raise HTTPException(
+                                    status_code=status.HTTP_403_FORBIDDEN,
+                                    detail="サーバーを掲載するには、該当Discordサーバーのオーナー権限または管理者権限（ADMINISTRATOR）が必要です"
+                                )
+                        else:
+                            raise HTTPException(
+                                status_code=status.HTTP_403_FORBIDDEN,
+                                detail="指定されたサーバーに参加していないか、掲載権限（管理者またはオーナー）がありません"
+                            )
+            except HTTPException:
+                raise
+            except Exception:
+                pass
+        elif settings.APP_ENV == "production":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="サーバーを掲載するには、Discordアカウントの連携が必要です"
+            )
+
     server = Server(
         owner_id=current_user.id,
         slug=data.slug,
         name=data.name,
-        guild_id=data.guild_id or (guild_id if 'guild_id' in locals() else None),
+        guild_id=target_guild_id,
         description=data.description,
         icon_url=real_icon_url,
         invite_url=clean_invite,

@@ -11,12 +11,36 @@ from app.api import auth, profile, server, minecraft, lanyard, report, media, ad
 # Ensure uploads directory exists
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 
+async def ensure_schema_updated(conn):
+    # Check accounts table columns and add missing ones
+    result = await conn.exec_driver_sql("PRAGMA table_info(accounts);")
+    columns = [row[1] for row in result.fetchall()]
+    if columns:
+        if "music_url" not in columns:
+            await conn.exec_driver_sql("ALTER TABLE accounts ADD COLUMN music_url VARCHAR(512);")
+        if "video_url" not in columns:
+            await conn.exec_driver_sql("ALTER TABLE accounts ADD COLUMN video_url VARCHAR(512);")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Auto-create tables on startup for rapid development
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        try:
+            await ensure_schema_updated(conn)
+        except Exception:
+            pass
     yield
+
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from app.core.auth import get_client_ip
+
+def rate_limit_key_func(request) -> str:
+    ip = get_client_ip(request)
+    return ip if ip else "127.0.0.1"
+
+limiter = Limiter(key_func=rate_limit_key_func, default_limits=["120/minute"])
 
 app = FastAPI(
     title="Linkord API",
@@ -25,6 +49,8 @@ app = FastAPI(
     redoc_url="/redoc",
     lifespan=lifespan
 )
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Static file serving for uploads (safe, non-executable)
 app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")

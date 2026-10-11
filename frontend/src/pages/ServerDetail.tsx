@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Flame, Flag, ExternalLink, ArrowLeft, Loader2, ServerCrash } from 'lucide-react';
+import { Flame, Flag, ExternalLink, ArrowLeft, Loader2, ServerCrash, RefreshCw, Check } from 'lucide-react';
 import { ReportModal } from '../components/ReportModal';
-import { fetchServer, boostServer } from '../api/client';
+import { fetchServer, boostServer, syncServerDiscordStats } from '../api/client';
+import { useAuth } from '../context/AuthContext';
 import { ServerData } from '../types';
 import { useTitle } from '../hooks/useTitle';
 
@@ -13,9 +14,12 @@ const isSafeHttpUrl = (url?: string): boolean => {
 
 export const ServerDetail: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
+  const { user } = useAuth();
   const [server, setServer] = useState<ServerData | null>(null);
   useTitle(server ? server.name : 'サーバー');
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [syncSuccess, setSyncSuccess] = useState(false);
   const [boosts, setBoosts] = useState(0);
   const [boosted, setBoosted] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
@@ -61,6 +65,25 @@ export const ServerDetail: React.FC = () => {
         setBoostError('このサーバーへのブーストは1時間に1回のみ可能です');
       }
       setBoosted(true);
+    }
+  };
+
+  const handleSync = async () => {
+    if (!server || syncing) return;
+    try {
+      setSyncing(true);
+      const res = await syncServerDiscordStats(server.slug);
+      setServer(prev => prev ? {
+        ...prev,
+        member_count: res.member_count,
+        icon_url: res.icon_url || prev.icon_url,
+      } : null);
+      setSyncSuccess(true);
+      setTimeout(() => setSyncSuccess(false), 3000);
+    } catch (err: any) {
+      alert(err.message || 'Discord情報の同期に失敗しました');
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -159,6 +182,21 @@ export const ServerDetail: React.FC = () => {
             >
               <Flame className="w-3.5 h-3.5" />
               <span>{boosted ? 'ブースト済み' : 'ブーストする'}</span>
+            </button>
+            <button
+              onClick={handleSync}
+              disabled={syncing}
+              className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-medium flex items-center justify-center gap-1.5 transition"
+              title="Discordから最新のメンバー数とアイコンを再取得"
+            >
+              {syncing ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-purple-400" />
+              ) : syncSuccess ? (
+                <Check className="w-3.5 h-3.5 text-emerald-400" />
+              ) : (
+                <RefreshCw className="w-3.5 h-3.5 text-slate-400" />
+              )}
+              <span>{syncSuccess ? '同期完了' : '最新同期'}</span>
             </button>
           </div>
         </div>

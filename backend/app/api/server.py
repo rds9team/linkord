@@ -205,6 +205,55 @@ async def delete_server(
     return {"status": "ok", "message": "サーバーを削除しました"}
 
 
+@router.post("/{slug}/sync")
+async def sync_server_discord_stats(
+    slug: str,
+    current_user: Account = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    stmt = select(Server).where(Server.slug == slug)
+    result = await db.execute(stmt)
+    server = result.scalars().first()
+    if not server:
+        raise HTTPException(status_code=404, detail="Server not found")
+
+    if server.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="このサーバーの同期権限がありません")
+
+    # Match invite code
+    match = re.search(r"(?:discord\.gg/|discord\.com/invite/)?([a-zA-Z0-9_-]+)$", server.invite_url.strip())
+    if not match:
+        raise HTTPException(status_code=400, detail="有効な招待コードが見つかりません")
+
+    code = match.group(1)
+    url = f"https://discord.com/api/v10/invites/{code}?with_counts=true"
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(url)
+            if resp.status_code == 200:
+                data = resp.json()
+                guild = data.get("guild", {})
+                guild_id = guild.get("id")
+                icon_hash = guild.get("icon")
+                if guild_id and icon_hash:
+                    server.icon_url = f"https://cdn.discordapp.com/icons/{guild_id}/{icon_hash}.png"
+                if "approximate_member_count" in data:
+                    server.member_count = data["approximate_member_count"]
+                server.updated_at = datetime.datetime.utcnow()
+                await db.commit()
+                await db.refresh(server)
+                server.boosts_count = await get_server_boosts_count(db, server.id)
+                return {
+                    "status": "ok",
+                    "member_count": server.member_count,
+                    "icon_url": server.icon_url,
+                    "message": "Discordから最新のメンバー数とアイコンを同期しました"
+                }
+            else:
+                raise HTTPException(status_code=400, detail="Discord招待情報の取得に失敗しました")
+    except httpx.RequestError as exc:
+        raise HTTPException(status_code=502, detail=f"Discord APIとの通信に失敗しました: {exc}")
+
 @router.post("/{identifier}/boost")
 async def boost_server(
     identifier: str,

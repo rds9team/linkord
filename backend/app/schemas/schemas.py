@@ -42,6 +42,8 @@ class ProfileOut(BaseModel):
     is_public: bool = True
     avatar_url: Optional[str] = None
     background_url: Optional[str] = None
+    music_url: Optional[str] = None
+    video_url: Optional[str] = None
     
     # Badges
     has_discord_authed: bool = False
@@ -99,11 +101,13 @@ class ProfileUpdate(BaseModel):
     is_public: Optional[bool] = None
     avatar_url: Optional[str] = Field(None, max_length=512)
     background_url: Optional[str] = Field(None, max_length=512)
+    music_url: Optional[str] = Field(None, max_length=512)
+    video_url: Optional[str] = Field(None, max_length=512)
     minecraft_uuid: Optional[str] = Field(None, max_length=64)
     analytics_id: Optional[str] = Field(None, max_length=32)
     hide_badges: Optional[bool] = None
 
-    @field_validator("avatar_url", "background_url")
+    @field_validator("avatar_url", "background_url", "music_url", "video_url")
     @classmethod
     def check_media_url(cls, v: Optional[str]) -> Optional[str]:
         return validate_safe_http_url(v)

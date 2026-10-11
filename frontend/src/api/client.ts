@@ -107,6 +107,12 @@ export const inspectDiscordInvite = (invite: string): Promise<{
   });
 };
 
+export const syncServerDiscordStats = (slug: string): Promise<{ status: string; member_count: number; icon_url?: string; message: string }> => {
+  return request<{ status: string; member_count: number; icon_url?: string; message: string }>(`/api/servers/${encodeURIComponent(slug)}/sync`, {
+    method: 'POST',
+  });
+};
+
 export const deleteServer = (slug: string): Promise<{ status: string; message: string }> => {
   return request<{ status: string; message: string }>(`/api/servers/${encodeURIComponent(slug)}`, {
     method: 'DELETE',

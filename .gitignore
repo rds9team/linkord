@@ -45,6 +45,7 @@ frontend/out/
 uploads/
 /uploads
 backend/uploads/
+backups/
 
 # IDE & OS
 .vscode/

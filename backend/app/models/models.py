@@ -19,6 +19,8 @@ class Account(Base):
     is_public = Column(Boolean, default=True, nullable=False)
     avatar_url = Column(String(512), nullable=True)
     background_url = Column(String(512), nullable=True)
+    music_url = Column(String(512), nullable=True)
+    video_url = Column(String(512), nullable=True)
     email = Column(String(256), nullable=True, index=True)
     
     # Badges

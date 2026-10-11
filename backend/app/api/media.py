@@ -10,11 +10,12 @@ async def upload_media(
     file: UploadFile = File(...),
     current_user: Account = Depends(get_current_user),
 ):
-    url, filename, size = await storage.save_file(file)
+    url, filename, size, media_kind = await storage.save_file(file)
     return {
         "url": url,
         "filename": filename,
         "size": size,
+        "media_kind": media_kind,
     }
 
 @router.delete("/{filename}")

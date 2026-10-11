@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Palette, User, Gamepad2, Save, Check, Loader2, AlertCircle, LogIn, Upload, Image as ImageIcon, Trash2, Radio, ExternalLink } from 'lucide-react';
+import { Palette, User, Gamepad2, Save, Check, Loader2, AlertCircle, LogIn, Upload, Image as ImageIcon, Trash2, Radio, ExternalLink, Music, Film } from 'lucide-react';
 import { fetchMe, updateMyProfile, uploadMedia, deleteAccount } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { ProfileUpdateData } from '../types';
@@ -52,6 +52,10 @@ export const Settings: React.FC = () => {
   const [bio, setBio] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [backgroundUrl, setBackgroundUrl] = useState('');
+  const [musicUrl, setMusicUrl] = useState('');
+  const [videoUrl, setVideoUrl] = useState('');
+  const [uploadingMusic, setUploadingMusic] = useState(false);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
   const [themeMode, setThemeMode] = useState<'dark' | 'light'>('dark');
   const [themeId, setThemeId] = useState('midnight');
   const [hideBadges, setHideBadges] = useState(false);
@@ -67,6 +71,8 @@ export const Settings: React.FC = () => {
         setBio(data.bio || '');
         setAvatarUrl(data.avatar_url || '');
         setBackgroundUrl(data.background_url || '');
+        setMusicUrl(data.music_url || '');
+        setVideoUrl(data.video_url || '');
         setThemeMode(data.theme_mode === 'light' ? 'light' : 'dark');
         setThemeId(data.theme_id || 'midnight');
         setHideBadges(!!data.hide_badges);
@@ -115,6 +121,36 @@ export const Settings: React.FC = () => {
     }
   };
 
+  const handleMusicChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setUploadingMusic(true);
+      setError(null);
+      const res = await uploadMedia(file);
+      setMusicUrl(res.url);
+    } catch (err: any) {
+      setError(err.message || '音楽ファイルのアップロードに失敗しました');
+    } finally {
+      setUploadingMusic(false);
+    }
+  };
+
+  const handleVideoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setUploadingVideo(true);
+      setError(null);
+      const res = await uploadMedia(file);
+      setVideoUrl(res.url);
+    } catch (err: any) {
+      setError(err.message || '背景動画のアップロードに失敗しました');
+    } finally {
+      setUploadingVideo(false);
+    }
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -127,6 +163,8 @@ export const Settings: React.FC = () => {
         bio: bio,
         avatar_url: avatarUrl,
         background_url: backgroundUrl,
+        music_url: musicUrl,
+        video_url: videoUrl,
         theme_id: themeId,
         theme_mode: themeMode,
         hide_badges: hideBadges,
@@ -309,6 +347,90 @@ export const Settings: React.FC = () => {
                     削除
                   </button>
                 )}
+              </div>
+            </div>
+          </div>
+
+          {/* Background Video Upload */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-2">
+              背景動画（オプション）
+            </label>
+            <div className="flex items-center gap-4">
+              <div className="w-24 h-14 rounded-xl bg-slate-800 border border-white/10 overflow-hidden flex items-center justify-center relative flex-shrink-0">
+                {videoUrl ? (
+                  <video src={videoUrl} autoPlay loop muted playsInline className="w-full h-full object-cover" />
+                ) : (
+                  <Film className="w-6 h-6 text-slate-500" />
+                )}
+                {uploadingVideo && (
+                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                    <Loader2 className="w-5 h-5 text-purple-400 animate-spin" />
+                  </div>
+                )}
+              </div>
+              <div>
+                <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-white/10 text-xs font-medium text-slate-200 transition">
+                  <Upload className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>動画を選択 (MP4/WebM, 最大50MB)</span>
+                  <input
+                    type="file"
+                    accept="video/mp4,video/webm"
+                    onChange={handleVideoChange}
+                    className="hidden"
+                    disabled={uploadingVideo}
+                  />
+                </label>
+                {videoUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setVideoUrl('')}
+                    className="ml-2 text-[11px] text-rose-400 hover:underline"
+                  >
+                    削除
+                  </button>
+                )}
+                <p className="text-[11px] text-slate-500 mt-1">プロフィール背景にシームレスにループ再生されます</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Profile BGM Music Upload */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-2">
+              プロフィール BGM（音楽）
+            </label>
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-slate-800 border border-white/10 overflow-hidden flex items-center justify-center relative flex-shrink-0">
+                <Music className={`w-5 h-5 ${musicUrl ? 'text-purple-400' : 'text-slate-500'}`} />
+                {uploadingMusic && (
+                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                    <Loader2 className="w-4 h-4 text-purple-400 animate-spin" />
+                  </div>
+                )}
+              </div>
+              <div className="flex-1">
+                <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-white/10 text-xs font-medium text-slate-200 transition">
+                  <Upload className="w-3.5 h-3.5 text-purple-400" />
+                  <span>音声を選択 (MP3/OGG/WAV, 最大20MB)</span>
+                  <input
+                    type="file"
+                    accept="audio/mpeg,audio/ogg,audio/wav"
+                    onChange={handleMusicChange}
+                    className="hidden"
+                    disabled={uploadingMusic}
+                  />
+                </label>
+                {musicUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setMusicUrl('')}
+                    className="ml-2 text-[11px] text-rose-400 hover:underline"
+                  >
+                    削除
+                  </button>
+                )}
+                <p className="text-[11px] text-slate-500 mt-1">guns.lol風にプロフ訪問時にBGMプレイヤーが表示されます</p>
               </div>
             </div>
           </div>

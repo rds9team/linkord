@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   MessageSquare, Github, Twitter, Code, Music, Eye, Flame, Flag, Heart,
-  Loader2, UserX, ExternalLink, Globe, Youtube, Twitch, Send, UserPlus, UserCheck, Users
+  Loader2, UserX, ExternalLink, Globe, Youtube, Twitch, Send, UserPlus, UserCheck, Users,
+  Volume2, VolumeX, Play, Pause
 } from 'lucide-react';
 import { Badges } from '../components/Badges';
 import { ReportModal } from '../components/ReportModal';
@@ -82,6 +83,11 @@ export const Profile: React.FC = () => {
   const [boostCount, setBoostCount] = useState(0);
   const [hasBoosted, setHasBoosted] = useState(false);
   const [themeMode, setThemeMode] = useState<'dark' | 'light'>('dark');
+
+  // Background Audio / Video State
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [audioMuted, setAudioMuted] = useState(false);
+  const audioRef = React.useRef<HTMLAudioElement | null>(null);
 
   // Follow State
   const [followersCount, setFollowersCount] = useState(0);
@@ -240,32 +246,90 @@ export const Profile: React.FC = () => {
   }
 
   return (
-    <div className={`min-h-screen py-6 px-4 flex flex-col items-center justify-center transition-colors duration-300 ${isLight ? 'bg-slate-50 text-slate-900' : 'bg-[#08090d] text-slate-100'}`}>
+    <div className={`min-h-screen py-6 px-4 flex flex-col items-center justify-center transition-colors duration-300 relative overflow-hidden ${isLight ? 'bg-slate-50 text-slate-900' : 'bg-[#08090d] text-slate-100'}`}>
       
+      {/* Background Video Loop (if set) */}
+      {profile.video_url && (
+        <div className="fixed inset-0 w-full h-full pointer-events-none z-0 overflow-hidden">
+          <video
+            src={profile.video_url}
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="w-full h-full object-cover opacity-35"
+          />
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px]"></div>
+        </div>
+      )}
+
+      {/* Audio Player (if music_url is set) */}
+      {profile.music_url && (
+        <audio
+          ref={audioRef}
+          src={profile.music_url}
+          loop
+          onPlay={() => setIsPlayingAudio(true)}
+          onPause={() => setIsPlayingAudio(false)}
+        />
+      )}
+
       {/* Ambient Glow Effects (Dark only) */}
-      {!isLight && (
+      {!isLight && !profile.video_url && (
         <>
           <div className={`fixed top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] ${themeAccent.glow} rounded-full blur-[140px] pointer-events-none`}></div>
           <div className="fixed bottom-1/4 left-1/3 -translate-x-1/2 w-[450px] h-[450px] bg-sky-500/10 rounded-full blur-[120px] pointer-events-none"></div>
         </>
       )}
 
-      {/* Profile Creator / Viewer Theme Switcher Bar */}
-      <div className="w-full max-w-lg mb-3 flex items-center justify-between px-2 text-xs">
+      {/* Profile Creator / Viewer Theme & Audio Switcher Bar */}
+      <div className="w-full max-w-lg mb-3 flex items-center justify-between px-2 text-xs relative z-10">
         <span className="font-mono text-slate-400">linkord.net/@{profile.username}</span>
-        <div className="flex items-center gap-1.5 p-1 rounded-full border border-slate-300 dark:border-white/10 bg-slate-200/80 dark:bg-white/5">
-          <button
-            onClick={() => setThemeMode('dark')}
-            className={`px-2.5 py-0.5 rounded-full font-semibold transition ${!isLight ? 'bg-slate-800 text-white shadow' : 'text-slate-600 hover:text-black'}`}
-          >
-            Dark
-          </button>
-          <button
-            onClick={() => setThemeMode('light')}
-            className={`px-2.5 py-0.5 rounded-full font-semibold transition ${isLight ? 'bg-white text-black shadow' : 'text-slate-400 hover:text-white'}`}
-          >
-            White
-          </button>
+        
+        <div className="flex items-center gap-2">
+          {/* Audio Play/Pause Button */}
+          {profile.music_url && (
+            <button
+              onClick={() => {
+                if (audioRef.current) {
+                  if (isPlayingAudio) {
+                    audioRef.current.pause();
+                  } else {
+                    audioRef.current.play().catch(() => {});
+                  }
+                }
+              }}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-purple-500/30 bg-purple-500/15 text-purple-300 hover:bg-purple-500/25 transition cursor-pointer"
+              title="BGMの再生/一時停止"
+            >
+              {isPlayingAudio ? (
+                <>
+                  <Pause className="w-3 h-3 text-purple-300" />
+                  <span className="text-[10px] font-semibold">再生中</span>
+                </>
+              ) : (
+                <>
+                  <Play className="w-3 h-3 text-purple-300" />
+                  <span className="text-[10px] font-semibold">BGM再生</span>
+                </>
+              )}
+            </button>
+          )}
+
+          <div className="flex items-center gap-1.5 p-1 rounded-full border border-slate-300 dark:border-white/10 bg-slate-200/80 dark:bg-white/5">
+            <button
+              onClick={() => setThemeMode('dark')}
+              className={`px-2.5 py-0.5 rounded-full font-semibold transition ${!isLight ? 'bg-slate-800 text-white shadow' : 'text-slate-600 hover:text-black'}`}
+            >
+              Dark
+            </button>
+            <button
+              onClick={() => setThemeMode('light')}
+              className={`px-2.5 py-0.5 rounded-full font-semibold transition ${isLight ? 'bg-white text-black shadow' : 'text-slate-400 hover:text-white'}`}
+            >
+              White
+            </button>
+          </div>
         </div>
       </div>
 

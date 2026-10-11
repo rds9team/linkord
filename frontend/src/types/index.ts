@@ -16,6 +16,8 @@ export interface ProfileData {
   is_public: boolean;
   avatar_url?: string;
   background_url?: string;
+  music_url?: string;
+  video_url?: string;
   has_discord_authed: boolean;
   has_supporter: boolean;
   has_team: boolean;
@@ -45,6 +47,7 @@ export interface ServerData {
   member_count: number;
   boosts_count?: number;
   is_public: boolean;
+  owner_id?: number;
   created_at: string;
 }
 
@@ -66,6 +69,8 @@ export interface ProfileUpdateData {
   is_public?: boolean;
   avatar_url?: string;
   background_url?: string;
+  music_url?: string;
+  video_url?: string;
   minecraft_uuid?: string;
   analytics_id?: string;
   hide_badges?: boolean;

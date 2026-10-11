@@ -4,19 +4,26 @@ import { Link2, Compass, Settings, Heart, LogIn, LogOut, User as UserIcon, Sun, 
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { SupportModal } from './SupportModal';
+import { LogoutModal } from './LogoutModal';
 
 export const Navbar: React.FC = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [isSupportOpen, setIsSupportOpen] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const handleLogout = async () => {
+  const handleConfirmLogout = async () => {
     try {
+      setIsLoggingOut(true);
       await logout();
+      setIsLogoutModalOpen(false);
       navigate('/');
     } catch (err) {
       console.error('Logout error:', err);
+    } finally {
+      setIsLoggingOut(false);
     }
   };
 
@@ -118,9 +125,9 @@ export const Navbar: React.FC = () => {
             </Link>
 
             <button
-              onClick={handleLogout}
+              onClick={() => setIsLogoutModalOpen(true)}
               title="ログアウト"
-              className={`p-1.5 rounded-xl transition flex items-center justify-center ${
+              className={`p-1.5 rounded-xl transition flex items-center justify-center cursor-pointer ${
                 isLight
                   ? 'text-slate-400 hover:text-rose-500 hover:bg-rose-50'
                   : 'text-slate-400 hover:text-rose-400 hover:bg-rose-500/10'
@@ -145,6 +152,17 @@ export const Navbar: React.FC = () => {
       </nav>
 
       <SupportModal isOpen={isSupportOpen} onClose={() => setIsSupportOpen(false)} />
+      {user && (
+        <LogoutModal
+          isOpen={isLogoutModalOpen}
+          onClose={() => setIsLogoutModalOpen(false)}
+          onConfirm={handleConfirmLogout}
+          isLoading={isLoggingOut}
+          username={user.username}
+          displayName={user.display_name}
+          avatarUrl={user.avatar_url}
+        />
+      )}
     </header>
   );
 };

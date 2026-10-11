@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Palette, User, Gamepad2, Save, Check, Loader2, AlertCircle, LogIn, Upload, Image as ImageIcon, Trash2, Radio, ExternalLink, Music, Film, Share2, Plus, X, Globe, MessageSquare, Github, Twitter, Code, Youtube, Twitch } from 'lucide-react';
+import { Palette, User, Gamepad2, Save, Check, Loader2, AlertCircle, LogIn, LogOut, Upload, Image as ImageIcon, Trash2, Radio, ExternalLink, Music, Film, Share2, Plus, X, Globe, MessageSquare, Github, Twitter, Code, Youtube, Twitch } from 'lucide-react';
 import { fetchMe, updateMyProfile, uploadMedia, deleteAccount } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { ProfileUpdateData } from '../types';
 import { useTitle } from '../hooks/useTitle';
+import { useTheme } from '../context/ThemeContext';
+import { LogoutModal } from '../components/LogoutModal';
+import { ConfirmModal } from '../components/ConfirmModal';
 
 const PRESET_THEMES = [
   { id: 'midnight', name: 'Midnight (王道ダーク)' },
@@ -44,11 +47,16 @@ interface LinkItem {
 
 export const Settings: React.FC = () => {
   useTitle('設定');
-  const { refreshUser, user } = useAuth();
+  const { theme } = useTheme();
+  const isLight = theme === 'light';
+  const { refreshUser, user, logout } = useAuth();
   const navigate = useNavigate();
   const [initialLoading, setInitialLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isLogoutOpen, setIsLogoutOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [uploadingBg, setUploadingBg] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -213,17 +221,28 @@ export const Settings: React.FC = () => {
     }
   };
 
-  const handleDeleteAccount = async () => {
-    if (!window.confirm('本当にアカウントを削除（退会）しますか？\nこの操作を実行すると、プロフィールは退会状態となり元に戻せません。')) {
-      return;
+  const handleLogoutConfirm = async () => {
+    try {
+      setLoggingOut(true);
+      await logout();
+      setIsLogoutOpen(false);
+      navigate('/');
+    } catch (err: any) {
+      setError(err.message || 'ログアウトに失敗しました');
+    } finally {
+      setLoggingOut(false);
     }
+  };
+
+  const handleConfirmDelete = async () => {
     try {
       setDeleting(true);
       await deleteAccount();
       await refreshUser();
+      setIsDeleteOpen(false);
       navigate('/');
     } catch (err: any) {
-      alert(err.message || '退会処理に失敗しました');
+      setError(err.message || '退会処理に失敗しました');
     } finally {
       setDeleting(false);
     }
@@ -831,33 +850,108 @@ export const Settings: React.FC = () => {
 
       </form>
 
-      {/* Danger Zone: Account Deletion */}
-      <div className="mt-12 p-6 rounded-2xl bg-rose-500/[0.04] border border-rose-500/20">
+      {/* Account Actions: Logout */}
+      <div
+        className={`mt-10 p-6 rounded-2xl border transition-colors ${
+          isLight
+            ? 'bg-white border-slate-200 shadow-sm'
+            : 'bg-white/[0.02] border-white/10'
+        }`}
+      >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h3 className="text-sm font-bold text-rose-400 mb-1 flex items-center gap-1.5">
+            <h3 className={`text-sm font-bold mb-1 flex items-center gap-1.5 ${isLight ? 'text-slate-900' : 'text-white'}`}>
+              <LogOut className="w-4 h-4 text-purple-500" />
+              <span>ログアウト</span>
+            </h3>
+            <p className={`text-xs ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+              この端末からログアウトします。再度プロフィールの編集を行うにはログインが必要です。
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsLogoutOpen(true)}
+            className={`px-4 py-2 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition flex-shrink-0 self-start sm:self-auto cursor-pointer ${
+              isLight
+                ? 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700'
+                : 'bg-white/5 hover:bg-white/10 border-white/10 text-slate-200 hover:text-white'
+            }`}
+          >
+            <LogOut className="w-4 h-4" />
+            <span>ログアウト</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Danger Zone: Account Deletion */}
+      <div
+        className={`mt-4 p-6 rounded-2xl border transition-colors ${
+          isLight
+            ? 'bg-rose-50 border-rose-200'
+            : 'bg-rose-500/[0.04] border-rose-500/20'
+        }`}
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h3 className={`text-sm font-bold mb-1 flex items-center gap-1.5 ${isLight ? 'text-rose-700' : 'text-rose-400'}`}>
               <Trash2 className="w-4 h-4" />
               <span>アカウントの削除（退会）</span>
             </h3>
-            <p className="text-xs text-slate-400">
+            <p className={`text-xs ${isLight ? 'text-rose-600/80' : 'text-slate-400'}`}>
               退会するとプロフィールは非公開・削除状態となり、元に戻すことはできません。
             </p>
           </div>
           <button
             type="button"
-            onClick={handleDeleteAccount}
+            onClick={() => setIsDeleteOpen(true)}
             disabled={deleting}
-            className="px-4 py-2 rounded-xl bg-rose-600/80 hover:bg-rose-600 disabled:opacity-50 text-white font-bold text-xs flex items-center gap-1.5 transition flex-shrink-0 self-start sm:self-auto"
+            className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white font-bold text-xs flex items-center gap-1.5 transition flex-shrink-0 self-start sm:self-auto cursor-pointer shadow-lg shadow-rose-600/20"
           >
             {deleting ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
               <Trash2 className="w-4 h-4" />
             )}
-            <span>{deleting ? '処理中...' : 'アカウントを削除'}</span>
+            <span>アカウントを削除</span>
           </button>
         </div>
       </div>
+
+      {/* Logout Confirmation Modal */}
+      {user && (
+        <LogoutModal
+          isOpen={isLogoutOpen}
+          onClose={() => setIsLogoutOpen(false)}
+          onConfirm={handleLogoutConfirm}
+          isLoading={loggingOut}
+          username={user.username}
+          displayName={user.display_name}
+          avatarUrl={user.avatar_url}
+        />
+      )}
+
+      {/* Account Deletion Confirmation Modal */}
+      <ConfirmModal
+        isOpen={isDeleteOpen}
+        onClose={() => setIsDeleteOpen(false)}
+        onConfirm={handleConfirmDelete}
+        isLoading={deleting}
+        title="アカウントの完全削除"
+        message={
+          <>
+            本当にアカウントを削除（退会）しますか？<br />
+            この操作を実行すると、あなたのプロフィールは非公開・削除状態となり、元に戻すことはできません。
+          </>
+        }
+        confirmText="退会する"
+        cancelText="キャンセル"
+        type="danger"
+        userInfo={user ? {
+          username: user.username,
+          displayName: user.display_name,
+          avatarUrl: user.avatar_url,
+        } : undefined}
+      />
     </div>
   );
 };

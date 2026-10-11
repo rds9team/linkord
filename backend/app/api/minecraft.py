@@ -94,6 +94,10 @@ async def get_playhive_stats(identifier: str, gamemode: str = "bed"):
                     deaths = raw_data.get("deaths", 0)
                     kd = round(kills / deaths, 2) if deaths > 0 else float(kills)
                     special_val = raw_data.get(mode_info["special_key"], 0)
+                    played = raw_data.get("played", 0)
+                    victories = raw_data.get("victories", 0)
+                    losses = max(0, played - victories)
+                    win_rate = round((victories / played) * 100, 1) if played > 0 else 0.0
                     
                     data = {
                         "UUID": raw_data.get("UUID"),
@@ -102,8 +106,10 @@ async def get_playhive_stats(identifier: str, gamemode: str = "bed"):
                         "gamemode_name": mode_info["name"],
                         "kills": kills,
                         "deaths": deaths,
-                        "victories": raw_data.get("victories", 0),
-                        "played": raw_data.get("played", 0),
+                        "victories": victories,
+                        "played": played,
+                        "losses": losses,
+                        "win_rate": win_rate,
                         "xp": raw_data.get("xp", 0),
                         "kd": kd,
                         "prestige": raw_data.get("prestige", 0),

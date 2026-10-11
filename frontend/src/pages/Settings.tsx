@@ -518,29 +518,6 @@ export const Settings: React.FC = () => {
             <span>テーマ設定</span>
           </div>
 
-          {/* Dark / White Mode selection */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-2">
-              ベーステーマモード
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setThemeMode('dark')}
-                className={`py-2.5 px-4 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-2 ${themeMode === 'dark' ? 'bg-purple-600/20 border-purple-500 text-white shadow-lg shadow-purple-600/20' : 'bg-slate-900 border-white/10 text-slate-400'}`}
-              >
-                <span>ダークモード (Dark)</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setThemeMode('light')}
-                className={`py-2.5 px-4 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-2 ${themeMode === 'light' ? 'bg-white/20 border-white text-white shadow-lg' : 'bg-slate-900 border-white/10 text-slate-400'}`}
-              >
-                <span>ホワイトモード (Light)</span>
-              </button>
-            </div>
-          </div>
-
           {/* Theme Presets */}
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-2">
@@ -571,13 +548,13 @@ export const Settings: React.FC = () => {
           {/* Real-time Theme Preview */}
           {(() => {
             const currentAccent = THEME_ACCENTS[themeId] || THEME_ACCENTS.midnight;
-            const isLightPreview = themeMode === 'light';
+            const isLightPreview = isLight;
             return (
               <div className="mt-4 pt-4 border-t border-white/5">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-[11px] font-semibold text-slate-300">リアルタイムプレビュー</span>
                   <span className="text-[10px] text-purple-400 font-mono">
-                    {PRESET_THEMES.find(p => p.id === themeId)?.name} / {isLightPreview ? 'Light' : 'Dark'}
+                    {PRESET_THEMES.find(p => p.id === themeId)?.name}
                   </span>
                 </div>
                 <div className={`relative overflow-hidden rounded-2xl border p-4 transition-all duration-300 ${isLightPreview ? 'bg-slate-100 border-slate-300 text-slate-900' : 'bg-[#0f1118] border-white/10 text-white'}`}>

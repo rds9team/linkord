@@ -14,6 +14,7 @@ import { useLanyard } from '../hooks/useLanyard';
 import { useTitle } from '../hooks/useTitle';
 import { fetchProfile, boostProfile, toggleFollow, fetchMinecraftStats } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { ProfileData } from '../types';
 
 const PLAYHIVE_MODES = [
@@ -93,10 +94,11 @@ export const Profile: React.FC = () => {
       : 'プロフィール'
   );
 
+  const { theme } = useTheme();
+  const isLight = theme === 'light';
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [boostCount, setBoostCount] = useState(0);
   const [hasBoosted, setHasBoosted] = useState(false);
-  const [themeMode, setThemeMode] = useState<'dark' | 'light'>('dark');
 
   // Background Audio / Video State
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
@@ -143,7 +145,6 @@ export const Profile: React.FC = () => {
         setBoostCount(data.boosts_count !== undefined ? data.boosts_count : 0);
         setFollowersCount(data.followers_count || 0);
         setIsFollowing(!!data.is_following);
-        setThemeMode(data.theme_mode === 'light' ? 'light' : 'dark');
 
         // Fetch PlayHive stats if minecraft_uuid exists
         if (data.minecraft_uuid) {
@@ -199,7 +200,6 @@ export const Profile: React.FC = () => {
     }
   };
 
-  const isLight = themeMode === 'light';
   const themeAccent = THEME_ACCENTS[profile?.theme_id || 'midnight'] || THEME_ACCENTS.midnight;
 
   if (loading) {
@@ -318,21 +318,6 @@ export const Profile: React.FC = () => {
               </span>
             </div>
           )}
-
-          <div className="flex items-center gap-1.5 p-1 rounded-full border border-slate-300 dark:border-white/10 bg-slate-200/80 dark:bg-white/5">
-            <button
-              onClick={() => setThemeMode('dark')}
-              className={`px-2.5 py-0.5 rounded-full font-semibold transition ${!isLight ? 'bg-slate-800 text-white shadow' : 'text-slate-600 hover:text-black'}`}
-            >
-              Dark
-            </button>
-            <button
-              onClick={() => setThemeMode('light')}
-              className={`px-2.5 py-0.5 rounded-full font-semibold transition ${isLight ? 'bg-white text-black shadow' : 'text-slate-400 hover:text-white'}`}
-            >
-              White
-            </button>
-          </div>
         </div>
       </div>
 
@@ -582,27 +567,65 @@ export const Profile: React.FC = () => {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-4 gap-2 text-center">
-                  <div className="bg-slate-200/60 dark:bg-white/5 rounded-xl py-2 px-1">
-                    <span className="block text-[10px] text-slate-500 dark:text-slate-400">Kills</span>
-                    <span className="font-mono text-xs font-bold">{(mcData?.kills ?? 0).toLocaleString()}</span>
-                  </div>
-                  <div className="bg-slate-200/60 dark:bg-white/5 rounded-xl py-2 px-1">
-                    <span className="block text-[10px] text-slate-500 dark:text-slate-400">Victories</span>
-                    <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">{(mcData?.victories ?? 0).toLocaleString()}</span>
-                  </div>
-                  <div className="bg-slate-200/60 dark:bg-white/5 rounded-xl py-2 px-1">
-                    <span className="block text-[10px] text-slate-500 dark:text-slate-400">Played</span>
-                    <span className="font-mono text-xs font-bold text-sky-500">{(mcData?.played ?? 0).toLocaleString()}</span>
-                  </div>
-                  <div className="bg-slate-200/60 dark:bg-white/5 rounded-xl py-2 px-1">
-                    <span className="block text-[10px] text-slate-500 dark:text-slate-400">
-                      {mcData?.special_label || 'K/D'}
+                {/* Win Rate Banner with Progress Bar */}
+                <div className={`p-2.5 rounded-xl mb-2.5 ${isLight ? 'bg-slate-200/50' : 'bg-white/[0.03]'}`}>
+                  <div className="flex items-center justify-between text-[11px] mb-1.5 font-semibold">
+                    <span className="flex items-center gap-1.5 text-emerald-500">
+                      <span>🏆 勝率</span>
+                      <span className="font-mono font-extrabold text-xs">
+                        {mcData?.win_rate !== undefined ? `${mcData.win_rate}%` : '0.0%'}
+                      </span>
                     </span>
-                    <span className="font-mono text-xs font-bold text-purple-600 dark:text-purple-400">
-                      {mcData?.special_value !== undefined && mcData?.special_label
-                        ? mcData.special_value.toLocaleString()
-                        : (mcData?.kd ?? '0.0')}
+                    <span className="text-[10px] font-mono text-slate-400">
+                      {mcData?.victories ?? 0}勝 / {mcData?.losses ?? 0}敗 ({mcData?.played ?? 0}戦)
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-300 dark:bg-white/10 h-1.5 rounded-full overflow-hidden">
+                    <div
+                      className="bg-gradient-to-r from-emerald-500 to-teal-400 h-full rounded-full transition-all duration-500"
+                      style={{ width: `${Math.min(100, Math.max(0, mcData?.win_rate || 0))}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* 6-Grid Battle Stats */}
+                <div className="grid grid-cols-3 gap-1.5 text-center mb-1">
+                  <div className="bg-slate-200/60 dark:bg-white/5 rounded-xl py-2 px-1">
+                    <span className="block text-[9px] text-slate-500 dark:text-slate-400">K/D 比</span>
+                    <span className="font-mono text-xs font-bold text-purple-500">
+                      {mcData?.kd ?? '0.00'}
+                    </span>
+                  </div>
+                  <div className="bg-slate-200/60 dark:bg-white/5 rounded-xl py-2 px-1">
+                    <span className="block text-[9px] text-slate-500 dark:text-slate-400">Kills / Deaths</span>
+                    <span className="font-mono text-xs font-bold">
+                      {(mcData?.kills ?? 0).toLocaleString()} <span className="text-[9px] text-slate-400 font-normal">/ {(mcData?.deaths ?? 0).toLocaleString()}</span>
+                    </span>
+                  </div>
+                  <div className="bg-slate-200/60 dark:bg-white/5 rounded-xl py-2 px-1">
+                    <span className="block text-[9px] text-slate-500 dark:text-slate-400 truncate">
+                      {mcData?.special_label || 'Special'}
+                    </span>
+                    <span className="font-mono text-xs font-bold text-amber-500">
+                      {mcData?.special_value !== undefined ? mcData.special_value.toLocaleString() : '-'}
+                    </span>
+                  </div>
+                  <div className="bg-slate-200/60 dark:bg-white/5 rounded-xl py-2 px-1">
+                    <span className="block text-[9px] text-slate-500 dark:text-slate-400">Victories</span>
+                    <span className="font-mono text-xs font-bold text-emerald-500">
+                      {(mcData?.victories ?? 0).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="bg-slate-200/60 dark:bg-white/5 rounded-xl py-2 px-1">
+                    <span className="block text-[9px] text-slate-500 dark:text-slate-400">Played</span>
+                    <span className="font-mono text-xs font-bold text-sky-500">
+                      {(mcData?.played ?? 0).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="bg-slate-200/60 dark:bg-white/5 rounded-xl py-2 px-1">
+                    <span className="block text-[9px] text-slate-500 dark:text-slate-400">獲得 XP</span>
+                    <span className="font-mono text-xs font-bold text-indigo-400">
+                      {(mcData?.xp ?? 0).toLocaleString()}
                     </span>
                   </div>
                 </div>

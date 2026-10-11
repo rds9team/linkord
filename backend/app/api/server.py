@@ -9,6 +9,7 @@ from app.core.database import get_db
 from app.core.auth import get_current_user, get_optional_current_user, get_client_ip
 from app.models.models import Server, Boost, Account
 from app.schemas.schemas import ServerOut, ServerCreate, ServerUpdate
+from app.services.discord_notify import notify_boost_discord
 
 router = APIRouter(prefix="/servers", tags=["servers"])
 
@@ -296,5 +297,12 @@ async def boost_server(
     )
     db.add(new_boost)
     await db.commit()
+
+    await notify_boost_discord(
+        target_name=server.name,
+        target_type="server",
+        booster_account=current_user
+    )
+
     return {"status": "ok", "message": f"{server.name} をブーストしました！"}
 

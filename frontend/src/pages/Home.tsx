@@ -43,7 +43,7 @@ export const Home: React.FC = () => {
         </Link>
       </div>
 
-      {/* Live guns.lol Style Interactive Preview Card */}
+      {/* Live Interactive Preview Card */}
       <div className="w-full max-w-lg mb-16 p-1 rounded-3xl bg-gradient-to-b from-purple-500/20 via-sky-500/10 to-transparent shadow-2xl shadow-purple-900/30">
         <div className="rounded-[26px] p-6 bg-slate-900/80 border border-white/10 backdrop-blur-2xl text-left relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/15 rounded-full blur-2xl pointer-events-none"></div>
@@ -51,7 +51,7 @@ export const Home: React.FC = () => {
           {/* Banner */}
           <div className="h-20 -mx-6 -mt-6 mb-4 bg-gradient-to-r from-purple-900/60 via-indigo-900/50 to-sky-900/60 relative overflow-hidden flex items-center justify-end px-4">
             <span className="text-[10px] font-mono uppercase tracking-wider text-purple-300/80 bg-black/40 px-2.5 py-1 rounded-full border border-white/10">
-              guns.lol inspired style
+              Linkord Cyber Glass Style
             </span>
           </div>
 

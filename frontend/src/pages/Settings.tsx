@@ -462,10 +462,10 @@ export const Settings: React.FC = () => {
               <div className="flex-1">
                 <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-white/10 text-xs font-medium text-slate-200 transition">
                   <Upload className="w-3.5 h-3.5 text-purple-400" />
-                  <span>音声を選択 (MP3/OGG/WAV, 最大20MB)</span>
+                  <span>音声を選択 (MP3, WAV, OGG, M4A, FLAC等, 最大50MB)</span>
                   <input
                     type="file"
-                    accept="audio/mpeg,audio/ogg,audio/wav"
+                    accept="audio/*"
                     onChange={handleMusicChange}
                     className="hidden"
                     disabled={uploadingMusic}
@@ -480,7 +480,7 @@ export const Settings: React.FC = () => {
                     削除
                   </button>
                 )}
-                <p className="text-[11px] text-slate-500 mt-1">guns.lol風にプロフ訪問時にBGMプレイヤーが表示されます</p>
+                <p className="text-[11px] text-slate-500 mt-1">プロフィール訪問時にBGMプレイヤーが表示されます</p>
               </div>
             </div>
           </div>

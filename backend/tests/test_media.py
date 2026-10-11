@@ -47,6 +47,33 @@ async def test_media_upload_flow():
         assert wav_data["media_kind"] == "audio"
         assert wav_data["url"].endswith(".wav")
 
+        # 5b. Test FLAC upload
+        dummy_flac = b"fLaC\x00\x00\x00\x22\x10\x00\x10\x00\x00\x00\x00\x00\x00\x00"
+        flac_files = {"file": ("bgm.flac", io.BytesIO(dummy_flac), "audio/flac")}
+        flac_res = await client.post("/api/media/upload", files=flac_files)
+        assert flac_res.status_code == 200
+        flac_data = flac_res.json()
+        assert flac_data["media_kind"] == "audio"
+        assert flac_data["url"].endswith(".flac")
+
+        # 5c. Test MP3 with ID3 header
+        dummy_mp3 = b"ID3\x04\x00\x00\x00\x00\x00\x20TIT2\x00\x00\x00\x08\x00\x00\x03TestSong"
+        mp3_files = {"file": ("track.mp3", io.BytesIO(dummy_mp3), "audio/mpeg")}
+        mp3_res = await client.post("/api/media/upload", files=mp3_files)
+        assert mp3_res.status_code == 200
+        mp3_data = mp3_res.json()
+        assert mp3_data["media_kind"] == "audio"
+        assert mp3_data["url"].endswith(".mp3")
+
+        # 5d. Test M4A audio upload
+        dummy_m4a = b"\x00\x00\x00\x20ftypM4A \x00\x00\x00\x00M4A mp42isom\x00\x00\x00\x08mdat"
+        m4a_files = {"file": ("music.m4a", io.BytesIO(dummy_m4a), "audio/x-m4a")}
+        m4a_res = await client.post("/api/media/upload", files=m4a_files)
+        assert m4a_res.status_code == 200
+        m4a_data = m4a_res.json()
+        assert m4a_data["media_kind"] == "audio"
+        assert m4a_data["url"].endswith(".m4a")
+
         # 6. Test video upload (MP4 ftyp)
         dummy_mp4 = b"\x00\x00\x00\x18ftypisom\x00\x00\x02\x00isomiso2mp41\x00\x00\x00\x08free"
         mp4_files = {"file": ("bg.mp4", io.BytesIO(dummy_mp4), "video/mp4")}
@@ -56,7 +83,12 @@ async def test_media_upload_flow():
         assert mp4_data["media_kind"] == "video"
         assert mp4_data["url"].endswith(".mp4")
 
-        # 7. Reject invalid non-media file
+        # 7. Reject invalid non-media file (EXE)
         bad_file = {"file": ("malicious.exe", io.BytesIO(b"MZ\x90\x00ThisIsNotAnImage"), "application/octet-stream")}
         bad_res = await client.post("/api/media/upload", files=bad_file)
         assert bad_res.status_code == 400
+
+        # 8. Reject dangerous php script disguised as audio
+        bad_script = {"file": ("fake.mp3", io.BytesIO(b"<?php echo 'danger'; ?>"), "audio/mpeg")}
+        script_res = await client.post("/api/media/upload", files=bad_script)
+        assert script_res.status_code == 400

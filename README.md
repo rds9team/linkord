@@ -12,7 +12,7 @@ Linkord（https://linkord.net）は、Discordユーザーのプロフィール�
 
 ## 主な機能
 
-- **プロフィール**: guns.lol スタイルのサイバー・ダークグラスモーフィズム、カスタムテーマ（Dark/White、12種プリセット）
+- **プロフィール**: サイバー・ダークグラスモーフィズム、カスタムテーマ（Dark/White、12種プリセット）
 - **Discord / Google 認証**: 安全な OAuth2 + セッション Cookie 管理、Authed バッジ自動付与
 - **コミュニティ & 簡単サーバー掲載**: Discord 招待URL / OAuth 連携によるワンクリック自動情報補完（サーバー名・アイコン・メンバー数自動取得）、サーバー検索、ユーザー検索、フォロー・フォロワーモーダル
 - **外部連携**: Lanyard (Spotify / Discord アクティビティ同期)、Minecraft PlayHive 公式戦績

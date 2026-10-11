@@ -8,6 +8,7 @@ import {
 import { Badges } from '../components/Badges';
 import { ReportModal } from '../components/ReportModal';
 import { FollowListModal } from '../components/FollowListModal';
+import { MusicPlayer } from '../components/MusicPlayer';
 import { SpotifyWidget, ActivityWidget, CustomStatusBubble } from '../components/LanyardWidgets';
 import { useLanyard } from '../hooks/useLanyard';
 import { useTitle } from '../hooks/useTitle';
@@ -99,8 +100,6 @@ export const Profile: React.FC = () => {
 
   // Background Audio / Video State
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
-  const [audioMuted, setAudioMuted] = useState(false);
-  const audioRef = React.useRef<HTMLAudioElement | null>(null);
 
   // Follow State
   const [followersCount, setFollowersCount] = useState(0);
@@ -290,17 +289,6 @@ export const Profile: React.FC = () => {
         </div>
       )}
 
-      {/* Audio Player (if music_url is set) */}
-      {profile.music_url && (
-        <audio
-          ref={audioRef}
-          src={profile.music_url}
-          loop
-          onPlay={() => setIsPlayingAudio(true)}
-          onPause={() => setIsPlayingAudio(false)}
-        />
-      )}
-
       {/* Ambient Glow Effects (Dark only) */}
       {!isLight && !profile.video_url && (
         <>
@@ -314,33 +302,21 @@ export const Profile: React.FC = () => {
         <span className="font-mono text-slate-400">linkord.net/@{profile.username}</span>
         
         <div className="flex items-center gap-2">
-          {/* Audio Play/Pause Button */}
+          {/* Audio Status Pill */}
           {profile.music_url && (
-            <button
-              onClick={() => {
-                if (audioRef.current) {
-                  if (isPlayingAudio) {
-                    audioRef.current.pause();
-                  } else {
-                    audioRef.current.play().catch(() => {});
-                  }
-                }
-              }}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-purple-500/30 bg-purple-500/15 text-purple-300 hover:bg-purple-500/25 transition cursor-pointer"
-              title="BGMの再生/一時停止"
+            <div
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border transition ${
+                isPlayingAudio
+                  ? 'border-purple-500/40 bg-purple-500/15 text-purple-300 shadow-sm shadow-purple-500/20'
+                  : 'border-slate-300 dark:border-white/10 bg-slate-200/50 dark:bg-white/5 text-slate-400'
+              }`}
+              title={isPlayingAudio ? 'BGM 再生中' : 'BGM 一時停止中'}
             >
-              {isPlayingAudio ? (
-                <>
-                  <Pause className="w-3 h-3 text-purple-300" />
-                  <span className="text-[10px] font-semibold">再生中</span>
-                </>
-              ) : (
-                <>
-                  <Play className="w-3 h-3 text-purple-300" />
-                  <span className="text-[10px] font-semibold">BGM再生</span>
-                </>
-              )}
-            </button>
+              <Music className={`w-3 h-3 ${isPlayingAudio ? 'animate-bounce text-purple-400' : 'text-slate-400'}`} />
+              <span className="text-[10px] font-semibold">
+                {isPlayingAudio ? 'BGM再生中' : 'BGM'}
+              </span>
+            </div>
           )}
 
           <div className="flex items-center gap-1.5 p-1 rounded-full border border-slate-300 dark:border-white/10 bg-slate-200/80 dark:bg-white/5">
@@ -360,7 +336,7 @@ export const Profile: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Guns.lol Style Profile Panel */}
+      {/* Main Profile Panel */}
       <main className={`w-full max-w-lg rounded-[28px] overflow-hidden relative z-10 transition duration-300 ${isLight ? 'glass-panel-light' : 'glass-panel-dark'} ${!isLight ? themeAccent.border : ''}`}>
         
         {/* Profile Cover / Background Banner */}
@@ -713,6 +689,17 @@ export const Profile: React.FC = () => {
         username={profile.username}
         type={followModalType}
       />
+
+      {/* Rich BGM Player (Click-to-enter overlay & Floating bottom bar) */}
+      {profile.music_url && (
+        <MusicPlayer
+          musicUrl={profile.music_url}
+          username={profile.username}
+          displayName={profile.display_name}
+          avatarUrl={profile.avatar_url}
+          onPlayStateChange={(playing) => setIsPlayingAudio(playing)}
+        />
+      )}
     </div>
   );
 };

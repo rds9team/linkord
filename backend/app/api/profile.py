@@ -1,16 +1,22 @@
 import datetime
+import time
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_, func
+from sqlalchemy import select, or_, func, delete
 from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
 from app.core.auth import get_current_user, get_optional_current_user, get_client_ip
-from app.models.models import Account, ProfileBoost, Follow
+from app.models.models import Account, ProfileBoost, Follow, SocialLink
 from app.schemas.schemas import ProfileOut, ProfileUpdate, FollowUserOut, ProfileSearchResult
 
 router = APIRouter(prefix="/profile", tags=["profile"])
+
+# In-memory IP view cache for debouncing access count: {f"{account_id}:{ip}": timestamp}
+_VIEW_IP_CACHE: dict[str, float] = {}
+VIEW_DEBOUNCE_SECONDS = 600
+
 
 @router.get("/search", response_model=list[ProfileSearchResult])
 async def search_profiles(
@@ -114,11 +120,19 @@ async def get_my_profile(
     current_user: Account = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    current_user.boosts_count = await get_account_boosts_count(db, current_user.id)
-    current_user.followers_count = await get_followers_count(db, current_user.id)
-    current_user.following_count = await get_following_count(db, current_user.id)
-    current_user.is_following = False
-    return current_user
+    stmt = (
+        select(Account)
+        .options(selectinload(Account.links))
+        .where(Account.id == current_user.id)
+    )
+    res = await db.execute(stmt)
+    user = res.scalars().first() or current_user
+
+    user.boosts_count = await get_account_boosts_count(db, user.id)
+    user.followers_count = await get_followers_count(db, user.id)
+    user.following_count = await get_following_count(db, user.id)
+    user.is_following = False
+    return user
 
 @router.patch("/me", response_model=ProfileOut)
 async def update_my_profile(
@@ -127,12 +141,36 @@ async def update_my_profile(
     db: AsyncSession = Depends(get_db)
 ):
     update_dict = data.model_dump(exclude_unset=True)
+    links_data = update_dict.pop("links", None)
+
     for field, val in update_dict.items():
         setattr(current_user, field, val)
+
+    if links_data is not None:
+        await db.execute(delete(SocialLink).where(SocialLink.account_id == current_user.id))
+        for idx, item in enumerate(links_data):
+            title = item.get("title", "") if isinstance(item, dict) else getattr(item, "title", "")
+            url = item.get("url", "") if isinstance(item, dict) else getattr(item, "url", "")
+            icon = item.get("icon", "link") if isinstance(item, dict) else getattr(item, "icon", "link")
+            if title and url:
+                new_link = SocialLink(
+                    account_id=current_user.id,
+                    title=title,
+                    url=url,
+                    icon=icon,
+                    sort_order=idx
+                )
+                db.add(new_link)
 
     current_user.updated_at = datetime.datetime.utcnow()
     await db.commit()
     await db.refresh(current_user)
+
+    # Fetch fresh links
+    links_stmt = select(SocialLink).where(SocialLink.account_id == current_user.id).order_by(SocialLink.sort_order.asc())
+    links_res = await db.execute(links_stmt)
+    current_user.links = list(links_res.scalars().all())
+
     current_user.boosts_count = await get_account_boosts_count(db, current_user.id)
     current_user.followers_count = await get_followers_count(db, current_user.id)
     current_user.following_count = await get_following_count(db, current_user.id)
@@ -279,6 +317,7 @@ async def boost_profile(
 @router.get("/{username}", response_model=ProfileOut)
 async def get_profile(
     username: str,
+    request: Request,
     current_user: Optional[Account] = Depends(get_optional_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -293,9 +332,28 @@ async def get_profile(
     if not account.is_public:
         raise HTTPException(status_code=403, detail="This profile is private")
 
-    account.views_count += 1
-    await db.commit()
-    await db.refresh(account)
+    # Increment view count with debounce and self-view exclusion
+    now = time.time()
+    client_ip = get_client_ip(request)
+    cache_key = f"{account.id}:{client_ip}"
+
+    # Only count if:
+    # 1. Visitor is not the profile owner
+    # 2. Same IP hasn't visited this profile within 10 minutes
+    is_owner = current_user and current_user.id == account.id
+    last_view_time = _VIEW_IP_CACHE.get(cache_key, 0)
+
+    if not is_owner and (now - last_view_time > VIEW_DEBOUNCE_SECONDS):
+        _VIEW_IP_CACHE[cache_key] = now
+        account.views_count += 1
+        await db.commit()
+        await db.refresh(account)
+
+        # Cleanup ancient cache entries if too large
+        if len(_VIEW_IP_CACHE) > 5000:
+            for k in list(_VIEW_IP_CACHE.keys()):
+                if now - _VIEW_IP_CACHE[k] > 3600:
+                    del _VIEW_IP_CACHE[k]
 
     account.boosts_count = await get_account_boosts_count(db, account.id)
     account.followers_count = await get_followers_count(db, account.id)

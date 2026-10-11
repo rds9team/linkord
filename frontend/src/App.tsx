@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
+import { PageTransition } from './components/PageTransition';
 import { Home } from './pages/Home';
 import { Profile } from './pages/Profile';
 import { Discover } from './pages/Discover';
@@ -12,35 +13,55 @@ import { Terms } from './pages/Terms';
 import { Privacy } from './pages/Privacy';
 import { Admin } from './pages/Admin';
 import { AuthProvider } from './context/AuthContext';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
+
+const AppContent: React.FC = () => {
+  const { theme } = useTheme();
+  const isLight = theme === 'light';
+
+  return (
+    <div
+      className={`min-h-screen flex flex-col relative overflow-x-hidden transition-colors duration-300 ${
+        isLight ? 'bg-[#f8fafc] text-slate-900' : 'bg-[#08090d] text-slate-100'
+      }`}
+    >
+      {/* Subtle background glow */}
+      <div
+        className={`fixed top-0 left-1/2 -translate-x-1/2 w-[800px] h-[300px] rounded-full blur-[140px] pointer-events-none transition-opacity duration-300 ${
+          isLight ? 'bg-purple-300/25' : 'bg-purple-600/10'
+        }`}
+      />
+
+      <Navbar />
+
+      <PageTransition>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/discover" element={<Discover />} />
+          <Route path="/server/:slug" element={<ServerDetail />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/terms" element={<Terms />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/admin" element={<Admin />} />
+          <Route path="/@:username" element={<Profile />} />
+          <Route path="/:username" element={<Profile />} />
+        </Routes>
+      </PageTransition>
+
+      <Footer />
+    </div>
+  );
+};
 
 export const App: React.FC = () => {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-      <div className="min-h-screen bg-[#08090d] text-slate-100 flex flex-col relative overflow-x-hidden">
-        {/* Subtle background glow */}
-        <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[800px] h-[300px] bg-purple-600/10 rounded-full blur-[140px] pointer-events-none"></div>
-
-        <Navbar />
-
-        <div className="flex-1">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/discover" element={<Discover />} />
-            <Route path="/server/:slug" element={<ServerDetail />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/terms" element={<Terms />} />
-            <Route path="/privacy" element={<Privacy />} />
-            <Route path="/admin" element={<Admin />} />
-            <Route path="/@:username" element={<Profile />} />
-            <Route path="/:username" element={<Profile />} />
-          </Routes>
-        </div>
-
-        <Footer />
-      </div>
-    </BrowserRouter>
-  </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <BrowserRouter>
+          <AppContent />
+        </BrowserRouter>
+      </AuthProvider>
+    </ThemeProvider>
   );
 };

@@ -76,6 +76,7 @@ export interface ProfileUpdateData {
   analytics_id?: string;
   hide_badges?: boolean;
   hide_followers?: boolean;
+  links?: Array<{ title: string; url: string; icon: string }>;
 }
 
 export interface ReportData {

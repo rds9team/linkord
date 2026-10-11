@@ -177,6 +177,10 @@ export const fetchMinecraftStats = async (uuid: string, gamemode: string = 'bedw
   return request<any>(`/api/minecraft/${encodeURIComponent(uuid)}/${encodeURIComponent(gamemode)}`);
 };
 
+export const fetchPlayHiveModes = async (): Promise<Array<{ id: string; name: string; short: string; special_key: string; special_label: string }>> => {
+  return request<any>('/api/minecraft/modes');
+};
+
 export const fetchFollowers = (username: string): Promise<FollowUser[]> => {
   return request<FollowUser[]>(`/api/profile/${encodeURIComponent(username)}/followers`);
 };

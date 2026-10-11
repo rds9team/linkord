@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import {
   MessageSquare, Github, Twitter, Code, Music, Eye, Flame, Flag, Heart,
   Loader2, UserX, ExternalLink, Globe, Youtube, Twitch, Send, UserPlus, UserCheck, Users,
-  Volume2, VolumeX, Play, Pause
+  Volume2, VolumeX, Play, Pause, Plus
 } from 'lucide-react';
 import { Badges } from '../components/Badges';
 import { ReportModal } from '../components/ReportModal';
@@ -14,6 +14,19 @@ import { useTitle } from '../hooks/useTitle';
 import { fetchProfile, boostProfile, toggleFollow, fetchMinecraftStats } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { ProfileData } from '../types';
+
+const PLAYHIVE_MODES = [
+  { id: 'bed', name: 'BedWars', short: 'BED' },
+  { id: 'bridge', name: 'The Bridge', short: 'BRIDGE' },
+  { id: 'sky', name: 'SkyWars', short: 'SKY' },
+  { id: 'sg', name: 'Survival Games', short: 'SG' },
+  { id: 'murder', name: 'Murder Mystery', short: 'MURDER' },
+  { id: 'dr', name: 'DeathRun', short: 'DR' },
+  { id: 'drop', name: 'Block Drop', short: 'DROP' },
+  { id: 'ground', name: 'Ground Wars', short: 'GROUND' },
+  { id: 'ctf', name: 'Capture The Flag', short: 'CTF' },
+  { id: 'wars', name: 'Treasure Wars', short: 'WARS' },
+];
 
 const THEME_ACCENTS: Record<string, { glow: string; border: string; badge: string }> = {
   midnight: { glow: 'bg-purple-600/15', border: 'border-purple-500/20', badge: 'bg-purple-500/20 text-purple-300' },
@@ -99,6 +112,20 @@ export const Profile: React.FC = () => {
   // Real-time WebSocket Lanyard Presence
   const { data: lanyardData } = useLanyard(profile?.discord_id);
   const [mcData, setMcData] = useState<any>(null);
+  const [mcGamemode, setMcGamemode] = useState('bed');
+  const [mcLoading, setMcLoading] = useState(false);
+
+  const handleSelectGamemode = (mode: string) => {
+    if (!profile?.minecraft_uuid || mode === mcGamemode) return;
+    setMcGamemode(mode);
+    setMcLoading(true);
+    fetchMinecraftStats(profile.minecraft_uuid, mode)
+      .then(res => {
+        if (res && res.data) setMcData(res.data);
+      })
+      .catch(() => {})
+      .finally(() => setMcLoading(false));
+  };
 
   const customStatusActivity = lanyardData?.activities?.find(a => a.type === 4);
   const otherActivities = lanyardData?.activities?.filter(a => a.type !== 4) || [];
@@ -121,7 +148,7 @@ export const Profile: React.FC = () => {
 
         // Fetch PlayHive stats if minecraft_uuid exists
         if (data.minecraft_uuid) {
-          fetchMinecraftStats(data.minecraft_uuid, 'bedwars')
+          fetchMinecraftStats(data.minecraft_uuid, 'bed')
             .then(res => {
               if (res && res.data) setMcData(res.data);
             })
@@ -464,46 +491,61 @@ export const Profile: React.FC = () => {
         </div>
 
         {/* Social Links Grid */}
-        {profile.links && profile.links.length > 0 ? (
-          <div className="grid grid-cols-4 gap-2 mb-4">
-            {profile.links.map(link => {
-              const safe = isSafeHttpUrl(link.url);
-              return (
-                <a
-                  key={link.id}
-                  href={safe ? link.url : '#'}
-                  target={safe ? '_blank' : undefined}
-                  rel={safe ? 'noopener noreferrer' : undefined}
-                  className={`rounded-xl p-2.5 flex flex-col items-center justify-center gap-1 transition hover:scale-[1.02] ${isLight ? 'glass-card-light' : 'glass-card-dark'}`}
+        {(() => {
+          let displayLinks = profile.links || [];
+          if (displayLinks.length === 0 && profile.discord_id) {
+            displayLinks = [
+              {
+                id: 0,
+                title: 'Discord',
+                url: `https://discord.com/users/${profile.discord_id}`,
+                icon: 'discord',
+              },
+            ];
+          }
+
+          if (displayLinks.length > 0) {
+            return (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+                {displayLinks.map((link, idx) => {
+                  const safe = isSafeHttpUrl(link.url);
+                  return (
+                    <a
+                      key={link.id || idx}
+                      href={safe ? link.url : '#'}
+                      target={safe ? '_blank' : undefined}
+                      rel={safe ? 'noopener noreferrer' : undefined}
+                      className={`rounded-xl p-2.5 flex items-center justify-center gap-2 transition hover:scale-[1.02] ${isLight ? 'glass-card-light' : 'glass-card-dark'}`}
+                    >
+                      {getSocialIcon(link.icon || link.title)}
+                      <span className="text-[11px] text-slate-700 dark:text-slate-300 font-semibold truncate max-w-[100px]">
+                        {link.title}
+                      </span>
+                    </a>
+                  );
+                })}
+              </div>
+            );
+          }
+
+          if (currentUser?.username === profile.username) {
+            return (
+              <div className="mb-4 text-center">
+                <Link
+                  to="/settings"
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition ${
+                    isLight ? 'border-dashed border-slate-300 text-slate-500 hover:text-slate-800' : 'border-dashed border-white/10 text-slate-400 hover:text-white'
+                  }`}
                 >
-                  {getSocialIcon(link.icon || link.title)}
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate max-w-full">
-                    {link.title}
-                  </span>
-                </a>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="grid grid-cols-4 gap-2 mb-4">
-            <a href="#" className={`rounded-xl p-2.5 flex flex-col items-center justify-center gap-1 transition hover:scale-[1.02] ${isLight ? 'glass-card-light' : 'glass-card-dark'}`}>
-              <MessageSquare className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
-              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Discord</span>
-            </a>
-            <a href="#" className={`rounded-xl p-2.5 flex flex-col items-center justify-center gap-1 transition hover:scale-[1.02] ${isLight ? 'glass-card-light' : 'glass-card-dark'}`}>
-              <Github className="w-5 h-5 text-slate-700 dark:text-slate-200" />
-              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">GitHub</span>
-            </a>
-            <a href="#" className={`rounded-xl p-2.5 flex flex-col items-center justify-center gap-1 transition hover:scale-[1.02] ${isLight ? 'glass-card-light' : 'glass-card-dark'}`}>
-              <Twitter className="w-5 h-5 text-sky-500 dark:text-sky-400" />
-              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">X</span>
-            </a>
-            <a href="#" className={`rounded-xl p-2.5 flex flex-col items-center justify-center gap-1 transition hover:scale-[1.02] ${isLight ? 'glass-card-light' : 'glass-card-dark'}`}>
-              <Code className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Qiita</span>
-            </a>
-          </div>
-        )}
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>SNSリンクを追加する</span>
+                </Link>
+              </div>
+            );
+          }
+
+          return null;
+        })()}
 
         {/* Spotify / Lanyard Presence Widget (Dynamic & WebSocket-synced) */}
         {lanyardData?.spotify && (
@@ -518,12 +560,14 @@ export const Profile: React.FC = () => {
         {/* Minecraft PlayHive Stats Card (if minecraft_uuid exists or mcData exists) */}
         {profile.minecraft_uuid && (
           <div className={`rounded-2xl p-3.5 mb-3 ${isLight ? 'glass-card-light' : 'glass-card-dark'}`}>
-            <div className="flex items-center justify-between mb-2.5">
+            <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <div className="w-6 h-6 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/30 text-[10px] font-bold">
                   MC
                 </div>
-                <span className="text-xs font-bold">PlayHive - BedWars</span>
+                <span className="text-xs font-bold">
+                  PlayHive ({mcData?.gamemode_name || PLAYHIVE_MODES.find(m => m.id === mcGamemode)?.name || 'Stats'})
+                </span>
                 <span className="text-[10px] font-mono text-slate-400">({profile.minecraft_uuid})</span>
               </div>
               {mcData?.prestige !== undefined && mcData?.prestige > 0 && (
@@ -532,28 +576,66 @@ export const Profile: React.FC = () => {
                 </span>
               )}
             </div>
-            <div className="grid grid-cols-4 gap-2 text-center">
-              <div className="bg-slate-200/60 dark:bg-white/5 rounded-xl py-2 px-1">
-                <span className="block text-[10px] text-slate-500 dark:text-slate-400">Kills</span>
-                <span className="font-mono text-xs font-bold">{(mcData?.kills ?? 0).toLocaleString()}</span>
-              </div>
-              <div className="bg-slate-200/60 dark:bg-white/5 rounded-xl py-2 px-1">
-                <span className="block text-[10px] text-slate-500 dark:text-slate-400">Victories</span>
-                <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">{(mcData?.victories ?? 0).toLocaleString()}</span>
-              </div>
-              <div className="bg-slate-200/60 dark:bg-white/5 rounded-xl py-2 px-1">
-                <span className="block text-[10px] text-slate-500 dark:text-slate-400">Played</span>
-                <span className="font-mono text-xs font-bold text-sky-500">{(mcData?.played ?? 0).toLocaleString()}</span>
-              </div>
-              <div className="bg-slate-200/60 dark:bg-white/5 rounded-xl py-2 px-1">
-                <span className="block text-[10px] text-slate-500 dark:text-slate-400">K/D</span>
-                <span className="font-mono text-xs font-bold text-purple-600 dark:text-purple-400">{mcData?.kd ?? '0.0'}</span>
-              </div>
+
+            {/* PlayHive Gamemode Selector Tabs */}
+            <div className="flex items-center gap-1 overflow-x-auto pb-1 mb-2.5 scrollbar-thin">
+              {PLAYHIVE_MODES.map(mode => {
+                const isActive = mcGamemode === mode.id;
+                return (
+                  <button
+                    key={mode.id}
+                    onClick={() => handleSelectGamemode(mode.id)}
+                    className={`px-2 py-0.5 rounded-lg text-[10px] font-semibold whitespace-nowrap transition cursor-pointer ${
+                      isActive
+                        ? 'bg-emerald-600 text-white shadow-sm'
+                        : isLight
+                        ? 'bg-slate-200/80 text-slate-700 hover:bg-slate-300'
+                        : 'bg-white/5 text-slate-400 hover:text-white hover:bg-white/10'
+                    }`}
+                  >
+                    {mode.name}
+                  </button>
+                );
+              })}
             </div>
-            <div className="text-[9px] font-mono text-slate-400 text-right mt-1.5 flex items-center justify-between">
-              <span className="text-[9px] text-slate-500">playhive.com/api (BedWars)</span>
-              <span>10分キャッシュ</span>
-            </div>
+
+            {mcLoading ? (
+              <div className="py-6 flex flex-col items-center justify-center gap-2">
+                <Loader2 className="w-5 h-5 text-emerald-500 animate-spin" />
+                <span className="text-[10px] text-slate-400">戦績を読み込み中...</span>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-4 gap-2 text-center">
+                  <div className="bg-slate-200/60 dark:bg-white/5 rounded-xl py-2 px-1">
+                    <span className="block text-[10px] text-slate-500 dark:text-slate-400">Kills</span>
+                    <span className="font-mono text-xs font-bold">{(mcData?.kills ?? 0).toLocaleString()}</span>
+                  </div>
+                  <div className="bg-slate-200/60 dark:bg-white/5 rounded-xl py-2 px-1">
+                    <span className="block text-[10px] text-slate-500 dark:text-slate-400">Victories</span>
+                    <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">{(mcData?.victories ?? 0).toLocaleString()}</span>
+                  </div>
+                  <div className="bg-slate-200/60 dark:bg-white/5 rounded-xl py-2 px-1">
+                    <span className="block text-[10px] text-slate-500 dark:text-slate-400">Played</span>
+                    <span className="font-mono text-xs font-bold text-sky-500">{(mcData?.played ?? 0).toLocaleString()}</span>
+                  </div>
+                  <div className="bg-slate-200/60 dark:bg-white/5 rounded-xl py-2 px-1">
+                    <span className="block text-[10px] text-slate-500 dark:text-slate-400">
+                      {mcData?.special_label || 'K/D'}
+                    </span>
+                    <span className="font-mono text-xs font-bold text-purple-600 dark:text-purple-400">
+                      {mcData?.special_value !== undefined && mcData?.special_label
+                        ? mcData.special_value.toLocaleString()
+                        : (mcData?.kd ?? '0.0')}
+                    </span>
+                  </div>
+                </div>
+                <div className="text-[9px] font-mono text-slate-400 text-right mt-1.5 flex items-center justify-between">
+                  <span className="text-[9px] text-slate-500">api.playhive.com/v0</span>
+                  <span>10分キャッシュ</span>
+                </div>
+              </>
+            )}
           </div>
         )}
 

@@ -247,6 +247,31 @@ Linkord（Discord プロフィール & サーバーポータル / linkord.net）
   - `PATCH /api/admin/profiles/{username}/badges` エンドポイントを実装。
   - 管理画面（`Admin.tsx`）にバッジ管理フォームを追加し、Supporter, Team, Founder, Authed をワンクリックで直接付与・剥奪可能。
 
+### 21. ブラウザ全体の Dark / White（Light）モード切り替え (今回追加)
+- `ThemeContext` を新設し、アプリ全体のテーマ状態を一元管理（localStorage 保持 & prefers-color-scheme 自動判定）。
+- ナビゲーションバー（Navbar）に Sun / Moon ワンクリック切り替えトグルを設置。
+- 全体背景、Navbar、Footer、各カードのスタイルが連動して美しく切り替わるよう統合。
+
+### 22. ページ遷移時の滑らかなフェードアウト／フェードイン演出 (今回追加)
+- `PageTransition` コンポーネントを実装。
+- ルート変更時のカクつき・ガタつきを排除し、滑らかで上品なフェードアウト（120ms）＆フェードイン（180ms）アニメーションを適用。
+
+### 23. Minecraft PlayHive 連携の全ゲームモード対応 & 表記更新 (今回追加)
+- 設定画面の表記を「Minecraft PlayHive連携 / Minecraft ユーザー名 (Bedrock)」に更新。
+- 公式 OpenAPI（PlayHive API v0）準拠で、主要全ゲームモード（BedWars, The Bridge, SkyWars, Survival Games, Murder Mystery, DeathRun, Block Drop, Ground Wars, Capture The Flag, Treasure Wars）を完全サポート。
+- プロフィール画面にワンクリックで切り替え可能なゲームモードタブを設置し、Kills, Victories, Played, 特殊スタッツ（Beds Destroyed, Goals, Murders 等）を動的に切り替え表示。
+
+### 24. SNS リンク（Social Links）の入力・保存・自動生成 & 外部リンク化 (今回追加)
+- バックエンド `PATCH /api/profile/me` で `links` 配列の永続化とリフレッシュに対応。
+- 設定画面（`Settings.tsx`）に SNS リンク管理セクションを追加（Discord, GitHub, X, Qiita, YouTube, Twitch, Website 等のプリセット追加・編集・削除）。
+- Discord 連携ユーザーには `https://discord.com/users/{discord_id}` をワンクリックで自動登録できる導線を設置。
+- プロフィール画面でダミー `#` による誤遷移を撤廃し、登録済みURLへの安全な外部リンク（新規タブ）として正常稼働。
+
+### 25. サイト全体のインデックス登録（SEO）& バックアップ復元検証 (今回追加)
+- 検索エンジン向けインデックス登録（SEO）対応: `public/robots.txt`、`public/sitemap.xml`、`index.html` meta タグ（robots index/follow, canonical, keywords）の整備。
+- プロフィールアクセス数の重複カウント防止（自分自身閲覧の除外、同一IPからの10分以内連打・重複アクセスの除外）。
+- データベース復元検証スクリプト `scripts/restore_db.sh`（整合性チェック・自動バックアップ退避）の作成と動作検証成功。
+
 ---
 
 ## 🚀 次のステップ（今後の拡張タスク）
@@ -255,4 +280,5 @@ Linkord（Discord プロフィール & サーバーポータル / linkord.net）
    - 公式Bot経由でギルド管理者ロールの自動検証
 2. **アナリティクスダッシュボード詳細表示**:
    - プロフィール日別・週別アクセス推移グラフの提供
+
 

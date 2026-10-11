@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Palette, User, Gamepad2, Save, Check, Loader2, AlertCircle, LogIn, Upload, Image as ImageIcon, Trash2, Radio, ExternalLink, Music, Film } from 'lucide-react';
+import { Palette, User, Gamepad2, Save, Check, Loader2, AlertCircle, LogIn, Upload, Image as ImageIcon, Trash2, Radio, ExternalLink, Music, Film, Share2, Plus, X, Globe, MessageSquare, Github, Twitter, Code, Youtube, Twitch } from 'lucide-react';
 import { fetchMe, updateMyProfile, uploadMedia, deleteAccount } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { ProfileUpdateData } from '../types';
@@ -36,6 +36,12 @@ const THEME_ACCENTS: Record<string, { glow: string; border: string; badge: strin
   clean: { glow: 'from-slate-500/20 via-slate-600/10 to-transparent', border: 'border-slate-500/30', badge: 'bg-slate-500/20 text-slate-300 border-slate-500/30', sample: '#94a3b8' },
 };
 
+interface LinkItem {
+  title: string;
+  url: string;
+  icon: string;
+}
+
 export const Settings: React.FC = () => {
   useTitle('設定');
   const { refreshUser, user } = useAuth();
@@ -61,6 +67,7 @@ export const Settings: React.FC = () => {
   const [hideBadges, setHideBadges] = useState(false);
   const [hideFollowers, setHideFollowers] = useState(false);
   const [minecraftId, setMinecraftId] = useState('');
+  const [links, setLinks] = useState<LinkItem[]>([]);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -79,6 +86,9 @@ export const Settings: React.FC = () => {
         setHideBadges(!!data.hide_badges);
         setHideFollowers(!!data.hide_followers);
         setMinecraftId(data.minecraft_uuid || '');
+        if (data.links && Array.isArray(data.links)) {
+          setLinks(data.links.map(l => ({ title: l.title, url: l.url, icon: l.icon || 'link' })));
+        }
       } catch (err: any) {
         if (err.message && (err.message.includes('401') || err.message.includes('Not authenticated'))) {
           setNotLoggedIn(true);
@@ -92,6 +102,23 @@ export const Settings: React.FC = () => {
 
     loadProfile();
   }, []);
+
+  const addPresetLink = (title: string, icon: string, defaultUrl: string = '') => {
+    if (links.some(l => l.title.toLowerCase() === title.toLowerCase())) return;
+    setLinks(prev => [...prev, { title, url: defaultUrl, icon }]);
+  };
+
+  const removeLink = (index: number) => {
+    setLinks(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const updateLink = (index: number, field: 'title' | 'url' | 'icon', value: string) => {
+    setLinks(prev => {
+      const copy = [...prev];
+      copy[index] = { ...copy[index], [field]: value };
+      return copy;
+    });
+  };
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -172,6 +199,7 @@ export const Settings: React.FC = () => {
         hide_badges: hideBadges,
         hide_followers: hideFollowers,
         minecraft_uuid: minecraftId,
+        links: links.filter(l => l.title.trim() && l.url.trim()),
       };
 
       await updateMyProfile(payload);
@@ -597,7 +625,128 @@ export const Settings: React.FC = () => {
           </div>
         </div>
 
-        {/* Minecraft Integration */}
+        {/* Social Links Integration */}
+        <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/10 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm font-bold text-white">
+              <Share2 className="w-4 h-4 text-sky-400" />
+              <span>SNS & 外部リンク設定</span>
+            </div>
+            <span className="text-[10px] text-slate-400 font-mono">
+              {links.length} / 8 件
+            </span>
+          </div>
+
+          <p className="text-xs text-slate-400 leading-relaxed">
+            プロフィールカードに配置するSNSや外部サイトのリンクを登録できます。
+          </p>
+
+          {/* Discord Quick Connect Assist */}
+          {user?.discord_id && !links.some(l => l.title.toLowerCase() === 'discord') && (
+            <div className="p-3 rounded-xl bg-indigo-950/30 border border-indigo-500/30 flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-indigo-300 flex items-center gap-1.5">
+                  <MessageSquare className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Discord 連携中</span>
+                </p>
+                <p className="text-[11px] text-slate-400 truncate font-mono">
+                  https://discord.com/users/{user.discord_id}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => addPresetLink('Discord', 'discord', `https://discord.com/users/${user.discord_id}`)}
+                className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition flex items-center gap-1 flex-shrink-0 cursor-pointer shadow-sm"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>追加</span>
+              </button>
+            </div>
+          )}
+
+          {/* Quick Preset Buttons */}
+          <div>
+            <label className="block text-[11px] font-semibold text-slate-300 mb-2">
+              プリセットから追加
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                { title: 'Discord', icon: 'discord', defaultUrl: user?.discord_id ? `https://discord.com/users/${user.discord_id}` : 'https://discord.com/users/' },
+                { title: 'GitHub', icon: 'github', defaultUrl: 'https://github.com/' },
+                { title: 'X', icon: 'x', defaultUrl: 'https://x.com/' },
+                { title: 'Qiita', icon: 'qiita', defaultUrl: 'https://qiita.com/' },
+                { title: 'YouTube', icon: 'youtube', defaultUrl: 'https://youtube.com/@' },
+                { title: 'Twitch', icon: 'twitch', defaultUrl: 'https://twitch.tv/' },
+                { title: 'Website', icon: 'globe', defaultUrl: 'https://' },
+              ].map(preset => {
+                const isAdded = links.some(l => l.title.toLowerCase() === preset.title.toLowerCase());
+                return (
+                  <button
+                    key={preset.title}
+                    type="button"
+                    disabled={isAdded || links.length >= 8}
+                    onClick={() => addPresetLink(preset.title, preset.icon, preset.defaultUrl)}
+                    className={`px-2.5 py-1.5 rounded-xl text-xs font-medium border flex items-center gap-1.5 transition ${
+                      isAdded
+                        ? 'opacity-40 border-white/5 bg-white/5 text-slate-500 cursor-not-allowed'
+                        : 'border-white/10 bg-slate-900 text-slate-300 hover:text-white hover:border-white/20 cursor-pointer'
+                    }`}
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>{preset.title}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Registered Links List */}
+          <div className="space-y-2 pt-2">
+            {links.map((link, idx) => (
+              <div
+                key={idx}
+                className="p-3 rounded-xl bg-slate-900/90 border border-white/10 flex flex-col sm:flex-row items-stretch sm:items-center gap-2"
+              >
+                <div className="w-full sm:w-28 flex-shrink-0">
+                  <input
+                    type="text"
+                    value={link.title}
+                    onChange={(e) => updateLink(idx, 'title', e.target.value)}
+                    placeholder="表示名"
+                    className="w-full px-2.5 py-1.5 rounded-lg bg-black/40 border border-white/10 text-xs text-white focus:outline-none focus:border-purple-500 font-medium"
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <input
+                    type="url"
+                    value={link.url}
+                    onChange={(e) => updateLink(idx, 'url', e.target.value)}
+                    placeholder="https://..."
+                    className="w-full px-2.5 py-1.5 rounded-lg bg-black/40 border border-white/10 text-xs text-white focus:outline-none focus:border-purple-500 font-mono"
+                  />
+                </div>
+                <div className="flex items-center justify-end sm:justify-center">
+                  <button
+                    type="button"
+                    onClick={() => removeLink(idx)}
+                    title="リンクを削除"
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {links.length === 0 && (
+              <div className="text-center py-6 border border-dashed border-white/10 rounded-xl text-slate-500 text-xs">
+                登録されたSNSリンクはありません。上のプリセットから追加してください。
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Minecraft PlayHive Integration */}
         <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/10 space-y-4">
           <div className="flex items-center gap-2 text-sm font-bold text-white mb-2">
             <Gamepad2 className="w-4 h-4 text-emerald-400" />
@@ -606,15 +755,18 @@ export const Settings: React.FC = () => {
 
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1">
-              Minecraft ユーザー名 (Java / Bedrock)
+              Minecraft ユーザー名 (Bedrock)
             </label>
             <input
               type="text"
               value={minecraftId}
               onChange={(e) => setMinecraftId(e.target.value)}
-              placeholder="例: yuto_0926"
+              placeholder="例: Plursche （PlayHive Bedrockゲーマータグ）"
               className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-white/10 text-xs text-white focus:outline-none focus:border-purple-500"
             />
+            <p className="text-[11px] text-slate-400 mt-1.5 leading-relaxed">
+              Bedrock 版公式サーバー「The Hive (PlayHive)」公式APIと連携します。プロフィール画面で BedWars、The Bridge、SkyWars、Survival Games などの全ゲームモードの戦績が切り替えて表示されます。
+            </p>
           </div>
         </div>
 

@@ -54,3 +54,35 @@ body {
   background: rgba(226, 232, 240, 0.85);
   border-color: rgba(203, 213, 225, 1);
 }
+
+/* Page Transitions */
+@keyframes pageFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pageFadeOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.animate-page-fade-in {
+  animation: pageFadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-page-fade-out {
+  animation: pageFadeOut 0.12s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+

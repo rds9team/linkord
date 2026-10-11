@@ -108,6 +108,7 @@ class ProfileUpdate(BaseModel):
     analytics_id: Optional[str] = Field(None, max_length=32)
     hide_badges: Optional[bool] = None
     hide_followers: Optional[bool] = None
+    links: Optional[List[SocialLinkBase]] = None
 
     @field_validator("avatar_url", "background_url", "music_url", "video_url")
     @classmethod

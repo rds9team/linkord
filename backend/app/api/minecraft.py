@@ -8,6 +8,23 @@ router = APIRouter(prefix="/minecraft", tags=["minecraft"])
 _CACHE = {}
 CACHE_TTL = 600
 
+# Supported PlayHive Game Modes
+GAMEMODE_INFO = {
+    "bed": {"id": "bed", "name": "BedWars", "short": "BED", "special_key": "beds_destroyed", "special_label": "Beds Destroyed"},
+    "bridge": {"id": "bridge", "name": "The Bridge", "short": "BRIDGE", "special_key": "goals", "special_label": "Goals"},
+    "sky": {"id": "sky", "name": "SkyWars", "short": "SKY", "special_key": "mystery_chests_destroyed", "special_label": "Mystery Chests"},
+    "sg": {"id": "sg", "name": "Survival Games", "short": "SG", "special_key": "crates", "special_label": "Crates Opened"},
+    "murder": {"id": "murder", "name": "Murder Mystery", "short": "MURDER", "special_key": "murders", "special_label": "Murders"},
+    "dr": {"id": "dr", "name": "DeathRun", "short": "DR", "special_key": "checkpoints", "special_label": "Checkpoints"},
+    "drop": {"id": "drop", "name": "Block Drop", "short": "DROP", "special_key": "vaults", "special_label": "Vaults"},
+    "ground": {"id": "ground", "name": "Ground Wars", "short": "GROUND", "special_key": "kills", "special_label": "Kills"},
+    "ctf": {"id": "ctf", "name": "Capture The Flag", "short": "CTF", "special_key": "flags_captured", "special_label": "Flags"},
+    "grav": {"id": "grav", "name": "Gravity", "short": "GRAV", "special_key": "checkpoints", "special_label": "Checkpoints"},
+    "party": {"id": "party", "name": "Block Party", "short": "PARTY", "special_key": "rounds_survived", "special_label": "Rounds Survived"},
+    "build": {"id": "build", "name": "Build Battle", "short": "BUILD", "special_key": "top3", "special_label": "Top 3"},
+    "wars": {"id": "wars", "name": "Treasure Wars", "short": "WARS", "special_key": "treasure_destroyed", "special_label": "Treasures"},
+}
+
 GAMEMODE_MAP = {
     "bedwars": "bed",
     "bed": "bed",
@@ -17,20 +34,46 @@ GAMEMODE_MAP = {
     "skywars": "sky",
     "sg": "sg",
     "survival": "sg",
+    "survivalgames": "sg",
     "ctf": "ctf",
+    "capturetheflag": "ctf",
     "murder": "murder",
+    "murdermystery": "murder",
     "hide": "hide",
+    "hideandseek": "hide",
     "dr": "dr",
     "deathrun": "dr",
     "bridge": "bridge",
+    "thebridge": "bridge",
     "ground": "ground",
+    "groundwars": "ground",
     "drop": "drop",
+    "blockdrop": "drop",
+    "grav": "grav",
+    "gravity": "grav",
+    "party": "party",
+    "blockparty": "party",
+    "build": "build",
+    "buildbattle": "build",
 }
+
+@router.get("/modes")
+async def list_playhive_modes():
+    """Return available game modes with labels for frontend selectors."""
+    return list(GAMEMODE_INFO.values())
 
 @router.get("/{identifier}/{gamemode}")
 async def get_playhive_stats(identifier: str, gamemode: str = "bed"):
     clean_identifier = identifier.strip()
     target_mode = GAMEMODE_MAP.get(gamemode.lower(), gamemode.lower())
+    mode_info = GAMEMODE_INFO.get(target_mode, {
+        "id": target_mode,
+        "name": target_mode.upper(),
+        "short": target_mode.upper(),
+        "special_key": "kills",
+        "special_label": "Kills"
+    })
+
     cache_key = f"{clean_identifier.lower()}:{target_mode}"
     now = time.time()
 
@@ -50,11 +93,13 @@ async def get_playhive_stats(identifier: str, gamemode: str = "bed"):
                     kills = raw_data.get("kills", 0)
                     deaths = raw_data.get("deaths", 0)
                     kd = round(kills / deaths, 2) if deaths > 0 else float(kills)
+                    special_val = raw_data.get(mode_info["special_key"], 0)
                     
                     data = {
                         "UUID": raw_data.get("UUID"),
                         "username": clean_identifier,
                         "gamemode": target_mode,
+                        "gamemode_name": mode_info["name"],
                         "kills": kills,
                         "deaths": deaths,
                         "victories": raw_data.get("victories", 0),
@@ -63,6 +108,8 @@ async def get_playhive_stats(identifier: str, gamemode: str = "bed"):
                         "kd": kd,
                         "prestige": raw_data.get("prestige", 0),
                         "final_kills": raw_data.get("final_kills", 0),
+                        "special_value": special_val,
+                        "special_label": mode_info["special_label"],
                         "raw": raw_data
                     }
                     _CACHE[cache_key] = (now, data)
@@ -78,6 +125,7 @@ async def get_playhive_stats(identifier: str, gamemode: str = "bed"):
         "data": {
             "username": clean_identifier,
             "gamemode": target_mode,
+            "gamemode_name": mode_info["name"],
             "kills": 0,
             "deaths": 0,
             "victories": 0,
@@ -85,7 +133,10 @@ async def get_playhive_stats(identifier: str, gamemode: str = "bed"):
             "xp": 0,
             "kd": 0.0,
             "prestige": 0,
-            "final_kills": 0
+            "final_kills": 0,
+            "special_value": 0,
+            "special_label": mode_info["special_label"],
+            "raw": {}
         },
         "cached_at": now
     }

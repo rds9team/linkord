@@ -40,11 +40,11 @@ export async function onRequest(context: any): Promise<Response> {
         if (res.ok) {
           const profile: any = await res.json();
           const displayName = profile.display_name || profile.username;
-          const title = `${displayName} (@${profile.username}) | Discord プロフィール - Linkord`;
+          const title = `${displayName} (@${profile.username}) - Discord プロフィール共有・自己紹介カード | Linkord`;
           const desc = profile.bio
-            ? `${profile.bio.slice(0, 150)}${profile.bio.length > 150 ? '...' : ''}`
-            : `${displayName} さんの Linkord プロフィール。Discordステータス、Spotify再生、Minecraft戦績、所属コミュニティを一覧表示。`;
-          const avatarImg = profile.avatar_url || 'https://linkord.net/logo.svg';
+            ? `${profile.bio.slice(0, 140)}${profile.bio.length > 140 ? '...' : ''} - Linkordで作成された ${displayName} のプロフィール共有ページ。`
+            : `${displayName} (@${profile.username}) さんのプロフィール共有ページ。Discordステータス、Spotify再生、ゲーム戦績、SNSリンクをまとめて掲載中。`;
+          const avatarImg = profile.avatar_url || 'https://linkord.net/logo.png';
           const bannerImg = profile.background_url || null;
           const ogImg = bannerImg || avatarImg;
           const twitterCard = bannerImg ? 'summary_large_image' : 'summary';
@@ -67,7 +67,11 @@ export async function onRequest(context: any): Promise<Response> {
   <meta charset="utf-8">
   <title>${escapeHtml(title)}</title>
   <meta name="description" content="${escapeHtml(desc)}">
+  <meta name="keywords" content="${escapeHtml(displayName)}, ${escapeHtml(profile.username)}, プロフィール共有, プロフィール, 自己紹介カード, Discord プロフィール, Linkord">
   <link rel="canonical" href="${escapeHtml(canonicalUrl)}">
+  <link rel="icon" href="/favicon.ico" sizes="48x48">
+  <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <meta property="og:title" content="${escapeHtml(title)}">
   <meta property="og:description" content="${escapeHtml(desc)}">
   <meta property="og:image" content="${escapeHtml(ogImg)}">
@@ -137,6 +141,9 @@ ${jsonLd}
   <title>${escapeHtml(title)}</title>
   <meta name="description" content="${escapeHtml(desc)}">
   <link rel="canonical" href="${escapeHtml(canonicalUrl)}">
+  <link rel="icon" href="/favicon.ico" sizes="48x48">
+  <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <meta property="og:title" content="${escapeHtml(title)}">
   <meta property="og:description" content="${escapeHtml(desc)}">
   <meta property="og:image" content="${escapeHtml(img)}">

@@ -14,7 +14,7 @@ export const Home: React.FC = () => {
       {/* Hero Badge */}
       <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-semibold mb-6">
         <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-        <span>無料のDiscordプロフィール＆サーバーポータル</span>
+        <span>無料のDiscordプロフィール作成・共有＆サーバーポータル</span>
       </div>
 
       {/* Main Catchphrase */}
@@ -26,7 +26,7 @@ export const Home: React.FC = () => {
       </h1>
 
       <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 max-w-xl mx-auto mb-8 leading-relaxed">
-        Discordのリアルタイムステータス、Minecraftの戦績、所属サーバー、SNSリンクをスタイリッシュにまとめよう。完全無料で誰でも利用できます。
+        Discordステータス、Spotify再生、Minecraft戦績、所属コミュニティ、SNSリンクをおしゃれにまとめて簡単プロフィール共有。完全無料で誰でも作成できます。
       </p>
 
       {/* CTA Buttons */}
@@ -35,7 +35,7 @@ export const Home: React.FC = () => {
           to="/login"
           className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-sm shadow-xl shadow-purple-600/30 flex items-center justify-center gap-2 transition"
         >
-          <span>今すぐプロフィールを作成</span>
+          <span>プロフィールを作成して共有</span>
           <ArrowRight className="w-4 h-4" />
         </Link>
         <Link

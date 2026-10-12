@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, Volume2, VolumeX, Disc, Music, Minimize2, Maximize2, AlertCircle } from 'lucide-react';
+import { Play, Pause, Volume2, Volume1, VolumeX, Disc, Music, Minimize2, Maximize2, AlertCircle } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { resolveMediaUrl } from '../utils/media';
 
@@ -25,14 +25,42 @@ export const MusicPlayer: React.FC<MusicPlayerProps> = ({
 
   const resolvedUrl = resolveMediaUrl(musicUrl);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const volumeControlRef = useRef<HTMLDivElement | null>(null);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(0.7);
+  const [volume, setVolume] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('linkord_bgm_volume');
+      if (saved !== null) {
+        const parsed = parseFloat(saved);
+        if (!isNaN(parsed) && parsed >= 0 && parsed <= 1) return parsed;
+      }
+    } catch (_) {}
+    return 0.7;
+  });
   const [isMuted, setIsMuted] = useState(false);
+  const [showVolumePopover, setShowVolumePopover] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
+
+  // Close volume popover when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      if (volumeControlRef.current && !volumeControlRef.current.contains(e.target as Node)) {
+        setShowVolumePopover(false);
+      }
+    };
+    if (showVolumePopover) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [showVolumePopover]);
 
   // Initialize and reload when URL changes
   useEffect(() => {
@@ -75,11 +103,15 @@ export const MusicPlayer: React.FC<MusicPlayerProps> = ({
   }, [isPlaying, resolvedUrl]);
 
   const handleVolumeChange = (newVol: number) => {
-    setVolume(newVol);
+    const clamped = Math.max(0, Math.min(1, newVol));
+    setVolume(clamped);
+    try {
+      localStorage.setItem('linkord_bgm_volume', clamped.toString());
+    } catch (_) {}
     if (audioRef.current) {
-      audioRef.current.volume = newVol;
+      audioRef.current.volume = clamped;
     }
-    if (newVol > 0 && isMuted) {
+    if (clamped > 0 && isMuted) {
       setIsMuted(false);
       if (audioRef.current) audioRef.current.muted = false;
     }
@@ -90,6 +122,16 @@ export const MusicPlayer: React.FC<MusicPlayerProps> = ({
     const nextMuted = !isMuted;
     setIsMuted(nextMuted);
     audioRef.current.muted = nextMuted;
+  };
+
+  const getVolumeIcon = () => {
+    if (isMuted || volume === 0) {
+      return <VolumeX className="w-3.5 h-3.5 text-rose-400" />;
+    }
+    if (volume < 0.5) {
+      return <Volume1 className="w-3.5 h-3.5 text-purple-400" />;
+    }
+    return <Volume2 className="w-3.5 h-3.5 text-purple-400" />;
   };
 
   const togglePlay = () => {
@@ -182,7 +224,7 @@ export const MusicPlayer: React.FC<MusicPlayerProps> = ({
         {isMinimized ? (
           /* Minimized Compact Pill Player */
           <div
-            className={`flex items-center gap-2.5 px-3.5 py-2 rounded-full border shadow-2xl backdrop-blur-2xl transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-full border shadow-2xl backdrop-blur-2xl transition-all cursor-pointer ${
               isLight
                 ? 'bg-white/95 border-slate-200 text-slate-800 shadow-slate-300/50'
                 : 'bg-[#0f111a]/95 border-white/10 text-white shadow-purple-950/40'
@@ -206,6 +248,81 @@ export const MusicPlayer: React.FC<MusicPlayerProps> = ({
                 {displayName || username}
               </span>
             </div>
+
+            {/* Quick Volume Button & Popover in Minimized View */}
+            <div
+              className="relative"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                onClick={() => setShowVolumePopover(prev => !prev)}
+                className="p-1 text-slate-400 hover:text-white transition cursor-pointer"
+                title={`音量: ${Math.round((isMuted ? 0 : volume) * 100)}%`}
+              >
+                {getVolumeIcon()}
+              </button>
+              {showVolumePopover && (
+                <div
+                  className={`absolute bottom-full right-0 mb-3 p-3 rounded-2xl border shadow-2xl backdrop-blur-2xl z-50 flex flex-col items-center gap-2.5 w-40 transition-all ${
+                    isLight
+                      ? 'bg-white/95 border-slate-200 text-slate-800 shadow-slate-300/80'
+                      : 'bg-[#0f111a]/95 border-white/10 text-white shadow-purple-950/80'
+                  }`}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex items-center justify-between w-full text-xs font-semibold">
+                    <button
+                      type="button"
+                      onClick={toggleMute}
+                      className="flex items-center gap-1 text-[11px] hover:text-purple-400 transition"
+                    >
+                      {isMuted ? <VolumeX className="w-3.5 h-3.5 text-rose-400" /> : <Volume2 className="w-3.5 h-3.5 text-purple-400" />}
+                      <span>{isMuted ? 'ミュート中' : '音量'}</span>
+                    </button>
+                    <span className="font-mono text-[11px] tabular-nums text-purple-400 font-bold">
+                      {isMuted ? '0%' : `${Math.round(volume * 100)}%`}
+                    </span>
+                  </div>
+
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value={isMuted ? 0 : volume}
+                    onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
+                    className="w-full h-1.5 bg-slate-700/60 rounded-lg appearance-none cursor-pointer accent-purple-500"
+                  />
+
+                  {/* Quick Presets */}
+                  <div className="flex items-center justify-between w-full pt-1.5 border-t border-white/5 dark:border-white/5 text-[10px] text-slate-400">
+                    <button
+                      type="button"
+                      onClick={() => handleVolumeChange(0.25)}
+                      className="px-1.5 py-0.5 rounded hover:bg-white/10 hover:text-purple-300 transition"
+                    >
+                      25%
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleVolumeChange(0.5)}
+                      className="px-1.5 py-0.5 rounded hover:bg-white/10 hover:text-purple-300 transition"
+                    >
+                      50%
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleVolumeChange(1.0)}
+                      className="px-1.5 py-0.5 rounded hover:bg-white/10 hover:text-purple-300 transition"
+                    >
+                      100%
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <button
               type="button"
               onClick={(e) => {
@@ -299,23 +416,107 @@ export const MusicPlayer: React.FC<MusicPlayerProps> = ({
                     )}
                   </button>
 
-                  {/* Mute Toggle */}
-                  <button
-                    type="button"
-                    onClick={toggleMute}
-                    className={`p-1.5 rounded-xl transition cursor-pointer ${
-                      isLight
-                        ? 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
-                        : 'text-slate-400 hover:text-white hover:bg-white/5'
-                    }`}
-                    title={isMuted ? 'ミュート解除' : 'ミュート'}
-                  >
-                    {isMuted || volume === 0 ? (
-                      <VolumeX className="w-3.5 h-3.5 text-rose-400" />
-                    ) : (
-                      <Volume2 className="w-3.5 h-3.5" />
+                  {/* Desktop Inline Volume Control */}
+                  <div className="hidden sm:flex items-center gap-1 px-1.5 py-1 rounded-xl bg-white/5 border border-white/5">
+                    <button
+                      type="button"
+                      onClick={toggleMute}
+                      className="p-1 rounded-lg text-slate-400 hover:text-white transition cursor-pointer"
+                      title={isMuted ? 'ミュート解除' : 'ミュート'}
+                    >
+                      {getVolumeIcon()}
+                    </button>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value={isMuted ? 0 : volume}
+                      onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
+                      className="w-16 h-1 bg-slate-700/60 rounded-lg appearance-none cursor-pointer accent-purple-500"
+                      title={`音量: ${Math.round((isMuted ? 0 : volume) * 100)}%`}
+                    />
+                    <span className="text-[10px] font-mono tabular-nums text-slate-400 w-6 text-right">
+                      {Math.round((isMuted ? 0 : volume) * 100)}%
+                    </span>
+                  </div>
+
+                  {/* Mobile Volume Control with Popover */}
+                  <div className="relative sm:hidden" ref={volumeControlRef}>
+                    <button
+                      type="button"
+                      onClick={() => setShowVolumePopover(prev => !prev)}
+                      className={`p-1.5 rounded-xl transition cursor-pointer ${
+                        showVolumePopover
+                          ? 'bg-purple-600/20 text-purple-300'
+                          : isLight
+                            ? 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
+                            : 'text-slate-400 hover:text-white hover:bg-white/5'
+                      }`}
+                      title="音量調整"
+                    >
+                      {getVolumeIcon()}
+                    </button>
+
+                    {showVolumePopover && (
+                      <div
+                        className={`absolute bottom-full right-0 mb-3 p-3 rounded-2xl border shadow-2xl backdrop-blur-2xl z-50 flex flex-col items-center gap-2.5 w-40 transition-all ${
+                          isLight
+                            ? 'bg-white/95 border-slate-200 text-slate-800 shadow-slate-300/80'
+                            : 'bg-[#0f111a]/95 border-white/10 text-white shadow-purple-950/80'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between w-full text-xs font-semibold">
+                          <button
+                            type="button"
+                            onClick={toggleMute}
+                            className="flex items-center gap-1 text-[11px] hover:text-purple-400 transition"
+                          >
+                            {isMuted ? <VolumeX className="w-3.5 h-3.5 text-rose-400" /> : <Volume2 className="w-3.5 h-3.5 text-purple-400" />}
+                            <span>{isMuted ? 'ミュート中' : '音量'}</span>
+                          </button>
+                          <span className="font-mono text-[11px] tabular-nums text-purple-400 font-bold">
+                            {isMuted ? '0%' : `${Math.round(volume * 100)}%`}
+                          </span>
+                        </div>
+
+                        <input
+                          type="range"
+                          min="0"
+                          max="1"
+                          step="0.01"
+                          value={isMuted ? 0 : volume}
+                          onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
+                          className="w-full h-1.5 bg-slate-700/60 rounded-lg appearance-none cursor-pointer accent-purple-500"
+                        />
+
+                        {/* Quick Presets */}
+                        <div className="flex items-center justify-between w-full pt-1.5 border-t border-white/5 dark:border-white/5 text-[10px] text-slate-400">
+                          <button
+                            type="button"
+                            onClick={() => handleVolumeChange(0.25)}
+                            className="px-1.5 py-0.5 rounded hover:bg-white/10 hover:text-purple-300 transition"
+                          >
+                            25%
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleVolumeChange(0.5)}
+                            className="px-1.5 py-0.5 rounded hover:bg-white/10 hover:text-purple-300 transition"
+                          >
+                            50%
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleVolumeChange(1.0)}
+                            className="px-1.5 py-0.5 rounded hover:bg-white/10 hover:text-purple-300 transition"
+                          >
+                            100%
+                          </button>
+                        </div>
+                      </div>
                     )}
-                  </button>
+                  </div>
 
                   {/* Minimize Button */}
                   <button

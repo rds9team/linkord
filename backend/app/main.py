@@ -4,9 +4,13 @@ from contextlib import asynccontextmanager
 from app.core.config import settings
 from app.core.database import engine, Base
 import os
+import starlette.formparsers
 from fastapi.staticfiles import StaticFiles
 import app.models
 from app.api import auth, profile, server, minecraft, lanyard, report, media, admin, donations, announcements, seo, recruitments, badge, alliances
+
+# Allow multipart uploads up to 120MB (supporting videos up to 100MB and audio up to 60MB)
+starlette.formparsers.MultiPartParser.max_part_size = 120 * 1024 * 1024
 
 # Ensure uploads directory exists
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)

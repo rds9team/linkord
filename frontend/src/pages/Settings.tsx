@@ -161,6 +161,10 @@ export const Settings: React.FC = () => {
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      setError('アバター画像のサイズは最大10MBまでです');
+      return;
+    }
     try {
       setUploadingAvatar(true);
       setError(null);
@@ -176,6 +180,10 @@ export const Settings: React.FC = () => {
   const handleBgChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      setError('背景画像のサイズは最大10MBまでです');
+      return;
+    }
     try {
       setUploadingBg(true);
       setError(null);
@@ -191,6 +199,10 @@ export const Settings: React.FC = () => {
   const handleMusicChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 60 * 1024 * 1024) {
+      setError('音声ファイルのサイズは最大60MBまでです');
+      return;
+    }
     try {
       setUploadingMusic(true);
       setError(null);
@@ -210,6 +222,10 @@ export const Settings: React.FC = () => {
   const handleVideoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 100 * 1024 * 1024) {
+      setError('背景動画のサイズは最大100MBまでです');
+      return;
+    }
     try {
       setUploadingVideo(true);
       setError(null);
@@ -548,7 +564,7 @@ export const Settings: React.FC = () => {
               <div>
                 <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-white/10 dark:text-slate-200 text-xs font-medium transition shadow-sm">
                   <Upload className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
-                  <span>動画を選択 (MP4/WebM, 最大50MB)</span>
+                  <span>動画を選択 (MP4/WebM, 最大100MB)</span>
                   <input
                     type="file"
                     accept="video/mp4,video/webm"
@@ -566,7 +582,7 @@ export const Settings: React.FC = () => {
                     削除
                   </button>
                 )}
-                <p className="text-[11px] text-slate-500 mt-1">プロフィール背景にシームレスにループ再生されます</p>
+                <p className="text-[11px] text-slate-500 mt-1">プロフィール背景にシームレスにループ再生されます（最大100MB）</p>
               </div>
             </div>
           </div>
@@ -630,10 +646,10 @@ export const Settings: React.FC = () => {
                 ) : (
                   <Upload className="w-3.5 h-3.5" />
                 )}
-                <span>{uploadingMusic ? 'アップロード中...' : (musicUrl ? '別の音声に変更' : '音声ファイルを選択 (MP3/WAV/OGG/M4A)')}</span>
+                <span>{uploadingMusic ? 'アップロード中...' : (musicUrl ? '別の音声に変更' : '音声ファイルを選択 (MP3/WAV/OGG/M4A/WebM等, 最大60MB)')}</span>
                 <input
                   type="file"
-                  accept="audio/*"
+                  accept="audio/*,audio/mpeg,audio/wav,audio/ogg,audio/x-m4a,audio/webm,audio/flac"
                   onChange={handleMusicChange}
                   className="hidden"
                   disabled={uploadingMusic}
@@ -675,7 +691,7 @@ export const Settings: React.FC = () => {
             )}
 
             <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              ※ 最大50MBまで対応。プロフィールページ訪問時にスタイリッシュなBGMプレイヤーが表示されます。
+              ※ 最大60MBまで対応。プロフィールページ訪問時にスタイリッシュなBGMプレイヤーが表示されます。
             </p>
           </div>
 

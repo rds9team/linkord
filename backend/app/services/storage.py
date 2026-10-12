@@ -29,8 +29,8 @@ ALLOWED_VIDEO_TYPES = {
 }
 
 MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10MB
-MAX_AUDIO_SIZE = 50 * 1024 * 1024  # 50MB (緩和)
-MAX_VIDEO_SIZE = 50 * 1024 * 1024  # 50MB
+MAX_AUDIO_SIZE = 60 * 1024 * 1024  # 60MB
+MAX_VIDEO_SIZE = 100 * 1024 * 1024  # 100MB
 
 SAFE_AUDIO_EXTENSIONS = {
     ".mp3": "audio/mpeg",
@@ -68,7 +68,7 @@ def detect_media_type(header: bytes, filename: str = "", content_type: str = "")
         return "image/png", "image"
     if header.startswith(b"GIF87a") or header.startswith(b"GIF89a"):
         return "image/gif", "image"
-    if len(header) >= 12 and header.startswith(b"RIFF") and header[8:12] == b"WEBP":
+    if (len(header) >= 12 and header.startswith(b"RIFF") and header[8:12] == b"WEBP") or lower_fn.endswith(".webp") or lower_ct == "image/webp":
         return "image/webp", "image"
 
     # 2. Audio - FLAC
@@ -91,14 +91,14 @@ def detect_media_type(header: bytes, filename: str = "", content_type: str = "")
     if len(header) >= 2 and header[0] == 0xFF and (header[1] & 0xF0) == 0xF0:
         return "audio/aac", "audio"
 
-    # 7. Video / Audio - WebM / MKV (EBML header 1A 45 DF A3)
-    if header.startswith(b"\x1a\x45\xdf\xa3"):
+    # 7. Video / Audio - WebM / MKV (EBML header 1A 45 DF A3 or .webm extension)
+    if header.startswith(b"\x1a\x45\xdf\xa3") or lower_fn.endswith(".webm") or lower_ct.startswith("video/webm"):
         if lower_fn.endswith(".weba") or "audio" in lower_ct:
             return "audio/webm", "audio"
         return "video/webm", "video"
 
-    # 8. Video / Audio - MP4 / M4A (ftyp box: 4 bytes size, b"ftyp")
-    if len(header) >= 12 and header[4:8] == b"ftyp":
+    # 8. Video / Audio - MP4 / M4A (ftyp box: 4 bytes size, b"ftyp" or .mp4 extension)
+    if (len(header) >= 12 and header[4:8] == b"ftyp") or lower_fn.endswith(".mp4") or lower_ct.startswith("video/mp4"):
         if lower_fn.endswith(".m4a") or lower_fn.endswith(".aac") or "audio" in lower_ct or b"M4A " in header[8:16]:
             return "audio/x-m4a", "audio"
         return "video/mp4", "video"
@@ -120,6 +120,12 @@ def detect_media_type(header: bytes, filename: str = "", content_type: str = "")
                 return safe_mime, "audio"
         return "audio/mpeg", "audio"
 
+    # Fallback for WebP / WebM images/videos
+    if lower_fn.endswith(".webp") or lower_ct == "image/webp":
+        return "image/webp", "image"
+    if lower_fn.endswith(".webm") or lower_ct == "video/webm":
+        return "video/webm", "video"
+
     return None
 
 class LocalStorage:
@@ -128,48 +134,67 @@ class LocalStorage:
         os.makedirs(self.upload_dir, exist_ok=True)
 
     async def save_file(self, file: UploadFile) -> Tuple[str, str, int, str]:
-        content = await file.read()
-        file_size = len(content)
-
-        if file_size < 12:
-            raise HTTPException(status_code=400, detail="Invalid file contents")
+        # Read initial chunk for header inspection
+        first_chunk = await file.read(8192)
+        if len(first_chunk) < 8:
+            raise HTTPException(status_code=400, detail="無効なファイル内容です")
 
         detected = detect_media_type(
-            content[:64],
+            first_chunk,
             filename=file.filename or "",
             content_type=file.content_type or ""
         )
         if not detected:
             raise HTTPException(
                 status_code=400,
-                detail="対応していないファイル形式です。画像 (JPEG, PNG, WebP, GIF), 音楽 (MP3, WAV, OGG, M4A, FLAC等), 背景動画 (MP4, WebM) のみアップロードできます。"
+                detail="対応していないファイル形式です。画像 (JPEG, PNG, WebP, GIF: 最大10MB), 音楽 (MP3, WAV, OGG, M4A, WebM: 最大60MB), 動画 (MP4, WebM: 最大100MB) のみアップロードできます。"
             )
 
         detected_mime, media_kind = detected
 
         if media_kind == "image":
-            if file_size > MAX_IMAGE_SIZE:
-                raise HTTPException(status_code=400, detail="画像サイズが上限（10MB）を超えています")
-            ext = ALLOWED_IMAGE_TYPES.get(detected_mime, ".jpg")
+            max_size = MAX_IMAGE_SIZE
+            limit_msg = "画像サイズが上限（10MB）を超えています"
+            ext = ALLOWED_IMAGE_TYPES.get(detected_mime, ".png" if "png" in detected_mime else (".webp" if "webp" in detected_mime else ".jpg"))
         elif media_kind == "audio":
-            if file_size > MAX_AUDIO_SIZE:
-                raise HTTPException(status_code=400, detail="音声ファイルサイズが上限（50MB）を超えています")
+            max_size = MAX_AUDIO_SIZE
+            limit_msg = "音声ファイルサイズが上限（60MB）を超えています"
             ext = ALLOWED_AUDIO_TYPES.get(detected_mime, ".mp3")
         elif media_kind == "video":
-            if file_size > MAX_VIDEO_SIZE:
-                raise HTTPException(status_code=400, detail="動画ファイルサイズが上限（50MB）を超えています")
-            ext = ALLOWED_VIDEO_TYPES.get(detected_mime, ".mp4")
+            max_size = MAX_VIDEO_SIZE
+            limit_msg = "動画ファイルサイズが上限（100MB）を超えています"
+            ext = ALLOWED_VIDEO_TYPES.get(detected_mime, ".webm" if "webm" in detected_mime else ".mp4")
         else:
             raise HTTPException(status_code=400, detail="無効なメディア形式です")
+
+        total_size = len(first_chunk)
+        if total_size > max_size:
+            raise HTTPException(status_code=400, detail=limit_msg)
 
         unique_filename = f"{uuid.uuid4().hex}{ext}"
         target_path = os.path.join(self.upload_dir, unique_filename)
 
-        with open(target_path, "wb") as f:
-            f.write(content)
+        try:
+            with open(target_path, "wb") as f:
+                f.write(first_chunk)
+                while True:
+                    chunk = await file.read(65536)  # 64KB chunk streaming
+                    if not chunk:
+                        break
+                    total_size += len(chunk)
+                    if total_size > max_size:
+                        raise HTTPException(status_code=400, detail=limit_msg)
+                    f.write(chunk)
+        except Exception:
+            if os.path.exists(target_path):
+                try:
+                    os.remove(target_path)
+                except OSError:
+                    pass
+            raise
 
         relative_url = f"/uploads/{unique_filename}"
-        return relative_url, unique_filename, file_size, media_kind
+        return relative_url, unique_filename, total_size, media_kind
 
     def delete_file(self, filename: str) -> bool:
         clean_name = os.path.basename(filename)

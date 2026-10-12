@@ -191,13 +191,19 @@ export const uploadMedia = async (file: File): Promise<{ url: string; filename: 
 
   if (!response.ok) {
     let errorDetail = response.statusText;
-    try {
-      const errorJson = await response.json();
-      errorDetail = errorJson.detail || errorDetail;
-    } catch {
-      // ignore
+    if (response.status === 413) {
+      errorDetail = 'ファイルサイズが上限を超えています（動画: 最大100MB、音声: 最大60MB、画像: 最大10MB）';
+    } else if (response.status === 502) {
+      errorDetail = 'アップロード通信エラー（502 Bad Gateway）。ファイルサイズが大きすぎるか、通信が中断されました。容量（動画100MB / 音声60MB）をご確認ください。';
+    } else {
+      try {
+        const errorJson = await response.json();
+        errorDetail = errorJson.detail || errorDetail;
+      } catch {
+        // ignore
+      }
     }
-    throw new Error(errorDetail || '画像のアップロードに失敗しました');
+    throw new Error(errorDetail || 'ファイルのアップロードに失敗しました');
   }
 
   return response.json();

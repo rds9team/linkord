@@ -25,7 +25,8 @@ export const PageTransition: React.FC<PageTransitionProps> = ({ children }) => {
 
   // Handle smooth page exit & enter animation with scroll restoration
   useEffect(() => {
-    if (location.pathname !== displayLocation.pathname || location.search !== displayLocation.search) {
+    // Only animate if pathname changes (ignore query search parameter changes like typing in search box)
+    if (location.pathname !== displayLocation.pathname) {
       // Save current scroll position before leaving
       try {
         const stored = sessionStorage.getItem(SCROLL_POSITIONS_KEY);
@@ -59,6 +60,9 @@ export const PageTransition: React.FC<PageTransitionProps> = ({ children }) => {
       }, 100);
 
       return () => clearTimeout(timer);
+    } else if (location.search !== displayLocation.search) {
+      // For search query changes, update displayLocation immediately without animating or fading out
+      setDisplayLocation(location);
     }
   }, [location, displayLocation, navType]);
 

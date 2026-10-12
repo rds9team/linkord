@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Server as ServerIcon, Upload, Loader2, Sparkles, CheckCircle2, Shield, Search, Crown, ExternalLink, Bot, Clipboard, Link2, AlertCircle } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { X, Server as ServerIcon, Upload, Loader2, Sparkles, CheckCircle2, Shield, Search, Crown, ExternalLink, Bot, Clipboard, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { createServer, uploadMedia, inspectDiscordInvite, fetchMyGuilds, DiscordGuildItem } from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -18,7 +19,6 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const [registerMode, setRegisterMode] = useState<'invite' | 'bot'>('invite');
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
   const [inviteUrl, setInviteUrl] = useState('');
@@ -94,7 +94,6 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
       setError(null);
       const res = await inspectDiscordInvite(targetInvite);
 
-      // Auto-fill fields if empty or updated
       if (res.name && (!name || inspectSuccess)) {
         setName(res.name);
       }
@@ -141,19 +140,15 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
         handleInspectInvite(clean);
       }
     } catch {
-      setError('クリップボードの読み取りが拒否されました。手動で貼り付けてください');
+      setError('クリップボードの読み取り権限がありません。手動で貼り付けてください');
     }
   };
 
   const handleInviteChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setInviteUrl(val);
-    setInspectSuccess(false);
-
-    // Auto-inspect when a valid invite pattern is entered
-    const clean = val.trim();
-    if (clean.includes('discord.gg/') || clean.includes('discord.com/invite/') || (clean.length >= 6 && !clean.includes(' '))) {
-      handleInspectInvite(clean);
+    if (inspectSuccess) {
+      setInspectSuccess(false);
     }
   };
 
@@ -161,13 +156,18 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (file.size > 5 * 1024 * 1024) {
+      setError('アイコン画像は5MB以下にしてください');
+      return;
+    }
+
     try {
       setUploading(true);
       setError(null);
       const res = await uploadMedia(file);
       setIconUrl(res.url);
     } catch (err: any) {
-      setError(err.message || 'アイコン画像のアップロードに失敗しました');
+      setError(err.message || 'アイコンのアップロードに失敗しました');
     } finally {
       setUploading(false);
     }
@@ -175,6 +175,7 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!user) {
       setError('サーバーを掲載するにはログインが必要です');
       return;
@@ -187,7 +188,7 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
 
     let finalInvite = inviteUrl.trim();
     if (!finalInvite) {
-      setError('招待URLを入力してください');
+      setError('Discord招待URLを入力してください');
       return;
     }
     if (!finalInvite.startsWith('http://') && !finalInvite.startsWith('https://')) {
@@ -231,23 +232,29 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
 
   if (!isOpen) return null;
 
+  // Official Linkord Bot (App ID: 1558818096524034058)
   const botInviteUrl = selectedGuildId
-    ? `https://discord.com/api/oauth2/authorize?client_id=1558374855290781717&permissions=274877991936&scope=bot%20applications.commands&guild_id=${selectedGuildId}`
-    : `https://discord.com/api/oauth2/authorize?client_id=1558374855290781717&permissions=274877991936&scope=bot%20applications.commands`;
+    ? `https://discord.com/api/oauth2/authorize?client_id=1558818096524034058&permissions=274877991936&scope=bot%20applications.commands&guild_id=${selectedGuildId}`
+    : `https://discord.com/api/oauth2/authorize?client_id=1558818096524034058&permissions=274877991936&scope=bot%20applications.commands`;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-      <div className="w-full max-w-xl bg-[#0f111a] border border-white/10 rounded-3xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
+  const filteredGuilds = myGuilds.filter(g =>
+    g.name.toLowerCase().includes(guildSearch.toLowerCase())
+  );
+
+  // Use createPortal to mount directly on document.body to avoid stacking context issues with PageTransition / Navbar
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+      <div className="w-full max-w-xl bg-[#0f111a] border border-white/10 rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
         
-        {/* Dedicated Fixed Header (Never overlapped by content) */}
-        <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-[#0f111a]/95 backdrop-blur z-20 shrink-0">
+        {/* Fixed Header */}
+        <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-[#0f111a] shrink-0 z-20">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-purple-600/20">
               <ServerIcon className="w-4 h-4 text-white" />
             </div>
             <div>
               <h2 className="text-sm sm:text-base font-bold text-white tracking-tight">Discordサーバーを掲載</h2>
-              <p className="text-[10px] text-slate-400">オーナーまたは管理者権限のあるサーバーのみ掲載できます</p>
+              <p className="text-[10px] text-slate-400">公式Bot連携専用・オーナー/管理者のみ掲載可能</p>
             </div>
           </div>
           <button
@@ -260,8 +267,8 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
           </button>
         </div>
 
-        {/* Scrollable Modal Content */}
-        <div className="p-6 overflow-y-auto space-y-5 text-xs scrollbar-thin">
+        {/* Scrollable Form Body */}
+        <div className="p-6 overflow-y-auto space-y-4 text-xs scrollbar-thin flex-1">
           {!user ? (
             <div className="text-center py-8 space-y-4">
               <p className="text-sm text-slate-300">
@@ -279,7 +286,7 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
               </button>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form id="create-server-form" onSubmit={handleSubmit} className="space-y-4">
 
               {error && (
                 <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs flex items-center gap-2">
@@ -298,171 +305,129 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
                 <div className="p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 space-y-2.5">
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <span className="font-bold text-indigo-300 flex items-center gap-1.5 text-xs">
-                      <Shield className="w-4 h-4 text-indigo-400" />
-                      <span>管理可能なサーバーから選択</span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-mono">
-                        {myGuilds.length}件
-                      </span>
+                      <Shield className="w-3.5 h-3.5 text-indigo-400" />
+                      <span>掲載するサーバーを選択 (管理者のみ)</span>
                     </span>
-
-                    {myGuilds.length > 3 && (
-                      <div className="relative">
-                        <Search className="w-3 h-3 absolute left-2 top-2 text-slate-400" />
-                        <input
-                          type="text"
-                          placeholder="サーバー検索..."
-                          value={guildSearch}
-                          onChange={(e) => setGuildSearch(e.target.value)}
-                          className="pl-6 pr-2 py-1 rounded-lg bg-black/40 border border-white/10 text-[11px] text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 w-32"
-                        />
-                      </div>
-                    )}
+                    <span className="text-[10px] text-slate-400">
+                      {myGuilds.length}件の管理サーバー
+                    </span>
                   </div>
 
+                  {myGuilds.length > 4 && (
+                    <div className="relative">
+                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+                      <input
+                        type="text"
+                        placeholder="サーバー名で絞り込み..."
+                        value={guildSearch}
+                        onChange={(e) => setGuildSearch(e.target.value)}
+                        className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-white placeholder-slate-500 text-xs focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                  )}
+
                   <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1 scrollbar-thin">
-                    {myGuilds
-                      .filter((g) => !guildSearch.trim() || g.name.toLowerCase().includes(guildSearch.toLowerCase().trim()))
-                      .map((g) => {
-                        const isSelected = selectedGuildId === g.id;
-                        return (
-                          <button
-                            key={g.id}
-                            type="button"
-                            onClick={() => handleSelectGuild(g)}
-                            className={`w-full flex items-center justify-between p-2 rounded-xl border text-left transition cursor-pointer ${
-                              isSelected
-                                ? 'bg-indigo-600/30 border-indigo-500 text-white shadow-sm'
-                                : 'bg-white/[0.03] border-white/5 hover:bg-white/[0.08] text-slate-300 hover:border-white/10'
-                            }`}
-                          >
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              {g.icon_url ? (
-                                <img
-                                  src={g.icon_url}
-                                  alt=""
-                                  className="w-7 h-7 rounded-lg object-cover shrink-0 ring-1 ring-white/10"
-                                />
-                              ) : (
-                                <div className="w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center text-xs font-bold text-indigo-300 shrink-0 border border-white/10">
-                                  {g.name.slice(0, 1)}
-                                </div>
-                              )}
-                              <div className="min-w-0">
-                                <div className="font-bold truncate text-white">{g.name}</div>
-                                <div className="flex items-center gap-1.5 mt-0.5">
-                                  {g.owner ? (
-                                    <span className="text-[10px] text-amber-300 bg-amber-500/15 px-1.5 py-0.2 rounded flex items-center gap-0.5 font-semibold">
-                                      <Crown className="w-2.5 h-2.5" />
-                                      オーナー
-                                    </span>
-                                  ) : (
-                                    <span className="text-[10px] text-indigo-300 bg-indigo-500/15 px-1.5 py-0.2 rounded flex items-center gap-0.5 font-semibold">
-                                      <Shield className="w-2.5 h-2.5" />
-                                      管理者
-                                    </span>
-                                  )}
-                                  {g.is_registered && (
-                                    <span className="text-[10px] text-emerald-400 bg-emerald-500/15 px-1.5 py-0.2 rounded font-semibold">
-                                      掲載中
-                                    </span>
-                                  )}
-                                </div>
+                    {filteredGuilds.map((g) => {
+                      const isSelected = selectedGuildId === g.id;
+                      return (
+                        <button
+                          key={g.id}
+                          type="button"
+                          onClick={() => handleSelectGuild(g)}
+                          className={`w-full flex items-center justify-between p-2 rounded-xl border text-left transition cursor-pointer ${
+                            isSelected
+                              ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-sm'
+                              : 'bg-white/5 border-white/5 hover:bg-white/10 text-slate-300 hover:text-white'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            {g.icon_url ? (
+                              <img src={g.icon_url} alt="" className="w-7 h-7 rounded-lg object-cover shrink-0" />
+                            ) : (
+                              <div className="w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center font-bold text-[11px] shrink-0">
+                                {g.name.slice(0, 1)}
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <div className="font-semibold text-xs truncate">{g.name}</div>
+                              <div className="text-[10px] text-slate-400 flex items-center gap-1">
+                                {g.owner && (
+                                  <span className="text-amber-400 flex items-center gap-0.5">
+                                    <Crown className="w-2.5 h-2.5" /> オーナー
+                                  </span>
+                                )}
+                                {!g.owner && g.can_manage && (
+                                  <span className="text-indigo-300">管理者</span>
+                                )}
                               </div>
                             </div>
+                          </div>
 
-                            {isSelected ? (
-                              <div className="flex items-center gap-1 text-[11px] font-bold text-indigo-300 bg-indigo-500/20 px-2 py-0.5 rounded-lg shrink-0">
-                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                                <span>選択中</span>
-                              </div>
-                            ) : (
-                              <span className="text-[11px] text-slate-500 shrink-0">選択</span>
-                            )}
-                          </button>
-                        );
-                      })}
+                          {isSelected ? (
+                            <span className="text-[10px] font-bold text-indigo-400 flex items-center gap-1 shrink-0 bg-indigo-500/20 px-2 py-0.5 rounded-full">
+                              <CheckCircle2 className="w-3 h-3" /> 選択中
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-slate-400 hover:text-white shrink-0">
+                              選択
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               ) : (
-                <div className="p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/20">
-                  <span className="font-bold text-indigo-300 flex items-center gap-1.5 text-xs mb-1">
-                    <Shield className="w-4 h-4 text-indigo-400" />
-                    <span>Discord連携が必要です</span>
-                  </span>
-                  <p className="text-[11px] text-slate-300 mb-2 leading-relaxed">
-                    Discordと最新の権限で連携すると、あなたがオーナーまたは管理者を務めるサーバーが自動一覧表示され、簡単に入力できます。
+                <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-300 space-y-2">
+                  <div className="flex items-center gap-2 font-bold text-xs">
+                    <Shield className="w-4 h-4 text-amber-400" />
+                    <span>Discord管理サーバーが見つかりません</span>
+                  </div>
+                  <p className="text-[11px] text-slate-300 leading-relaxed">
+                    あなたがオーナーまたは管理者権限を持つDiscordサーバーのみLinkordに掲載可能です。
                   </p>
                   {authUrl && (
                     <a
                       href={authUrl}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition shadow-md shadow-indigo-600/30"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-bold text-xs transition cursor-pointer"
                     >
                       <Sparkles className="w-3.5 h-3.5" />
-                      <span>Discordと連携してサーバーを取得</span>
+                      <span>Discordと再連携してサーバーを取得</span>
                     </a>
                   )}
                 </div>
               )}
 
-              {/* Mode Selection Tabs (手動招待リンク vs 公式Bot連携) */}
-              <div className="space-y-2">
-                <span className="block text-xs font-semibold text-slate-300">掲載・連携方式を選択</span>
-                <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-black/40 border border-white/5">
-                  <button
-                    type="button"
-                    onClick={() => setRegisterMode('invite')}
-                    className={`py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
-                      registerMode === 'invite'
-                        ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
-                        : 'text-slate-400 hover:text-white hover:bg-white/5'
-                    }`}
+              {/* Official Bot Invitation Card */}
+              <div className="p-3.5 rounded-2xl bg-indigo-950/60 border border-indigo-500/30 space-y-2.5 text-indigo-300">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-xl bg-indigo-600/30 flex items-center justify-center text-indigo-300 border border-indigo-500/30">
+                      <Bot className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="font-bold text-xs text-white block">公式Bot連携（必須）</span>
+                      <span className="text-[10px] text-indigo-300">安全な掲載と自動バンプに対応</span>
+                    </div>
+                  </div>
+                  <a
+                    href={botInviteUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-bold text-xs transition shadow-md shadow-[#5865F2]/30 cursor-pointer shrink-0"
                   >
-                    <Link2 className="w-3.5 h-3.5" />
-                    <span>招待リンク手動登録</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setRegisterMode('bot')}
-                    className={`py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
-                      registerMode === 'bot'
-                        ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                        : 'text-slate-400 hover:text-white hover:bg-white/5'
-                    }`}
-                  >
-                    <Bot className="w-3.5 h-3.5" />
-                    <span>公式Bot連携 (/up対応)</span>
-                    <span className="text-[9px] bg-white/20 px-1 py-0.2 rounded font-semibold ml-0.5">推奨</span>
-                  </button>
+                    <span>Botを追加する</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
                 </div>
+                <ul className="text-[11px] text-slate-300 space-y-1 list-disc pl-4 leading-relaxed">
+                  <li>不正な他人のサーバー掲載を防止するため、公式Botの導入が必須です。</li>
+                  <li>Discord内で <code className="bg-black/40 px-1 py-0.5 rounded text-indigo-200">/up</code> を実行すると掲載順位をトップに押し上げ（バンプ）できます。</li>
+                  <li>人数やアイコンが完全自動でリアルタイム同期されます。</li>
+                </ul>
               </div>
 
-              {/* Bot Mode Assist Banner */}
-              {registerMode === 'bot' && (
-                <div className="p-3.5 rounded-2xl bg-indigo-950/50 border border-indigo-500/30 space-y-2 text-indigo-300">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold flex items-center gap-1.5 text-xs text-white">
-                      <Bot className="w-4 h-4 text-indigo-400" />
-                      <span>Linkord公式Botを導入</span>
-                    </span>
-                    <a
-                      href={botInviteUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#5865F2] hover:bg-[#4752c4] text-white font-bold text-xs transition shadow-md shadow-[#5865F2]/30 cursor-pointer"
-                    >
-                      <span>Botを追加する</span>
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
-                  </div>
-                  <ul className="text-[11px] text-slate-300 space-y-1 list-disc pl-4 leading-relaxed">
-                    <li>Discord内で <code className="bg-black/40 px-1 py-0.5 rounded text-indigo-200">/up</code> コマンドを実行するだけで、いつでもLinkord掲載順位をトップに押し上げ（バンプ）できます！</li>
-                    <li>サーバー人数やアクティブ状況が完全自動でリアルタイム同期されます。</li>
-                  </ul>
-                </div>
-              )}
-
-              {/* Invite URL Input with Clipboard Paste & Quick Inspection */}
+              {/* Invite URL Input */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-semibold text-slate-300">
@@ -498,34 +463,9 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
                   </button>
                 </div>
                 <p className="text-[10px] text-slate-500">
-                  ※ 有効期限「無制限」の招待リンクを推奨します。入力するとサーバー情報が自動補完されます。
+                  ※ サイト訪問者が参加するための招待リンクです（無期限推奨）。
                 </p>
               </div>
-
-              {/* Inspected Server Preview Card */}
-              {inspectSuccess && (
-                <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between gap-3 text-emerald-300">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    {iconUrl ? (
-                      <img src={iconUrl} alt="" className="w-9 h-9 rounded-xl object-cover shrink-0 ring-1 ring-white/10" />
-                    ) : (
-                      <div className="w-9 h-9 rounded-xl bg-slate-800 flex items-center justify-center font-bold shrink-0">
-                        {name.slice(0, 1)}
-                      </div>
-                    )}
-                    <div className="min-w-0">
-                      <div className="font-bold text-white text-xs truncate">{name}</div>
-                      <div className="text-[11px] text-emerald-400 font-semibold mt-0.5">
-                        メンバー数: {serverStats?.member_count || 0}名
-                        {serverStats?.presence_count ? ` (オンライン: ${serverStats.presence_count}名)` : ''}
-                      </div>
-                    </div>
-                  </div>
-                  <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full font-bold shrink-0">
-                    有効な招待
-                  </span>
-                </div>
-              )}
 
               {/* Basic Fields: Name & Slug */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -615,30 +555,34 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
                 </div>
               </div>
 
-              {/* Submit Buttons */}
-              <div className="pt-2 flex items-center justify-end gap-2.5">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white font-medium text-xs transition cursor-pointer"
-                >
-                  キャンセル
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 active:scale-[0.98] disabled:opacity-50 text-white font-bold text-xs flex items-center gap-1.5 transition shadow-lg shadow-purple-600/30 cursor-pointer"
-                >
-                  {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                  <span>{submitting ? '掲載中...' : 'サーバーを掲載する'}</span>
-                </button>
-              </div>
-
             </form>
           )}
         </div>
 
+        {/* Fixed Footer (Always visible, never clipped) */}
+        {user && (
+          <div className="px-6 py-4 border-t border-white/10 bg-[#0f111a] flex items-center justify-end gap-2.5 shrink-0 z-20">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white font-medium text-xs transition cursor-pointer"
+            >
+              キャンセル
+            </button>
+            <button
+              type="submit"
+              form="create-server-form"
+              disabled={submitting}
+              className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 active:scale-[0.98] disabled:opacity-50 text-white font-bold text-xs flex items-center gap-1.5 transition shadow-lg shadow-purple-600/30 cursor-pointer"
+            >
+              {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              <span>{submitting ? '掲載中...' : 'サーバーを掲載する'}</span>
+            </button>
+          </div>
+        )}
+
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Flame, Flag, ExternalLink, ArrowLeft, Loader2, ServerCrash, RefreshCw, Check, Code, ShieldCheck, Copy } from 'lucide-react';
+import { Flame, Flag, ExternalLink, ArrowLeft, Loader2, ServerCrash, RefreshCw, Check, Code, ShieldCheck, Copy, Share2 } from 'lucide-react';
 import { ReportModal } from '../components/ReportModal';
 import { fetchServer, boostServer, syncServerDiscordStats, fetchServerAlliances } from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -225,6 +225,20 @@ export const ServerDetail: React.FC = () => {
                 <RefreshCw className="w-3.5 h-3.5 text-slate-400" />
               )}
               <span>{syncSuccess ? '同期完了' : '最新同期'}</span>
+            </button>
+            <button
+              onClick={() => {
+                const tweetText = `Discordサーバー「${server.name}」(${server.member_count}名) をチェック！\n\n参加はこちら👇`;
+                const shareUrl = `https://linkord.net/server/${server.slug}`;
+                const hashtags = `Discordサーバー,ディスコード,Linkord`;
+                const xUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(shareUrl)}&hashtags=${encodeURIComponent(hashtags)}`;
+                window.open(xUrl, '_blank', 'noopener,noreferrer');
+              }}
+              className="px-3.5 py-2.5 rounded-xl border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-xs font-medium flex items-center justify-center gap-1.5 transition cursor-pointer"
+              title="X (Twitter) でシェア"
+            >
+              <Share2 className="w-3.5 h-3.5 text-sky-400" />
+              <span>シェア</span>
             </button>
           </div>
         </div>

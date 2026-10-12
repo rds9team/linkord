@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Flame, Sparkles, Compass, ExternalLink, Loader2, Plus, Users, User, ArrowRight, Eye, TrendingUp, Radio, PhoneCall, Clock, Headphones } from 'lucide-react';
+import { Search, Flame, Sparkles, Compass, ExternalLink, Loader2, Plus, Users, User, ArrowRight, Eye, TrendingUp, Radio, PhoneCall, Clock, Headphones, Share2 } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { fetchServers, searchProfiles, fetchVoiceRecruitments } from '../api/client';
 import { ServerData, ProfileSearchResult, VoiceRecruitmentItem } from '../types';
@@ -474,18 +474,31 @@ export const Discover: React.FC = () => {
                     </Link>
                   </div>
 
-                  {/* Join VC Button -> Direct Discord Server Inflow */}
-                  <div className="pt-2">
+                  {/* Actions: Join VC Button + X Share Button */}
+                  <div className="pt-2 flex items-center gap-2">
                     <a
                       href={inviteTarget}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-rose-500 to-indigo-600 hover:from-rose-400 hover:to-indigo-500 text-white font-bold text-xs transition flex items-center justify-center gap-2 shadow-lg shadow-rose-500/20 active:scale-98 cursor-pointer"
+                      className="flex-1 py-2.5 px-3 rounded-xl bg-gradient-to-r from-rose-500 to-indigo-600 hover:from-rose-400 hover:to-indigo-500 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-lg shadow-rose-500/20 active:scale-98 cursor-pointer"
                     >
-                      <Headphones className="w-4 h-4" />
-                      <span>今すぐ通話に参加する (Discordを開く)</span>
-                      <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+                      <Headphones className="w-3.5 h-3.5" />
+                      <span>通話に参加 (Discord)</span>
+                      <ExternalLink className="w-3 h-3 opacity-80" />
                     </a>
+                    <button
+                      onClick={() => {
+                        const tweetText = `【${r.game_tag || '通話'} @${r.target_count}】${r.title}\nサーバー: ${r.server_name}\n\n通話・VC参加はこちら👇`;
+                        const shareUrl = `https://linkord.net/discover?type=recruitments`;
+                        const hashtags = `Discord募集,${r.game_tag ? r.game_tag.replace(/\s+/g, '') + '募集,' : ''}Linkord`;
+                        const xUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(shareUrl)}&hashtags=${encodeURIComponent(hashtags)}`;
+                        window.open(xUrl, '_blank', 'noopener,noreferrer');
+                      }}
+                      className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white transition flex items-center justify-center cursor-pointer"
+                      title="X (Twitter) でこの通話募集をシェア"
+                    >
+                      <Share2 className="w-4 h-4 text-sky-400" />
+                    </button>
                   </div>
                 </div>
               );

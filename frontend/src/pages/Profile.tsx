@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   MessageSquare, Github, Twitter, Code, Music, Eye, Flame, Flag, Heart,
   Loader2, UserX, ExternalLink, Globe, Youtube, Twitch, Send, UserPlus, UserCheck, Users,
-  Volume2, VolumeX, Play, Pause, Plus, ArrowLeft
+  Volume2, VolumeX, Play, Pause, Plus, ArrowLeft, Share2
 } from 'lucide-react';
 import { Badges } from '../components/Badges';
 import { ReportModal } from '../components/ReportModal';
@@ -517,6 +517,22 @@ export const Profile: React.FC = () => {
                   )}
                 </button>
               )}
+
+              {/* Share Profile to X (Twitter) */}
+              <button
+                onClick={() => {
+                  const tweetText = `Linkordで ${profile.display_name} (@${profile.username}) のプロフィールをチェック！\n\n`;
+                  const shareUrl = `https://linkord.net/@${profile.username}`;
+                  const hashtags = `Linkord,プロフィール`;
+                  const xUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(shareUrl)}&hashtags=${encodeURIComponent(hashtags)}`;
+                  window.open(xUrl, '_blank', 'noopener,noreferrer');
+                }}
+                className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white transition flex items-center gap-1 cursor-pointer"
+                title="X (Twitter) でこのプロフィールをシェア"
+              >
+                <Share2 className="w-3 h-3 text-sky-400" />
+                <span>シェア</span>
+              </button>
             </div>
 
             {/* Discord Custom Status Bubble (Lanyard) */}

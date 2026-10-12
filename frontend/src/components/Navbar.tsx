@@ -33,8 +33,8 @@ export const Navbar: React.FC = () => {
 
   return (
     <header className="w-full max-w-5xl mx-auto px-4 py-4 flex items-center justify-between z-20 relative">
-      <Link to="/" className="flex items-center gap-2 group">
-        <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-purple-600 to-sky-400 flex items-center justify-center shadow-lg shadow-purple-500/20 group-hover:scale-105 transition">
+      <Link to="/" className="flex items-center gap-2.5 group">
+        <div className="w-8 h-8 rounded-xl bg-[#5865F2] hover:bg-[#4752c4] flex items-center justify-center transition">
           <Link2 className="w-4 h-4 text-white" />
         </div>
         <span className={`font-extrabold tracking-tight text-base transition ${isLight ? 'text-slate-900' : 'text-white'}`}>Linkord</span>
@@ -49,7 +49,7 @@ export const Navbar: React.FC = () => {
               : 'text-slate-300 hover:text-white hover:bg-white/5'
           }`}
         >
-          <Compass className="w-3.5 h-3.5 text-sky-400" />
+          <Compass className="w-3.5 h-3.5 text-slate-400" />
           <span className="hidden sm:inline">見つける</span>
         </Link>
 
@@ -61,9 +61,9 @@ export const Navbar: React.FC = () => {
               : 'text-slate-300 hover:text-white hover:bg-white/5'
           }`}
         >
-          <Radio className="w-3.5 h-3.5 text-rose-500 animate-pulse" />
+          <Radio className="w-3.5 h-3.5 text-rose-400" />
           <span className="hidden sm:inline">通話募集</span>
-          <span className="px-1.5 py-0.2 rounded-md bg-rose-500 text-[10px] font-black text-white">LIVE</span>
+          <span className="px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-400 text-[10px] font-bold">LIVE</span>
         </Link>
 
         {isAuthenticated && (
@@ -75,20 +75,20 @@ export const Navbar: React.FC = () => {
                 : 'text-slate-300 hover:text-white hover:bg-white/5'
             }`}
           >
-            <Settings className="w-3.5 h-3.5 text-purple-400" />
+            <Settings className="w-3.5 h-3.5 text-slate-400" />
             <span className="hidden sm:inline">設定</span>
           </Link>
         )}
 
         <button
           onClick={() => setIsSupportOpen(true)}
-          className={`px-3 py-1.5 rounded-full text-xs font-medium border flex items-center gap-1.5 transition cursor-pointer ${
+          className={`px-3 py-1.5 rounded-xl text-xs font-medium border flex items-center gap-1.5 transition cursor-pointer ${
             isLight
-              ? 'bg-rose-50 border-rose-200 text-rose-600 hover:bg-rose-100'
-              : 'bg-rose-500/10 hover:bg-rose-500/20 border-rose-500/30 text-rose-300 hover:text-white'
+              ? 'bg-rose-50/80 border-rose-200 text-rose-600 hover:bg-rose-100'
+              : 'bg-white/[0.04] hover:bg-white/[0.08] border-white/10 text-slate-300 hover:text-white'
           }`}
         >
-          <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500/30" />
+          <Heart className="w-3.5 h-3.5 text-rose-400" />
           <span className="hidden sm:inline">応援する</span>
         </button>
 

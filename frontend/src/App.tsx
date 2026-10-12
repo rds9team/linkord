@@ -23,15 +23,9 @@ const AppContent: React.FC = () => {
   return (
     <div
       className={`min-h-screen flex flex-col relative overflow-x-hidden transition-colors duration-300 ${
-        isLight ? 'bg-[#f8fafc] text-slate-900' : 'bg-[#08090d] text-slate-100'
+        isLight ? 'bg-[#f6f7f9] text-slate-900' : 'bg-[#0b0c10] text-slate-100'
       }`}
     >
-      {/* Subtle background glow */}
-      <div
-        className={`fixed top-0 left-1/2 -translate-x-1/2 w-[800px] h-[300px] rounded-full blur-[140px] pointer-events-none transition-opacity duration-300 ${
-          isLight ? 'bg-purple-300/25' : 'bg-purple-600/10'
-        }`}
-      />
 
       <Navbar />
       <DiscordReauthBanner />

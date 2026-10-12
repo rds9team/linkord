@@ -161,16 +161,16 @@ export const Discover: React.FC = () => {
           {mainCategory === 'recruitments' && (
             <button
               onClick={() => setIsRecruitmentModalOpen(true)}
-              className="px-4 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-rose-500 to-purple-600 hover:from-rose-400 hover:to-purple-500 text-white transition flex items-center gap-1.5 shadow-lg shadow-rose-500/20 whitespace-nowrap cursor-pointer"
+              className="px-4 py-2.5 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white transition flex items-center gap-1.5 shadow-sm whitespace-nowrap cursor-pointer"
             >
-              <Radio className="w-4 h-4 animate-pulse" />
+              <Radio className="w-4 h-4" />
               <span>通話を募集する</span>
             </button>
           )}
           {mainCategory === 'servers' && (
             <button
               onClick={() => setIsCreateModalOpen(true)}
-              className="px-4 py-2.5 rounded-xl text-xs font-semibold bg-purple-600 hover:bg-purple-500 text-white transition flex items-center gap-1.5 shadow-lg shadow-purple-600/30 whitespace-nowrap cursor-pointer"
+              className="px-4 py-2.5 rounded-xl text-xs font-semibold bg-[#5865F2] hover:bg-[#4752c4] text-white transition flex items-center gap-1.5 shadow-sm whitespace-nowrap cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>サーバーを掲載する</span>
@@ -180,30 +180,30 @@ export const Discover: React.FC = () => {
       </div>
 
       {/* Main Mode Toggle: Servers vs Users vs Recruitments */}
-      <div className="flex items-center gap-1.5 p-1.5 rounded-2xl bg-slate-200/70 dark:bg-white/[0.04] border border-slate-300/80 dark:border-white/10 w-fit mb-6 overflow-x-auto max-w-full">
+      <div className="flex items-center gap-1.5 p-1.5 rounded-xl bg-slate-200/70 dark:bg-white/[0.04] border border-slate-300/80 dark:border-white/10 w-fit mb-6 overflow-x-auto max-w-full">
         <button
           onClick={() => {
             setMainCategory('recruitments');
             setSearchTerm('');
           }}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap ${
             mainCategory === 'recruitments'
-              ? 'bg-rose-500 text-white shadow-md shadow-rose-500/20'
+              ? 'bg-rose-600 text-white'
               : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
           }`}
         >
-          <Radio className="w-4 h-4 text-rose-400 animate-pulse" />
+          <Radio className="w-4 h-4 text-rose-300" />
           <span>通話募集</span>
-          <span className="px-1.5 py-0.2 rounded-md bg-white/20 text-[10px] font-black">LIVE</span>
+          <span className="px-1.5 py-0.2 rounded bg-white/20 text-[10px] font-black">LIVE</span>
         </button>
         <button
           onClick={() => {
             setMainCategory('servers');
             setSearchTerm('');
           }}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap ${
             mainCategory === 'servers'
-              ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
+              ? 'bg-[#5865F2] text-white'
               : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
           }`}
         >
@@ -215,9 +215,9 @@ export const Discover: React.FC = () => {
             setMainCategory('users');
             setSearchTerm('');
           }}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap ${
             mainCategory === 'users'
-              ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
+              ? 'bg-[#5865F2] text-white'
               : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
           }`}
         >
@@ -254,28 +254,28 @@ export const Discover: React.FC = () => {
         <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2">
           <button
             onClick={() => setActiveTab('popular')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${activeTab === 'popular' ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/20' : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 dark:border-transparent dark:bg-white/5 dark:text-slate-400 dark:hover:text-white'}`}
+            className={`px-4 py-2 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${activeTab === 'popular' ? 'bg-[#5865F2] text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 dark:border-transparent dark:bg-white/5 dark:text-slate-400 dark:hover:text-white'}`}
           >
             <Flame className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
             <span>人気ランキング</span>
           </button>
           <button
             onClick={() => setActiveTab('trending')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${activeTab === 'trending' ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/20' : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 dark:border-transparent dark:bg-white/5 dark:text-slate-400 dark:hover:text-white'}`}
+            className={`px-4 py-2 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${activeTab === 'trending' ? 'bg-[#5865F2] text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 dark:border-transparent dark:bg-white/5 dark:text-slate-400 dark:hover:text-white'}`}
           >
             <TrendingUp className="w-3.5 h-3.5 text-rose-500 dark:text-rose-400" />
             <span>急上昇 (ブースト順)</span>
           </button>
           <button
             onClick={() => setActiveTab('new')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${activeTab === 'new' ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/20' : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 dark:border-transparent dark:bg-white/5 dark:text-slate-400 dark:hover:text-white'}`}
+            className={`px-4 py-2 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${activeTab === 'new' ? 'bg-[#5865F2] text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 dark:border-transparent dark:bg-white/5 dark:text-slate-400 dark:hover:text-white'}`}
           >
             <Sparkles className="w-3.5 h-3.5 text-sky-500 dark:text-sky-400" />
             <span>新着サーバー</span>
           </button>
           <button
             onClick={() => setActiveTab('minecraft')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${activeTab === 'minecraft' ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/20' : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 dark:border-transparent dark:bg-white/5 dark:text-slate-400 dark:hover:text-white'}`}
+            className={`px-4 py-2 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${activeTab === 'minecraft' ? 'bg-[#5865F2] text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 dark:border-transparent dark:bg-white/5 dark:text-slate-400 dark:hover:text-white'}`}
           >
             <Compass className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
             <span>Minecraft</span>
@@ -320,12 +320,12 @@ export const Discover: React.FC = () => {
               return (
                 <div
                   key={server.id}
-                  className="p-5 rounded-2xl bg-white/80 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/[0.06] hover:border-purple-400/40 dark:hover:border-white/15 transition flex flex-col justify-between shadow-sm"
+                  className="p-5 rounded-2xl bg-white/80 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/[0.06] hover:border-slate-400 dark:hover:border-white/20 transition flex flex-col justify-between shadow-sm"
                 >
                   <div>
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center font-extrabold text-white text-base shadow-md">
+                        <div className="w-12 h-12 rounded-xl bg-[#5865F2] flex items-center justify-center font-extrabold text-white text-base shadow-sm">
                           {server.icon_url ? (
                             <img src={server.icon_url} alt={server.name} className="w-full h-full rounded-xl object-cover" />
                           ) : (
@@ -430,8 +430,8 @@ export const Discover: React.FC = () => {
                     {/* Top Bar: Live Badge, Game Tag, Target count */}
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30 text-[10px] font-black tracking-wide">
-                          <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping" />
+                        <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-500/15 text-rose-400 border border-rose-500/20 text-[10px] font-bold tracking-wide">
+                          <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
                           <span>LIVE VC</span>
                         </span>
                         {r.game_tag && (
@@ -440,7 +440,7 @@ export const Discover: React.FC = () => {
                           </span>
                         )}
                       </div>
-                      <span className="px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-400 border border-purple-500/30 text-[10px] font-bold font-mono">
+                      <span className="px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 text-[10px] font-bold font-mono">
                         @{r.target_count} 名募集
                       </span>
                     </div>
@@ -455,7 +455,7 @@ export const Discover: React.FC = () => {
                       to={`/server/${r.server_slug}`}
                       className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-100/70 dark:bg-white/[0.03] hover:bg-slate-200/80 dark:hover:bg-white/[0.06] transition mb-4 border border-slate-200/60 dark:border-white/5"
                     >
-                      <div className="w-8 h-8 rounded-lg overflow-hidden bg-purple-600/20 flex items-center justify-center font-bold text-xs text-white flex-shrink-0">
+                      <div className="w-8 h-8 rounded-lg overflow-hidden bg-[#5865F2]/20 flex items-center justify-center font-bold text-xs text-white flex-shrink-0">
                         {r.server_icon_url ? (
                           <img src={r.server_icon_url} alt={r.server_name} className="w-full h-full object-cover" />
                         ) : (
@@ -480,7 +480,7 @@ export const Discover: React.FC = () => {
                       href={inviteTarget}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex-1 py-2.5 px-3 rounded-xl bg-gradient-to-r from-rose-500 to-indigo-600 hover:from-rose-400 hover:to-indigo-500 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-lg shadow-rose-500/20 active:scale-98 cursor-pointer"
+                      className="flex-1 py-2.5 px-3 rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
                     >
                       <Headphones className="w-3.5 h-3.5" />
                       <span>通話に参加 (Discord)</span>

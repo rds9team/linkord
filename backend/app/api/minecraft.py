@@ -1,14 +1,15 @@
 import httpx
 import time
+import asyncio
 import urllib.parse
 from fastapi import APIRouter
 
 router = APIRouter(prefix="/minecraft", tags=["minecraft"])
 
-# In-memory 10-minute cache: {f"{identifier}:{gamemode}": (timestamp, data)}
+# In-memory 30-minute cache: {f"{identifier}:{gamemode}": (timestamp, data)}
 _CACHE = {}
-CACHE_TTL = 600
-MAX_CACHE_SIZE = 500
+CACHE_TTL = 1800
+MAX_CACHE_SIZE = 1000
 
 # Supported PlayHive Game Modes
 GAMEMODE_INFO = {
@@ -92,61 +93,82 @@ async def get_playhive_stats(identifier: str, gamemode: str = "bed"):
     # Fetch from official PlayHive public API (OpenAPI v0)
     encoded_identifier = urllib.parse.quote(clean_identifier)
     url = f"https://api.playhive.com/v0/game/all/{target_mode}/{encoded_identifier}"
-    try:
-        async with httpx.AsyncClient(timeout=2.5) as client:
-            resp = await client.get(url, headers={"User-Agent": "Mozilla/5.0 (compatible; Linkord/1.0)"})
-            if resp.status_code == 200:
-                raw_data = resp.json()
-                if isinstance(raw_data, dict) and raw_data and "UUID" in raw_data:
-                    kills = raw_data.get("kills", 0)
-                    deaths = raw_data.get("deaths", 0)
-                    kd = round(kills / deaths, 2) if deaths > 0 else float(kills)
-                    special_val = raw_data.get(mode_info["special_key"], 0)
-                    played = raw_data.get("played", 0)
-                    victories = raw_data.get("victories", 0)
-                    losses = max(0, played - victories)
-                    win_rate = round((victories / played) * 100, 1) if played > 0 else 0.0
-                    
-                    data = {
-                        "UUID": raw_data.get("UUID"),
-                        "username": clean_identifier,
-                        "gamemode": target_mode,
-                        "gamemode_name": mode_info["name"],
-                        "kills": kills,
-                        "deaths": deaths,
-                        "victories": victories,
-                        "played": played,
-                        "losses": losses,
-                        "win_rate": win_rate,
-                        "xp": raw_data.get("xp", 0),
-                        "kd": kd,
-                        "prestige": raw_data.get("prestige", 0),
-                        "final_kills": raw_data.get("final_kills", 0),
-                        "special_value": special_val,
-                        "special_label": mode_info["special_label"],
-                        "has_stats": True,
-                        "raw": raw_data
-                    }
-                    if len(_CACHE) >= MAX_CACHE_SIZE:
-                        expired = [k for k, (t, _) in _CACHE.items() if now - t >= CACHE_TTL]
-                        for k in expired:
-                            _CACHE.pop(k, None)
-                        if len(_CACHE) >= MAX_CACHE_SIZE:
-                            sorted_keys = sorted(_CACHE.keys(), key=lambda k: _CACHE[k][0])
-                            for k in sorted_keys[:100]:
-                                _CACHE.pop(k, None)
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Linkord/1.0",
+        "Accept": "application/json"
+    }
 
-                    _CACHE[cache_key] = (now, data)
-                    return {"source": "api", "data": data, "cached_at": now, "has_stats": True}
-    except Exception:
-        if cache_key in _CACHE:
-            ts, data = _CACHE[cache_key]
-            if "losses" not in data or "win_rate" not in data:
-                p = data.get("played", 0)
-                v = data.get("victories", 0)
-                data["losses"] = max(0, p - v)
-                data["win_rate"] = round((v / p) * 100, 1) if p > 0 else 0.0
-            return {"source": "stale_cache", "data": data, "cached_at": ts, "has_stats": data.get("has_stats", False)}
+    raw_data = None
+    for attempt in range(2):
+        try:
+            async with httpx.AsyncClient(timeout=6.0) as client:
+                resp = await client.get(url, headers=headers)
+                if resp.status_code == 200:
+                    raw_data = resp.json()
+                    break
+                elif resp.status_code == 404:
+                    # Player not found or has no stats in this mode
+                    break
+                elif resp.status_code == 429:
+                    if attempt == 0:
+                        await asyncio.sleep(0.8)
+                        continue
+        except Exception:
+            if attempt == 0:
+                await asyncio.sleep(0.6)
+                continue
+
+    if isinstance(raw_data, dict) and raw_data and "UUID" in raw_data:
+        kills = raw_data.get("kills", 0)
+        deaths = raw_data.get("deaths", 0)
+        kd = round(kills / deaths, 2) if deaths > 0 else float(kills)
+        special_val = raw_data.get(mode_info["special_key"], 0)
+        played = raw_data.get("played", 0)
+        victories = raw_data.get("victories", 0)
+        losses = max(0, played - victories)
+        win_rate = round((victories / played) * 100, 1) if played > 0 else 0.0
+
+        data = {
+            "UUID": raw_data.get("UUID"),
+            "username": clean_identifier,
+            "gamemode": target_mode,
+            "gamemode_name": mode_info["name"],
+            "kills": kills,
+            "deaths": deaths,
+            "victories": victories,
+            "played": played,
+            "losses": losses,
+            "win_rate": win_rate,
+            "xp": raw_data.get("xp", 0),
+            "kd": kd,
+            "prestige": raw_data.get("prestige", 0),
+            "final_kills": raw_data.get("final_kills", 0),
+            "special_value": special_val,
+            "special_label": mode_info["special_label"],
+            "has_stats": True,
+            "raw": raw_data
+        }
+        if len(_CACHE) >= MAX_CACHE_SIZE:
+            expired = [k for k, (t, _) in _CACHE.items() if now - t >= CACHE_TTL]
+            for k in expired:
+                _CACHE.pop(k, None)
+            if len(_CACHE) >= MAX_CACHE_SIZE:
+                sorted_keys = sorted(_CACHE.keys(), key=lambda k: _CACHE[k][0])
+                for k in sorted_keys[:100]:
+                    _CACHE.pop(k, None)
+
+        _CACHE[cache_key] = (now, data)
+        return {"source": "api", "data": data, "cached_at": now, "has_stats": True}
+
+    # Stale cache fallback if API request failed or rate-limited
+    if cache_key in _CACHE:
+        ts, data = _CACHE[cache_key]
+        if "losses" not in data or "win_rate" not in data:
+            p = data.get("played", 0)
+            v = data.get("victories", 0)
+            data["losses"] = max(0, p - v)
+            data["win_rate"] = round((v / p) * 100, 1) if p > 0 else 0.0
+        return {"source": "stale_cache", "data": data, "cached_at": ts, "has_stats": data.get("has_stats", True)}
 
     # If player has no stats or API unavailable / Cloudflare blocked
     return {

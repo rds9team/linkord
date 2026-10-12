@@ -354,14 +354,39 @@ export const Settings: React.FC = () => {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8 relative z-10">
-      <div className="mb-6">
-        <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-1">
-          プロフィール設定
-        </h1>
-        <p className="text-xs text-slate-500 dark:text-slate-400">
-          公開プロフィールの情報やデザインテーマを編集できます。
-        </p>
+    <div className="max-w-2xl mx-auto px-4 py-8 relative z-10 pb-24">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-1">
+            プロフィール設定
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            公開プロフィールの情報やデザインテーマを編集できます。
+          </p>
+        </div>
+
+        {/* Top Header Save Button */}
+        <div className="flex items-center gap-3 self-end sm:self-auto">
+          {saved && (
+            <span className="text-xs text-emerald-500 dark:text-emerald-400 font-semibold flex items-center gap-1 animate-fade-in">
+              <Check className="w-4 h-4" />
+              <span>保存しました！</span>
+            </span>
+          )}
+          <button
+            type="submit"
+            form="settings-form"
+            disabled={saving}
+            className="px-5 py-2.5 rounded-xl bg-[#5865F2] hover:bg-[#4752c4] disabled:opacity-50 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition cursor-pointer"
+          >
+            {saving ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Save className="w-4 h-4" />
+            )}
+            <span>{saving ? '保存中...' : '設定を保存'}</span>
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -371,7 +396,7 @@ export const Settings: React.FC = () => {
         </div>
       )}
 
-      <form onSubmit={handleSave} className="space-y-6">
+      <form id="settings-form" onSubmit={handleSave} className="space-y-6">
         
         {/* Basic Info */}
         <div className="p-6 rounded-2xl bg-white/80 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/10 shadow-sm space-y-4">
@@ -1142,7 +1167,7 @@ export const Settings: React.FC = () => {
           <button
             type="submit"
             disabled={saving}
-            className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 disabled:opacity-50 text-white font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-purple-600/20 transition"
+            className="px-6 py-2.5 rounded-xl bg-[#5865F2] hover:bg-[#4752c4] disabled:opacity-50 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition cursor-pointer"
           >
             {saving ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -1257,6 +1282,39 @@ export const Settings: React.FC = () => {
           avatarUrl: user.avatar_url,
         } : undefined}
       />
+      {/* Sticky Bottom Floating Save Bar */}
+      <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 w-[calc(100%-2rem)] max-w-2xl pointer-events-none">
+        <div className="pointer-events-auto bg-white/95 dark:bg-[#13141c]/95 backdrop-blur-md border border-slate-200/90 dark:border-white/10 shadow-xl rounded-xl px-4 py-3 sm:px-6 sm:py-3.5 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className={`w-2 h-2 rounded-full flex-shrink-0 ${saved ? 'bg-emerald-500' : 'bg-slate-400 dark:bg-slate-500'}`} />
+            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate">
+              {saved ? '設定を保存しました' : '変更後は保存をお忘れなく'}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-3 flex-shrink-0">
+            {saved && (
+              <span className="hidden sm:flex text-xs text-emerald-500 dark:text-emerald-400 font-bold items-center gap-1 animate-fade-in">
+                <Check className="w-4 h-4" />
+                <span>保存完了</span>
+              </span>
+            )}
+            <button
+              type="submit"
+              form="settings-form"
+              disabled={saving}
+              className="px-5 py-2 sm:px-6 sm:py-2.5 rounded-xl bg-[#5865F2] hover:bg-[#4752c4] disabled:opacity-50 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition cursor-pointer"
+            >
+              {saving ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4" />
+              )}
+              <span>{saving ? '保存中...' : '設定を保存'}</span>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

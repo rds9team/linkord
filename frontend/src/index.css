@@ -18,41 +18,37 @@ body {
   font-family: 'JetBrains Mono', monospace;
 }
 
-/* Glassmorphism Classes */
+/* Surface & Panel Classes (Matte & Solid) */
 .glass-panel-dark {
-  background: rgba(16, 18, 28, 0.75);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  background: #12131a;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
 }
 
 .glass-card-dark {
-  background: rgba(255, 255, 255, 0.03);
+  background: #151720;
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .glass-card-dark:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: #1a1c26;
   border-color: rgba(255, 255, 255, 0.12);
 }
 
 .glass-panel-light {
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(226, 232, 240, 0.8);
-  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04);
 }
 
 .glass-card-light {
-  background: rgba(241, 245, 249, 0.75);
-  border: 1px solid rgba(226, 232, 240, 0.9);
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
 }
 
 .glass-card-light:hover {
-  background: rgba(226, 232, 240, 0.85);
-  border-color: rgba(203, 213, 225, 1);
+  background: #f1f5f9;
+  border-color: #cbd5e1;
 }
 
 /* Page Transitions */

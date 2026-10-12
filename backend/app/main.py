@@ -161,7 +161,7 @@ app.add_middleware(
 )
 
 MAX_BODY_SIZE_GENERAL = 2 * 1024 * 1024  # 2MB
-MAX_BODY_SIZE_UPLOAD = 20 * 1024 * 1024   # 20MB
+MAX_BODY_SIZE_UPLOAD = 120 * 1024 * 1024  # 120MB (動画100MB、音声60MBに対応)
 
 # Request Size Limit Middleware (DoS / Resource Exhaustion Protection)
 @app.middleware("http")

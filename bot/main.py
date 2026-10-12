@@ -49,8 +49,9 @@ DB_PATH = find_db_path()
 logger.info(f"Target Database: {DB_PATH}")
 
 # Discord Bot クライアント初期化
+# Note: Privileged Intents (Server Members Intent) が Developer Portal で未有効でも動作するよう
+# default intents を使用。interaction.guild.member_count は default intents でも取得可能。
 intents = discord.Intents.default()
-intents.members = True
 
 bot = commands.Bot(command_prefix="!linkord_", intents=intents)
 

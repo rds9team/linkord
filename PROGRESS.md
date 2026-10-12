@@ -1,6 +1,6 @@
 # Linkord 開発進捗 & 備忘録まとめ
 
-最終更新: 2026-10-11
+最終更新: 2026-10-12
 
 
 Linkord（Discord プロフィール & サーバーポータル / linkord.net）の開発状況、これまでに実装した内容、および今後の作業用備忘録のまとめです。
@@ -12,10 +12,11 @@ Linkord（Discord プロフィール & サーバーポータル / linkord.net）
 | コンポーネント | 稼働場所 / URL | 状態 | 備考 |
 |---|---|---|---|
 | **Git リポジトリ** | `https://github.com/rds9team/linkord` (main) | **最新追従 (完全同期)** | バックエンド・フロントエンド結合テスト全件パス |
-| **バックエンド API** | VPS (`vps-gateway.sorahost.net`) | **オンライン (PM2 id: 5)** | ポート 8085 / SQLite 本番DB / 4桁タグ認証対応 |
+| **バックエンド API** | VPS (`vps-gateway.sorahost.net`) | **オンライン (PM2 id: 5)** | ポート 8085 / SQLite 本番DB / 4桁タグ認証・レートリミット対応 |
+| **公式 Discord Bot** | VPS (`vps-gateway.sorahost.net`) | **オンライン (PM2 id: 14: linkord-bot)** | `rds9up#0726` / スラッシュコマンド（`/up`, `/info`, `/help`）同期 |
 | **Cloudflare Tunnel** | VPS (`vps-gateway.sorahost.net`) | **オンライン (PM2 id: 9: linkord-tunnel)** | `api.linkord.net` -> VPS localhost:8085 疎通OK |
 | **フロントエンド** | Cloudflare Pages (`linkord.net`) | **オンライン** | SPAリライト・Functions OGP動的生成 稼働中 |
-| **Discord Webhook** | 通知チャンネル | **正常稼働** | デプロイ完了・節目ごとに自動投稿中 |
+| **Discord Webhook** | 通知チャンネル | **正常稼働** | デプロイ完了・PayPay支援通知等（.env管理） |
 | **ドメイン / SSL** | `linkord.net` / `api.linkord.net` | **本番運用中 (HTTP/2 200)** | HTTPS/Cloudflare Edge 正常応答 |
 
 ---
@@ -289,14 +290,41 @@ Linkord（Discord プロフィール & サーバーポータル / linkord.net）
 - バックエンド: `GET /api/servers/my-guilds` を強化。ユーザーが所属する全ギルドを取得し、管理権限（オーナー/管理者）順にソート。すでに Linkord に掲載中のサーバーかも判定。
 - フロントエンド: サーバー掲載モーダル（`CreateServerModal.tsx`）にリッチなサーバー一覧グリッド/リストを実装。サーバー名リアルタイム検索、👑オーナー/🛡️管理者バッジ、ワンクリックでのサーバー名・slug・アイコンの自動補完。未連携時のDiscord再認証ボタンも配置。
 
+### 30. 公式 Discord Bot（rds9up）の開発・常駐稼働 & スラッシュコマンド（今回追加）
+- **公式Bot常駐化**:
+  - `bot/main.py` を実装し、VPS 上で PM2（`linkord-bot`）としてオンライン起動。
+  - スラッシュコマンド `/up`（サーバー掲載順位のBump & 人数・アイコン最新同期 & 1時間クールダウン）、`/info`、`/help` を登録・同期。
+  - 招待URL: `https://discord.com/api/oauth2/authorize?client_id=1558818096524034058&permissions=274877991936&scope=bot%20applications.commands`
+
+### 31. 公式Bot連携型 3ステップサーバー掲載フロー & モーダルPortal化（今回追加）
+- **モーダル表示崩れの解消**:
+  - `CreateServerModal.tsx` を React `createPortal`（`document.body` 直下）に移行。ページ遷移アニメーション（`PageTransition`）やナビバーとの重なりによる画面見切れ・バグを根本解消。
+- **3ステップウィザード**:
+  - ステップ1: サーバー選択（ユーザーが管理者権限を持つ所属ギルドから選択）
+  - ステップ2: 公式Bot導入確認（`GET /api/servers/bot-check/{guild_id}` でBot導入を検知、未導入時はワンクリック招待）
+  - ステップ3: 招待リンクと基本情報はBotから自動取得されるため、ユーザーは slug・説明・タグのみを入力するだけのシンプルなフローに刷新。
+  - slug 入力欄横にホバー／タップで浮き上がる詳細説明ツールチップ（Info アイコン）を設置。
+
+### 32. Webhook セキュリティ強化 & ダミー寄付データクリーンアップ（今回追加）
+- バックエンド設定ファイル（`config.py`）から Discord Webhook URL の直書きを完全に排除し、VPS およびローカルの `.env` のみで安全に隔離管理。
+- 過去のテスト用ダミー寄付データ（Test User / @pikmin0333）をデータベースから完全クリーンアップ。
+
+### 33. ユーザー名変更レートリミット（1週間クールダウン）& 先住権保護（今回追加）
+- **先住優先 & 重複防止**:
+  - 設定画面で他のユーザーが既に使用しているユーザー名への変更は `400 Bad Request` で拒絶。先住ユーザーのIDを保護し、新規・後発側が妥協して別名にする仕様を確立。
+- **1週間（7日間）クールダウン**:
+  - `Account` テーブルに `username_changed_at` カラムを追加（DB自動マイグレーション対応）。
+  - 変更から7日間は再変更不可とし、次回変更可能日時（JST）を明示して拒絶。
+  - 設定画面（`Settings.tsx`）にクールダウン中の警告バナー（時計アイコン & 次回変更可能日時）を表示。
+
 ---
 
 ## 🚀 次のステップ（今後の拡張タスク）
 
-1. **Discord Bot による所有権自動確認・ロール連携（オプション）**:
-   - 公式Bot経由でギルド管理者ロールの自動検証
-2. **アナリティクスダッシュボード詳細表示**:
+1. **アナリティクスダッシュボード詳細表示**:
    - プロフィール日別・週別アクセス推移グラフの提供
+2. **公式Bot連携のさらなる拡張**:
+   - サーバーBAN・キック等のモデレーション連動やサーバーアクティビティ通知
 
 
 

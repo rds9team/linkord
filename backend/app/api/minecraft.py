@@ -1,5 +1,6 @@
 import httpx
 import time
+import urllib.parse
 from fastapi import APIRouter
 
 router = APIRouter(prefix="/minecraft", tags=["minecraft"])
@@ -85,13 +86,14 @@ async def get_playhive_stats(identifier: str, gamemode: str = "bed"):
                 v = data.get("victories", 0)
                 data["losses"] = max(0, p - v)
                 data["win_rate"] = round((v / p) * 100, 1) if p > 0 else 0.0
-            return {"source": "cache", "data": data, "cached_at": ts}
+            return {"source": "cache", "data": data, "cached_at": ts, "has_stats": data.get("has_stats", True)}
 
     # Fetch from official PlayHive public API (OpenAPI v0)
-    url = f"https://api.playhive.com/v0/game/all/{target_mode}/{clean_identifier}"
+    encoded_identifier = urllib.parse.quote(clean_identifier)
+    url = f"https://api.playhive.com/v0/game/all/{target_mode}/{encoded_identifier}"
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            resp = await client.get(url, headers={"User-Agent": "Linkord-API/1.0"})
+        async with httpx.AsyncClient(timeout=2.5) as client:
+            resp = await client.get(url, headers={"User-Agent": "Mozilla/5.0 (compatible; Linkord/1.0)"})
             if resp.status_code == 200:
                 raw_data = resp.json()
                 if isinstance(raw_data, dict) and raw_data and "UUID" in raw_data:
@@ -121,10 +123,11 @@ async def get_playhive_stats(identifier: str, gamemode: str = "bed"):
                         "final_kills": raw_data.get("final_kills", 0),
                         "special_value": special_val,
                         "special_label": mode_info["special_label"],
+                        "has_stats": True,
                         "raw": raw_data
                     }
                     _CACHE[cache_key] = (now, data)
-                    return {"source": "api", "data": data, "cached_at": now}
+                    return {"source": "api", "data": data, "cached_at": now, "has_stats": True}
     except Exception:
         if cache_key in _CACHE:
             ts, data = _CACHE[cache_key]
@@ -133,11 +136,13 @@ async def get_playhive_stats(identifier: str, gamemode: str = "bed"):
                 v = data.get("victories", 0)
                 data["losses"] = max(0, p - v)
                 data["win_rate"] = round((v / p) * 100, 1) if p > 0 else 0.0
-            return {"source": "stale_cache", "data": data, "cached_at": ts}
+            return {"source": "stale_cache", "data": data, "cached_at": ts, "has_stats": data.get("has_stats", False)}
 
-    # If player has no stats or API unavailable
+    # If player has no stats or API unavailable / Cloudflare blocked
     return {
-        "source": "empty",
+        "source": "unavailable",
+        "has_stats": False,
+        "message": "PlayHive API 接続制限またはプレイヤーの戦績がありません",
         "data": {
             "username": clean_identifier,
             "gamemode": target_mode,
@@ -154,6 +159,7 @@ async def get_playhive_stats(identifier: str, gamemode: str = "bed"):
             "final_kills": 0,
             "special_value": 0,
             "special_label": mode_info["special_label"],
+            "has_stats": False,
             "raw": {}
         },
         "cached_at": now

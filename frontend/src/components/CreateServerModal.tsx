@@ -587,7 +587,18 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-300">アイコン画像</label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-slate-300">アイコン画像</label>
+                    {iconUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setIconUrl('')}
+                        className="text-[10px] text-rose-400 hover:text-rose-300 hover:underline transition cursor-pointer"
+                      >
+                        アイコンを削除
+                      </button>
+                    )}
+                  </div>
                   <div className="flex items-center gap-2">
                     {iconUrl ? (
                       <img src={iconUrl} alt="Icon Preview" className="w-8 h-8 rounded-lg object-cover shrink-0 ring-1 ring-white/10" />

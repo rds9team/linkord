@@ -144,6 +144,8 @@ async def update_my_profile(
     links_data = update_dict.pop("links", None)
 
     for field, val in update_dict.items():
+        if field in ("avatar_url", "background_url", "music_url", "video_url", "minecraft_uuid", "bio") and val == "":
+            val = None
         setattr(current_user, field, val)
 
     if links_data is not None:

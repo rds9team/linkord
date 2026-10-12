@@ -444,6 +444,15 @@ export const Settings: React.FC = () => {
                     disabled={uploadingAvatar}
                   />
                 </label>
+                {avatarUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setAvatarUrl('')}
+                    className="ml-2 text-[11px] text-rose-500 hover:underline"
+                  >
+                    削除
+                  </button>
+                )}
                 <p className="text-[11px] text-slate-500 mt-1">PNG, JPG, WebP, GIFに対応しています</p>
               </div>
             </div>

@@ -150,7 +150,12 @@ export const Profile: React.FC = () => {
     setMcLoading(true);
     fetchMinecraftStats(profile.minecraft_uuid, mode)
       .then(res => {
-        if (res && res.data) setMcData(res.data);
+        if (res && res.data) {
+          setMcData({
+            ...res.data,
+            has_stats: res.has_stats !== undefined ? res.has_stats : (res.data.has_stats ?? (Number(res.data.played || 0) > 0))
+          });
+        }
       })
       .catch(() => {})
       .finally(() => setMcLoading(false));
@@ -184,7 +189,12 @@ export const Profile: React.FC = () => {
         if (data.minecraft_uuid) {
           fetchMinecraftStats(data.minecraft_uuid, 'bed')
             .then(res => {
-              if (res && res.data) setMcData(res.data);
+              if (res && res.data) {
+                setMcData({
+                  ...res.data,
+                  has_stats: res.has_stats !== undefined ? res.has_stats : (res.data.has_stats ?? (Number(res.data.played || 0) > 0))
+                });
+              }
             })
             .catch(() => {});
         }
@@ -587,13 +597,21 @@ export const Profile: React.FC = () => {
           <div className={`rounded-2xl p-3.5 mb-3 ${isLight ? 'glass-card-light' : 'glass-card-dark'}`}>
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/30 text-[10px] font-bold">
-                  MC
+                <div className="w-7 h-7 rounded-lg overflow-hidden bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30 flex-shrink-0">
+                  <img
+                    src={`https://mc-heads.net/avatar/${encodeURIComponent(profile.minecraft_uuid)}/28`}
+                    alt="Skin"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLElement).style.display = 'none';
+                    }}
+                  />
+                  <span className="text-[10px] font-bold text-emerald-400 hidden">MC</span>
                 </div>
                 <span className="text-xs font-bold">
                   PlayHive ({mcData?.gamemode_name || PLAYHIVE_MODES.find(m => m.id === mcGamemode)?.name || 'Stats'})
                 </span>
-                <span className="text-[10px] font-mono text-slate-400">({profile.minecraft_uuid})</span>
+                <span className="text-[10px] font-mono text-slate-400 truncate max-w-[120px]">({profile.minecraft_uuid})</span>
               </div>
               {mcData?.prestige !== undefined && mcData?.prestige > 0 && (
                 <span className="text-[10px] font-mono text-amber-500 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded font-bold">
@@ -628,6 +646,13 @@ export const Profile: React.FC = () => {
               <div className="py-6 flex flex-col items-center justify-center gap-2">
                 <Loader2 className="w-5 h-5 text-emerald-500 animate-spin" />
                 <span className="text-[10px] text-slate-400">戦績を読み込み中...</span>
+              </div>
+            ) : (!mcData?.has_stats && Number(mcData?.played || 0) === 0 && Number(mcData?.xp || 0) === 0) ? (
+              <div className="py-4 px-3 rounded-xl bg-black/20 border border-white/5 text-center space-y-1">
+                <p className="text-xs font-semibold text-slate-300">戦績データを取得できませんでした</p>
+                <p className="text-[11px] text-slate-500 leading-relaxed">
+                  PlayHiveでのプレイ履歴がないか、または現在PlayHive APIが保護・メンテナンス中です。
+                </p>
               </div>
             ) : (
               <>

@@ -2,6 +2,7 @@ import os
 import sys
 import logging
 import datetime
+import time
 from pathlib import Path
 from typing import Optional
 
@@ -10,6 +11,7 @@ from discord import app_commands
 from discord.ext import commands
 from dotenv import load_dotenv
 import aiosqlite
+from aiohttp import web
 
 # ログ設定
 logging.basicConfig(
@@ -26,7 +28,9 @@ for env_path in [current_dir / ".env", root_dir / ".env", root_dir / "backend" /
         load_dotenv(env_path)
 
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
-LINKORD_WEB_URL = os.getenv("LINKORD_WEB_URL", "https://linkord.site").rstrip("/")
+LINKORD_WEB_URL = os.getenv("LINKORD_WEB_URL", "https://linkord.net").rstrip("/")
+API_PORT = int(os.getenv("API_PORT", 8090))
+START_TIME = time.time()
 
 # データベースファイルのパス特定
 def find_db_path() -> Path:
@@ -49,11 +53,91 @@ DB_PATH = find_db_path()
 logger.info(f"Target Database: {DB_PATH}")
 
 # Discord Bot クライアント初期化
-# Note: Privileged Intents (Server Members Intent) が Developer Portal で未有効でも動作するよう
-# default intents を使用。interaction.guild.member_count は default intents でも取得可能。
 intents = discord.Intents.default()
 
-bot = commands.Bot(command_prefix="!linkord_", intents=intents)
+class LinkordBot(commands.Bot):
+    def __init__(self):
+        super().__init__(command_prefix="!linkord_", intents=intents)
+        self.web_runner: Optional[web.AppRunner] = None
+
+    async def setup_hook(self):
+        await self.start_web_server()
+
+    async def close(self):
+        if self.web_runner:
+            await self.web_runner.cleanup()
+        await super().close()
+
+    async def start_web_server(self):
+        app = web.Application()
+
+        async def root_handler(request: web.Request):
+            return web.json_response({
+                "service": "linkord-bot",
+                "version": "v1.0",
+                "status": "online",
+                "endpoints": [
+                    {"path": "/health", "method": "GET"},
+                    {"path": "/stats", "method": "GET"},
+                ],
+            })
+
+        async def health_handler(request: web.Request):
+            return web.json_response({
+                "status": "ok",
+                "service": "linkord-bot",
+                "uptime_seconds": int(time.time() - START_TIME),
+                "timestamp": datetime.datetime.now().isoformat(),
+            })
+
+        async def stats_handler(request: web.Request):
+            guild_count = len(self.guilds)
+            user_count = sum(g.member_count or 0 for g in self.guilds)
+            latency = round(self.latency * 1000, 1) if self.latency else 0.0
+
+            return web.json_response({
+                "status": "online",
+                "bot_name": "Linkord 公式Bot",
+                "bot_id": str(self.user.id) if self.user else "",
+                "guilds": guild_count,
+                "users": user_count,
+                "ping": latency,
+                "uptime_seconds": int(time.time() - START_TIME),
+                "version": "v1.0",
+            })
+
+        cors_headers = {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type",
+        }
+
+        async def cors_middleware(app, handler):
+            async def middleware_handler(request):
+                if request.method == "OPTIONS":
+                    return web.Response(status=204, headers=cors_headers)
+                response = await handler(request)
+                response.headers.update(cors_headers)
+                return response
+            return middleware_handler
+
+        app.middlewares.append(cors_middleware)
+        app.router.add_get("/", root_handler)
+        app.router.add_get("/health", health_handler)
+        app.router.add_get("/api/health", health_handler)
+        app.router.add_get("/stats", stats_handler)
+        app.router.add_get("/api/stats", stats_handler)
+
+        self.web_runner = web.AppRunner(app)
+        await self.web_runner.setup()
+        site = web.TCPSite(self.web_runner, "0.0.0.0", API_PORT)
+        try:
+            await site.start()
+            logger.info(f"[API] Web API server running on port {API_PORT}")
+        except Exception as e:
+            logger.error(f"[API Error] Failed to bind Web API on port {API_PORT}: {e}")
+
+bot = LinkordBot()
 
 async def init_db():
     """テーブルに必要なカラムが存在するか確認して追加"""
@@ -271,7 +355,7 @@ async def info_command(interaction: discord.Interaction):
 async def help_command(interaction: discord.Interaction):
     embed = discord.Embed(
         title="🤖 Linkord 公式Bot ヘルプ",
-        description="Linkord (https://linkord.site) と連携してサーバーを盛り上げる公式Botです。",
+        description="Linkord (https://linkord.net) と連携してサーバーを盛り上げる公式Botです。",
         color=0x5865F2
     )
     embed.add_field(

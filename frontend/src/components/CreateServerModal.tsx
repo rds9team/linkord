@@ -481,7 +481,7 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
                               Linkord上であなたのサーバーページを開くための固有URLになります。
                             </p>
                             <div className="mt-1.5 p-1.5 bg-black/40 rounded-lg font-mono text-[10px] text-purple-300">
-                              linkord.site/server/<span className="text-white font-bold">{slug || 'your-server'}</span>
+                              linkord.net/server/<span className="text-white font-bold">{slug || 'your-server'}</span>
                             </div>
                             <p className="mt-1 text-[10px] text-slate-400">
                               ※ 半角英数字・ハイフン・アンダースコア（3〜48文字）

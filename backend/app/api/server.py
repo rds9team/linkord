@@ -224,7 +224,7 @@ async def check_bot_installed(guild_id: str):
                                 invite_url = f"https://discord.gg/{code}"
 
             return {
-                "installed": true if True else True,
+                "installed": True,
                 "guild_id": clean_guild_id,
                 "name": guild_name,
                 "icon_url": icon_url,

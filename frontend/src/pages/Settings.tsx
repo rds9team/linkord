@@ -707,7 +707,7 @@ export const Settings: React.FC = () => {
               />
             </div>
             <p className="text-[11px] text-slate-500 mt-1">
-              プロフィールURL: <span className="font-mono text-purple-600 dark:text-purple-400">linkord.site/@{username || 'username'}</span>
+              プロフィールURL: <span className="font-mono text-purple-600 dark:text-purple-400">linkord.net/@{username || 'username'}</span>
             </p>
           </div>
 

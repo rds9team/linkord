@@ -23,10 +23,25 @@ export function resolveMediaUrl(url?: string | null): string | undefined {
   // Relative /uploads/ or other relative static paths
   if (trimmed.startsWith('/uploads/') || trimmed.startsWith('uploads/')) {
     const cleanPath = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+    
+    // 1. Explicit environment variable
     if (API_BASE_URL) {
       const baseClean = API_BASE_URL.replace(/\/+$/, '');
       return `${baseClean}${cleanPath}`;
     }
+
+    // 2. Production fallback when hosted on linkord.net or Cloudflare Pages
+    if (typeof window !== 'undefined' && window.location) {
+      const hostname = window.location.hostname;
+      if (
+        hostname.endsWith('linkord.net') ||
+        hostname.endsWith('linkord.site') ||
+        hostname.includes('pages.dev')
+      ) {
+        return `https://api.linkord.net${cleanPath}`;
+      }
+    }
+
     return cleanPath;
   }
 

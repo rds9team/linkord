@@ -47,6 +47,33 @@ export const MusicPlayer: React.FC<MusicPlayerProps> = ({
     onPlayStateChange?.(false);
   }, [resolvedUrl]);
 
+  // Synchronize with external play/pause events
+  useEffect(() => {
+    const handleToggle = () => {
+      togglePlay();
+    };
+    const handlePlay = () => {
+      if (audioRef.current && !isPlaying) {
+        audioRef.current.play().catch(console.warn);
+      }
+    };
+    const handlePause = () => {
+      if (audioRef.current && isPlaying) {
+        audioRef.current.pause();
+      }
+    };
+
+    window.addEventListener('linkord:toggle-bgm', handleToggle);
+    window.addEventListener('linkord:play-bgm', handlePlay);
+    window.addEventListener('linkord:pause-bgm', handlePause);
+
+    return () => {
+      window.removeEventListener('linkord:toggle-bgm', handleToggle);
+      window.removeEventListener('linkord:play-bgm', handlePlay);
+      window.removeEventListener('linkord:pause-bgm', handlePause);
+    };
+  }, [isPlaying, resolvedUrl]);
+
   const handleVolumeChange = (newVol: number) => {
     setVolume(newVol);
     if (audioRef.current) {
@@ -112,7 +139,6 @@ export const MusicPlayer: React.FC<MusicPlayerProps> = ({
         ref={audioRef}
         src={resolvedUrl}
         preload="metadata"
-        crossOrigin="anonymous"
         loop
         onTimeUpdate={() => {
           if (audioRef.current) {

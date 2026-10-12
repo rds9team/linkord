@@ -362,21 +362,29 @@ export const Profile: React.FC = () => {
         </span>
         
         <div className="flex items-center gap-2 flex-shrink-0">
-          {/* Audio Status Pill */}
+          {/* Audio Status Pill Button */}
           {profile.music_url && (
-            <div
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border transition ${
+            <button
+              type="button"
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('linkord:toggle-bgm'));
+              }}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-full border transition cursor-pointer select-none active:scale-95 ${
                 isPlayingAudio
-                  ? 'border-purple-500/40 bg-purple-500/15 text-purple-300 shadow-sm shadow-purple-500/20'
-                  : 'border-slate-300 dark:border-white/10 bg-slate-200/50 dark:bg-white/5 text-slate-400'
+                  ? 'border-purple-500/50 bg-purple-500/20 text-purple-200 shadow-sm shadow-purple-500/30'
+                  : 'border-slate-300 dark:border-white/10 bg-slate-200/50 dark:bg-white/5 hover:bg-purple-500/10 text-slate-400 hover:text-purple-300'
               }`}
-              title={isPlayingAudio ? 'BGM 再生中' : 'BGM 停止中'}
+              title={isPlayingAudio ? 'BGMを停止' : 'BGMを再生'}
             >
-              <Music className={`w-3 h-3 ${isPlayingAudio ? 'animate-bounce text-purple-400' : 'text-slate-400'}`} />
+              {isPlayingAudio ? (
+                <Pause className="w-3 h-3 text-purple-400" />
+              ) : (
+                <Play className="w-3 h-3 text-purple-400 ml-0.5" />
+              )}
               <span className="text-[10px] font-semibold">
-                {isPlayingAudio ? 'BGM再生中' : 'BGM'}
+                {isPlayingAudio ? 'BGM停止' : 'BGM再生'}
               </span>
-            </div>
+            </button>
           )}
         </div>
       </div>
@@ -524,6 +532,61 @@ export const Profile: React.FC = () => {
             )}
           </div>
         </div>
+
+        {/* Profile BGM Widget (Interactive play/pause card) */}
+        {profile.music_url && (
+          <div
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('linkord:toggle-bgm'));
+            }}
+            className={`mb-4 p-3 rounded-2xl flex items-center justify-between gap-3 border transition cursor-pointer select-none group ${
+              isPlayingAudio
+                ? isLight
+                  ? 'bg-purple-50 border-purple-300 shadow-md shadow-purple-200/50'
+                  : 'bg-purple-950/30 border-purple-500/40 shadow-lg shadow-purple-900/20'
+                : isLight
+                  ? 'bg-white/60 hover:bg-white/90 border-slate-200'
+                  : 'bg-white/[0.03] hover:bg-white/[0.06] border-white/10'
+            }`}
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div
+                className={`w-9 h-9 rounded-xl flex items-center justify-center transition shadow-md flex-shrink-0 ${
+                  isPlayingAudio
+                    ? 'bg-purple-600 text-white'
+                    : 'bg-purple-600/20 text-purple-400 group-hover:bg-purple-600 group-hover:text-white'
+                }`}
+              >
+                {isPlayingAudio ? (
+                  <Pause className="w-4 h-4" />
+                ) : (
+                  <Play className="w-4 h-4 ml-0.5" />
+                )}
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-slate-800 dark:text-white truncate">
+                    {profile.display_name || profile.username} のBGM
+                  </span>
+                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                    BGM
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                  {isPlayingAudio ? '再生中 (タップして停止)' : 'タップして再生'}
+                </p>
+              </div>
+            </div>
+
+            {isPlayingAudio && (
+              <div className="flex items-end gap-0.5 h-4 px-2 flex-shrink-0">
+                <span className="w-1 bg-purple-500 rounded-full animate-[bounce_0.6s_ease-in-out_infinite] h-full" />
+                <span className="w-1 bg-purple-500 rounded-full animate-[bounce_0.8s_ease-in-out_infinite_0.2s] h-3/4" />
+                <span className="w-1 bg-purple-500 rounded-full animate-[bounce_0.5s_ease-in-out_infinite_0.4s] h-1/2" />
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Social Links Grid */}
         {(() => {

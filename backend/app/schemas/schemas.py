@@ -67,6 +67,7 @@ class ProfileOut(BaseModel):
     followers_count: int = 0
     following_count: int = 0
     is_following: bool = False
+    username_changed_at: Optional[datetime.datetime] = None
     created_at: datetime.datetime
 
     model_config = ConfigDict(from_attributes=True)

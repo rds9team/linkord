@@ -34,6 +34,7 @@ export interface ProfileData {
   followers_count?: number;
   following_count?: number;
   is_following?: boolean;
+  username_changed_at?: string;
   links: SocialLink[];
   created_at: string;
 }

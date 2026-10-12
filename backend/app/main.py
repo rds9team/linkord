@@ -22,6 +22,8 @@ async def ensure_schema_updated(conn):
             await conn.exec_driver_sql("ALTER TABLE accounts ADD COLUMN video_url VARCHAR(512);")
         if "hide_followers" not in columns:
             await conn.exec_driver_sql("ALTER TABLE accounts ADD COLUMN hide_followers BOOLEAN DEFAULT 0;")
+        if "username_changed_at" not in columns:
+            await conn.exec_driver_sql("ALTER TABLE accounts ADD COLUMN username_changed_at DATETIME;")
 
     # Check account_identities table columns
     result_ident = await conn.exec_driver_sql("PRAGMA table_info(account_identities);")

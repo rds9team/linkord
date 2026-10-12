@@ -147,6 +147,20 @@ async def update_my_profile(
     if new_username is not None:
         clean_user = new_username.strip().lower()
         if clean_user != current_user.username:
+            # 1週間（7日間）のレートリミット判定
+            if current_user.username_changed_at:
+                cooldown_delta = datetime.timedelta(days=7)
+                now = datetime.datetime.utcnow()
+                if now - current_user.username_changed_at < cooldown_delta:
+                    next_available = current_user.username_changed_at + cooldown_delta
+                    # JST表示（UTC+9）
+                    next_jst = next_available + datetime.timedelta(hours=9)
+                    time_str = next_jst.strftime("%Y/%m/%d %H:%M")
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"ユーザー名は1週間に1度のみ変更可能です。次回は {time_str} 以降に変更できます。"
+                    )
+
             check_stmt = select(Account).where(Account.username == clean_user, Account.id != current_user.id)
             check_res = await db.execute(check_stmt)
             if check_res.scalars().first():
@@ -155,6 +169,7 @@ async def update_my_profile(
                     detail=f"ユーザー名「@{clean_user}」は既に使用されています。別のユーザー名をお試しください。"
                 )
             current_user.username = clean_user
+            current_user.username_changed_at = datetime.datetime.utcnow()
 
     for field, val in update_dict.items():
         if field in ("avatar_url", "background_url", "music_url", "video_url", "minecraft_uuid", "bio") and val == "":

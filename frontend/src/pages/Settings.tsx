@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Palette, User, Gamepad2, Save, Check, Loader2, AlertCircle, LogIn, LogOut, Upload, Image as ImageIcon, Trash2, Radio, ExternalLink, Music, Film, Share2, Plus, X, Globe, MessageSquare, Github, Twitter, Code, Youtube, Twitch } from 'lucide-react';
+import { Palette, User, Gamepad2, Save, Check, Loader2, AlertCircle, LogIn, LogOut, Upload, Image as ImageIcon, Trash2, Radio, ExternalLink, Music, Film, Share2, Plus, X, Globe, MessageSquare, Github, Twitter, Code, Youtube, Twitch, Clock } from 'lucide-react';
 import { fetchMe, updateMyProfile, uploadMedia, deleteAccount, getDiscordLoginUrl } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { ProfileUpdateData } from '../types';
@@ -597,6 +597,30 @@ export const Settings: React.FC = () => {
                 半角英数・アンダースコア・ドット (2〜32文字)
               </span>
             </div>
+            {(() => {
+              if (!user?.username_changed_at) return null;
+              const changedAt = new Date(user.username_changed_at);
+              const nextAvailable = new Date(changedAt.getTime() + 7 * 24 * 60 * 60 * 1000);
+              const now = new Date();
+              const isLocked = nextAvailable > now;
+              if (!isLocked) return null;
+
+              const year = nextAvailable.getFullYear();
+              const month = String(nextAvailable.getMonth() + 1).padStart(2, '0');
+              const day = String(nextAvailable.getDate()).padStart(2, '0');
+              const hours = String(nextAvailable.getHours()).padStart(2, '0');
+              const mins = String(nextAvailable.getMinutes()).padStart(2, '0');
+              const nextStr = `${year}/${month}/${day} ${hours}:${mins}`;
+
+              return (
+                <div className="mb-2 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs flex items-center gap-2">
+                  <Clock className="w-4 h-4 flex-shrink-0" />
+                  <span>
+                    ユーザー名は1週間に1度のみ変更可能です。（次回変更可能: <strong>{nextStr}</strong> 以降）
+                  </span>
+                </div>
+              );
+            })()}
             <div className="relative">
               <span className="absolute left-3 top-2 text-slate-400 text-xs font-mono">@</span>
               <input

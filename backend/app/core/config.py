@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     GOOGLE_REDIRECT_URI: str = "http://localhost:8000/api/auth/google/callback"
     
     PAYPAY_SUPPORT_URL: str = "https://linkord.net"
-    DISCORD_DONATION_WEBHOOK_URL: Optional[str] = "https://discord.com/api/webhooks/1558684750703632404/3_k66aB7rvX4WWr5ug6rOSah1qpT65SX-x2rpM5MsqydiAcWm_boEpcb-kx3VMHRlHnP"
+    DISCORD_DONATION_WEBHOOK_URL: Optional[str] = None
     
     STORAGE_PROVIDER: str = "local"
     UPLOAD_DIR: str = "./uploads"

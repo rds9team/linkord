@@ -40,9 +40,9 @@ export async function onRequest(context: any): Promise<Response> {
         if (res.ok) {
           const profile: any = await res.json();
           const displayName = profile.display_name || profile.username;
-          const title = `${displayName} (@${profile.username}) - Discord プロフィール共有・自己紹介カード | Linkord`;
+          const title = `${displayName} (@${profile.username}) - Discord プロフィール共有・自己紹介カード | Linkord（リンコード）`;
           const desc = profile.bio
-            ? `${profile.bio.slice(0, 140)}${profile.bio.length > 140 ? '...' : ''} - Linkordで作成された ${displayName} のプロフィール共有ページ。`
+            ? `${profile.bio.slice(0, 140)}${profile.bio.length > 140 ? '...' : ''} - Linkord（リンコード）で作成された ${displayName} のプロフィール共有ページ。`
             : `${displayName} (@${profile.username}) さんのプロフィール共有ページ。Discordステータス、Spotify再生、ゲーム戦績、SNSリンクをまとめて掲載中。`;
           const avatarImg = profile.avatar_url || 'https://linkord.net/logo.png';
           const bannerImg = profile.background_url || null;
@@ -67,7 +67,7 @@ export async function onRequest(context: any): Promise<Response> {
   <meta charset="utf-8">
   <title>${escapeHtml(title)}</title>
   <meta name="description" content="${escapeHtml(desc)}">
-  <meta name="keywords" content="${escapeHtml(displayName)}, ${escapeHtml(profile.username)}, プロフィール共有, プロフィール, 自己紹介カード, Discord プロフィール, Linkord">
+  <meta name="keywords" content="${escapeHtml(displayName)}, ${escapeHtml(profile.username)}, リンコード, Linkord, プロフィール共有, プロフィール, 自己紹介カード, Discord プロフィール">
   <link rel="canonical" href="${escapeHtml(canonicalUrl)}">
   <link rel="icon" href="/favicon.ico" sizes="48x48">
   <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png">
@@ -77,7 +77,7 @@ export async function onRequest(context: any): Promise<Response> {
   <meta property="og:image" content="${escapeHtml(ogImg)}">
   <meta property="og:url" content="${escapeHtml(canonicalUrl)}">
   <meta property="og:type" content="profile">
-  <meta property="og:site_name" content="Linkord">
+  <meta property="og:site_name" content="Linkord（リンコード）">
   <meta property="og:locale" content="ja_JP">
   <meta name="twitter:card" content="${twitterCard}">
   <meta name="twitter:title" content="${escapeHtml(title)}">
@@ -118,7 +118,7 @@ ${jsonLd}
       const res = await fetch(`${apiUrl}/api/servers/${slug}`);
       if (res.ok) {
         const server: any = await res.json();
-        const title = `${server.name} | Discord サーバー募集 - Linkord`;
+        const title = `${server.name} | Discord サーバー募集 - Linkord（リンコード）`;
         const desc = server.description
           ? `${server.description.slice(0, 150)}${server.description.length > 150 ? '...' : ''}`
           : `${server.name} の公式Discordコミュニティ情報、メンバー募集、招待リンクをチェック。`;
@@ -149,7 +149,7 @@ ${jsonLd}
   <meta property="og:image" content="${escapeHtml(img)}">
   <meta property="og:url" content="${escapeHtml(canonicalUrl)}">
   <meta property="og:type" content="website">
-  <meta property="og:site_name" content="Linkord">
+  <meta property="og:site_name" content="Linkord（リンコード）">
   <meta property="og:locale" content="ja_JP">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="${escapeHtml(title)}">

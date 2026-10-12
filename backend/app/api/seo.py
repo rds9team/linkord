@@ -6,6 +6,8 @@ from sqlalchemy import select
 from app.core.database import get_db
 from app.models.models import Account, Server
 
+from xml.sax.saxutils import escape as xml_escape
+
 router = APIRouter(prefix="/seo", tags=["seo"])
 
 def format_w3c_date(dt: datetime.datetime | None) -> str:
@@ -43,7 +45,7 @@ async def generate_sitemap(db: AsyncSession = Depends(get_db)):
 
     xml_lines = [
         '<?xml version="1.0" encoding="UTF-8"?>',
-        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">',
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
         '  <url>',
         '    <loc>https://linkord.net/</loc>',
         f'    <lastmod>{today_str}</lastmod>',
@@ -71,7 +73,7 @@ async def generate_sitemap(db: AsyncSession = Depends(get_db)):
     ]
 
     for u in users:
-        uname = u.username
+        uname = xml_escape(str(u.username))
         lastmod = format_w3c_date(u.updated_at or u.created_at)
         views = getattr(u, "views_count", 0) or 0
         priority = "0.85" if views >= 50 else "0.8"
@@ -85,7 +87,7 @@ async def generate_sitemap(db: AsyncSession = Depends(get_db)):
         ])
 
     for s in servers:
-        slug = s.slug
+        slug = xml_escape(str(s.slug))
         lastmod = format_w3c_date(s.updated_at or s.created_at)
         members = getattr(s, "member_count", 0) or 0
         priority = "0.85" if members >= 100 else "0.8"
@@ -103,8 +105,9 @@ async def generate_sitemap(db: AsyncSession = Depends(get_db)):
 
     return Response(
         content=xml_content,
-        media_type="application/xml",
+        media_type="application/xml; charset=utf-8",
         headers={
+            "Content-Type": "application/xml; charset=utf-8",
             "Cache-Control": "public, max-age=1800, s-maxage=3600",
             "X-Content-Type-Options": "nosniff"
         }

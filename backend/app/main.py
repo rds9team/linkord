@@ -5,12 +5,26 @@ from app.core.config import settings
 from app.core.database import engine, Base
 import os
 import starlette.formparsers
+from starlette.requests import Request
+
+# Patch Starlette MultiPartParser & Request.form default max_part_size to 120MB (supporting 100MB videos, 60MB audio)
+_orig_multipart_init = starlette.formparsers.MultiPartParser.__init__
+def _patched_multipart_init(self, headers, stream, *, max_files=1000, max_fields=1000, max_part_size=1024 * 1024):
+    if max_part_size <= 1024 * 1024:
+        max_part_size = 120 * 1024 * 1024
+    return _orig_multipart_init(self, headers, stream, max_files=max_files, max_fields=max_fields, max_part_size=max_part_size)
+starlette.formparsers.MultiPartParser.__init__ = _patched_multipart_init
+
+_orig_request_form = Request.form
+def _patched_request_form(self, *, max_files=1000, max_fields=1000, max_part_size=1024 * 1024):
+    if max_part_size <= 1024 * 1024:
+        max_part_size = 120 * 1024 * 1024
+    return _orig_request_form(self, max_files=max_files, max_fields=max_fields, max_part_size=max_part_size)
+Request.form = _patched_request_form
+
 from fastapi.staticfiles import StaticFiles
 import app.models
 from app.api import auth, profile, server, minecraft, lanyard, report, media, admin, donations, announcements, seo, recruitments, badge, alliances
-
-# Allow multipart uploads up to 120MB (supporting videos up to 100MB and audio up to 60MB)
-starlette.formparsers.MultiPartParser.max_part_size = 120 * 1024 * 1024
 
 # Ensure uploads directory exists
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)

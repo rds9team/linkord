@@ -316,7 +316,7 @@ export const Profile: React.FC = () => {
   }
 
   return (
-    <div className={`min-h-screen py-6 px-4 flex flex-col items-center justify-center transition-colors duration-300 relative overflow-hidden ${isLight ? 'bg-slate-50 text-slate-900' : 'bg-[#08090d] text-slate-100'}`}>
+    <div className={`min-h-screen py-6 px-4 flex flex-col items-center justify-center transition-colors duration-300 relative overflow-hidden ${isLight ? 'bg-slate-50 text-slate-900' : 'bg-[#08090d] text-slate-100'} ${profile.music_url ? 'pb-24 sm:pb-28' : 'pb-8'}`}>
       
       {/* Background Video Loop (if set) */}
       {profile.video_url && (
@@ -342,11 +342,11 @@ export const Profile: React.FC = () => {
       )}
 
       {/* Profile Header & Smart Back Navigation Bar */}
-      <div className="w-full max-w-lg mb-3 flex items-center justify-between px-2 text-xs relative z-10">
+      <div className="w-full max-w-lg mb-3 flex items-center justify-between px-2 text-xs relative z-10 gap-2">
         <button
           type="button"
           onClick={handleGoBack}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition cursor-pointer ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition cursor-pointer flex-shrink-0 ${
             isLight
               ? 'bg-white/80 hover:bg-white border-slate-300 text-slate-700 hover:text-slate-900 shadow-sm'
               : 'bg-white/5 hover:bg-white/10 border-white/10 text-slate-300 hover:text-white'
@@ -357,11 +357,11 @@ export const Profile: React.FC = () => {
           <span className="text-[11px] font-semibold">戻る</span>
         </button>
 
-        <span className="font-mono text-slate-400 text-[11px] truncate max-w-[140px] sm:max-w-none text-center px-1">
+        <span className="font-mono text-slate-400 text-[11px] truncate text-center min-w-0">
           linkord.net/@{profile.username}
         </span>
         
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           {/* Audio Status Pill */}
           {profile.music_url && (
             <div
@@ -370,7 +370,7 @@ export const Profile: React.FC = () => {
                   ? 'border-purple-500/40 bg-purple-500/15 text-purple-300 shadow-sm shadow-purple-500/20'
                   : 'border-slate-300 dark:border-white/10 bg-slate-200/50 dark:bg-white/5 text-slate-400'
               }`}
-              title={isPlayingAudio ? 'BGM 再生中' : 'BGM 一時停止中'}
+              title={isPlayingAudio ? 'BGM 再生中' : 'BGM 停止中'}
             >
               <Music className={`w-3 h-3 ${isPlayingAudio ? 'animate-bounce text-purple-400' : 'text-slate-400'}`} />
               <span className="text-[10px] font-semibold">
@@ -786,6 +786,11 @@ export const Profile: React.FC = () => {
         </p>
       </footer>
 
+      {/* Spacer to prevent overlapping with floating music player */}
+      {profile.music_url && (
+        <div className="h-16 sm:h-20 pointer-events-none" aria-hidden="true" />
+      )}
+
       {/* Report Modal */}
       <ReportModal
         isOpen={isReportOpen}
@@ -802,10 +807,10 @@ export const Profile: React.FC = () => {
         type={followModalType}
       />
 
-      {/* Rich BGM Player (Click-to-enter overlay & Floating bottom bar) */}
+      {/* Rich BGM Player (User-controlled playback, no overlay, resolved URL) */}
       {profile.music_url && (
         <MusicPlayer
-          musicUrl={profile.music_url}
+          musicUrl={resolveMediaUrl(profile.music_url) || profile.music_url}
           username={profile.username}
           displayName={profile.display_name}
           avatarUrl={profile.avatar_url}

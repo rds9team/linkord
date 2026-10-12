@@ -8,6 +8,7 @@ router = APIRouter(prefix="/minecraft", tags=["minecraft"])
 # In-memory 10-minute cache: {f"{identifier}:{gamemode}": (timestamp, data)}
 _CACHE = {}
 CACHE_TTL = 600
+MAX_CACHE_SIZE = 500
 
 # Supported PlayHive Game Modes
 GAMEMODE_INFO = {
@@ -126,6 +127,15 @@ async def get_playhive_stats(identifier: str, gamemode: str = "bed"):
                         "has_stats": True,
                         "raw": raw_data
                     }
+                    if len(_CACHE) >= MAX_CACHE_SIZE:
+                        expired = [k for k, (t, _) in _CACHE.items() if now - t >= CACHE_TTL]
+                        for k in expired:
+                            _CACHE.pop(k, None)
+                        if len(_CACHE) >= MAX_CACHE_SIZE:
+                            sorted_keys = sorted(_CACHE.keys(), key=lambda k: _CACHE[k][0])
+                            for k in sorted_keys[:100]:
+                                _CACHE.pop(k, None)
+
                     _CACHE[cache_key] = (now, data)
                     return {"source": "api", "data": data, "cached_at": now, "has_stats": True}
     except Exception:

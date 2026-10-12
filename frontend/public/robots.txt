@@ -1,6 +1,38 @@
+# https://www.robotstxt.org/robotstxt.html
+# Linkord (https://linkord.net) - Robots Exclusion Protocol
+
 User-agent: *
 Allow: /
+Allow: /discover
+Allow: /@*
+Allow: /server/*
 Disallow: /api/
-Disallow: /admin
+Disallow: /admin/
+Disallow: /settings
+Disallow: /login
+Disallow: /auth/
 
+# Allow major search engine & social media preview bots
+User-agent: Googlebot
+User-agent: Googlebot-Image
+User-agent: Bingbot
+User-agent: Applebot
+User-agent: Twitterbot
+User-agent: Discordbot
+User-agent: facebookexternalhit
+Allow: /
+
+# Allow AI search engines (SearchGPT, Perplexity, Claude) for increased visibility
+User-agent: GPTBot
+User-agent: ChatGPT-User
+User-agent: PerplexityBot
+User-agent: ClaudeBot
+User-agent: Omgilibot
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /settings
+
+# Sitemap Location
 Sitemap: https://linkord.net/sitemap.xml
+

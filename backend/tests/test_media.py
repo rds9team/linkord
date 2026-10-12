@@ -92,3 +92,21 @@ async def test_media_upload_flow():
         bad_script = {"file": ("fake.mp3", io.BytesIO(b"<?php echo 'danger'; ?>"), "audio/mpeg")}
         script_res = await client.post("/api/media/upload", files=bad_script)
         assert script_res.status_code == 400
+
+    # 9. Test IDOR prevention: User B cannot delete User A's avatar
+    account_b, token_b = await create_test_account_and_session("victim_user")
+    async with AsyncClient(transport=transport, base_url="http://test", headers={"Authorization": f"Bearer {token_b}"}) as client_b:
+        # Victim uploads avatar and sets it in profile
+        files = {"file": ("avatar.png", io.BytesIO(dummy_png), "image/png")}
+        up_res = await client_b.post("/api/media/upload", files=files)
+        assert up_res.status_code == 200
+        victim_fn = up_res.json()["filename"]
+        victim_url = up_res.json()["url"]
+
+        await client_b.patch("/api/profile/me", json={"avatar_url": victim_url})
+
+    # Attacker tries to delete victim's avatar
+    async with AsyncClient(transport=transport, base_url="http://test", headers={"Authorization": f"Bearer {token}"}) as client_attacker:
+        del_attempt = await client_attacker.delete(f"/api/media/{victim_fn}")
+        assert del_attempt.status_code == 403
+        assert "他のユーザーが使用中のメディアは削除できません" in del_attempt.json()["detail"]

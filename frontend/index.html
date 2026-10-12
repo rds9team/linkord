@@ -7,38 +7,80 @@
     <link rel="icon" type="image/svg+xml" href="/logo.svg" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="apple-touch-icon" href="/logo.svg" />
-    <meta name="description" content="Discordの活動（リアルタイムステータス、Spotify再生、Minecraft戦績、所属コミュニティ）をひとつの美しいプロフィールに統合できるバイオリンク＆サーバーポータル。" />
-    <meta name="keywords" content="Linkord, Discord, バイオリンク, プロフィール, サーバー募集, PlayHive, Lanyard, Spotify, Discordプロフィール, マイクラ" />
-    <meta name="robots" content="index, follow" />
+    <meta name="description" content="Linkord（リンコード）は、Discordの活動（オンライン状態・Spotify再生・Minecraft戦績・所属サーバー・SNSリンク）を1枚の美しい自己紹介カードに統合できる次世代バイオリンク＆Discordサーバー募集掲示板ポータルです。" />
+    <meta name="keywords" content="Linkord, リンコード, Discord, ディスコード, Discord プロフィール, ディスコード プロフィール, Discord 自己紹介カード, Discord サーバー 募集, Discord 掲示板, ディスコード サーバー 宣伝, Discord バンプ, バイオリンク, litlink 代替, PlayHive 戦績, マイクラ 戦績, Lanyard, Spotify 再生中" />
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large" />
     <link rel="canonical" href="https://linkord.net/" />
+    <meta name="author" content="Linkord Team" />
+    <meta name="application-name" content="Linkord" />
+    <meta name="apple-mobile-web-app-title" content="Linkord" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+    <!-- Open Graph Protocol (OGP) -->
     <meta property="og:title" content="Linkord - Discord プロフィール & コミュニティポータル" />
-    <meta property="og:description" content="Discordの活動（リアルタイムステータス、Spotify再生、Minecraft戦績、所属コミュニティ）をひとつの美しいプロフィールに統合。" />
-    <meta property="og:image" content="https://linkord.net/logo.svg" />
+    <meta property="og:description" content="Discordステータス・Spotify再生・Minecraft戦績・SNSリンクを1枚の洗練されたカードに統合。サーバー宣伝やバンプ機能も完備したDiscord総合ポータル。" />
+    <meta property="og:image" content="https://linkord.net/logo.png" />
+    <meta property="og:image:secure_url" content="https://linkord.net/logo.png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta property="og:image:alt" content="Linkord Logo" />
     <meta property="og:url" content="https://linkord.net/" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Linkord" />
     <meta property="og:locale" content="ja_JP" />
+
+    <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Linkord - Discord プロフィール & コミュニティポータル" />
-    <meta name="twitter:description" content="Discordの活動（リアルタイムステータス、Spotify再生、Minecraft戦績、所属コミュニティ）をひとつの美しいプロフィールに統合。" />
-    <meta name="twitter:image" content="https://linkord.net/logo.svg" />
+    <meta name="twitter:description" content="Discordステータス・Spotify再生・Minecraft戦績・SNSリンクを1枚の洗練されたカードに統合。サーバー宣伝やバンプ機能も完備。" />
+    <meta name="twitter:image" content="https://linkord.net/logo.png" />
+    <meta name="twitter:image:alt" content="Linkord" />
+
     <meta name="theme-color" content="#9333ea" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Schema.org 構造化データ (WebSite & WebApplication) -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "WebSite",
-      "name": "Linkord",
-      "alternateName": "Linkord.net",
-      "url": "https://linkord.net/",
-      "description": "Discordの活動（リアルタイムステータス、Spotify再生、Minecraft戦績、所属コミュニティ）をひとつの美しいプロフィールに統合できるバイオリンク＆サーバーポータル。",
-      "potentialAction": {
-        "@type": "SearchAction",
-        "target": "https://linkord.net/discover?q={search_term_string}",
-        "query-input": "required name=search_term_string"
-      }
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": "https://linkord.net/#website",
+          "url": "https://linkord.net/",
+          "name": "Linkord",
+          "alternateName": ["リンコード", "Linkord.net"],
+          "description": "Discordの活動（ステータス・Spotify・Minecraft戦績・コミュニティ）を統合するバイオリンク＆サーバーポータル。",
+          "inLanguage": "ja-JP",
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": {
+              "@type": "EntryPoint",
+              "urlTemplate": "https://linkord.net/discover?q={search_term_string}"
+            },
+            "query-input": "required name=search_term_string"
+          }
+        },
+        {
+          "@type": "WebApplication",
+          "@id": "https://linkord.net/#webapp",
+          "name": "Linkord",
+          "url": "https://linkord.net/",
+          "applicationCategory": "SocialNetworkingApplication",
+          "operatingSystem": "All",
+          "browserRequirements": "Requires JavaScript. Requires HTML5.",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "JPY"
+          },
+          "description": "Discordユーザー向けのリアルタイム統合プロフィールカード作成およびDiscordサーバー掲示板サービス。"
+        }
+      ]
     }
     </script>
   </head>

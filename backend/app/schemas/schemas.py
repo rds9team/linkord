@@ -14,8 +14,8 @@ def validate_safe_http_url(v: Optional[str]) -> Optional[str]:
     return v
 
 class SocialLinkBase(BaseModel):
-    title: str = Field(..., max_length=32)
-    url: str = Field(..., max_length=512)
+    title: str = Field(..., min_length=1, max_length=32)
+    url: str = Field(..., min_length=1, max_length=512)
     icon: str = Field(default="link", max_length=32)
 
     @field_validator("url")
@@ -24,7 +24,10 @@ class SocialLinkBase(BaseModel):
         v = v.strip()
         if not v:
             raise ValueError("URLを入力してください")
-        if not (v.startswith("http://") or v.startswith("https://")):
+        lower_v = v.lower()
+        if lower_v.startswith("javascript:") or lower_v.startswith("data:") or lower_v.startswith("vbscript:"):
+            raise ValueError("無効または安全でないURLスキームです")
+        if not (lower_v.startswith("http://") or lower_v.startswith("https://")):
             v = f"https://{v}"
         return v
 
@@ -114,7 +117,14 @@ class ProfileUpdate(BaseModel):
     analytics_id: Optional[str] = Field(None, max_length=32)
     hide_badges: Optional[bool] = None
     hide_followers: Optional[bool] = None
-    links: Optional[List[SocialLinkBase]] = None
+    links: Optional[List[SocialLinkBase]] = Field(None, max_length=8)
+
+    @field_validator("links")
+    @classmethod
+    def validate_links_max_count(cls, v: Optional[List[SocialLinkBase]]) -> Optional[List[SocialLinkBase]]:
+        if v is not None and len(v) > 8:
+            raise ValueError("登録できるリンクは最大8件までです")
+        return v
 
     @field_validator("username")
     @classmethod
@@ -201,9 +211,17 @@ class ServerUpdate(BaseModel):
 
 class ReportCreate(BaseModel):
     target_type: str = Field(..., max_length=32)
-    target_id: str = Field(..., max_length=64)
-    reason: str = Field(..., max_length=64)
-    description: Optional[str] = None
+    target_id: str = Field(..., min_length=1, max_length=64)
+    reason: str = Field(..., min_length=1, max_length=64)
+    description: Optional[str] = Field(None, max_length=1000)
+
+    @field_validator("target_type")
+    @classmethod
+    def validate_target_type(cls, v: str) -> str:
+        v = v.strip().lower()
+        if v not in ("profile", "server", "donation", "user", "other"):
+            raise ValueError("無効な通報対象タイプです")
+        return v
 
 class FollowUserOut(BaseModel):
     username: str

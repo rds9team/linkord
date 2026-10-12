@@ -11,8 +11,8 @@ export async function onRequest(context: any): Promise<Response> {
   const { request, next, env } = context;
   const userAgent = request.headers.get('user-agent') || '';
 
-  // 検索エンジンおよびSNSクローラーの総合検知 (Googlebot, Bingbot, Twitter, Discord, etc.)
-  const isCrawler = /Discordbot|Twitterbot|facebookexternalhit|Slackbot|TelegramBot|LinkedInBot|Embedly|WhatsApp|Googlebot|bingbot|Baiduspider|YandexBot|DuckDuckBot|Slurp|Applebot/i.test(userAgent);
+  // 検索エンジン、SNSクローラーおよび次世代AI検索クローラーの総合検知 (Googlebot, Bingbot, Twitter, Discord, ChatGPT, Perplexity, etc.)
+  const isCrawler = /Discordbot|Twitterbot|facebookexternalhit|Slackbot|TelegramBot|LinkedInBot|Embedly|WhatsApp|Googlebot|bingbot|Baiduspider|YandexBot|DuckDuckBot|Slurp|Applebot|GPTBot|ChatGPT-User|PerplexityBot|ClaudeBot|Amazonbot|Bytespider|cohere-ai|Omgilibot/i.test(userAgent);
 
   if (!isCrawler) {
     const res = await next();

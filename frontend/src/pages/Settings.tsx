@@ -223,7 +223,14 @@ export const Settings: React.FC = () => {
     setSaved(false);
 
     try {
+      if (links.length > 8) {
+        setError('登録できるリンクは最大8件までです');
+        setSaving(false);
+        return;
+      }
+
       const cleanedLinks = links
+        .slice(0, 8)
         .filter(l => l.title.trim() && l.url.trim())
         .map(l => {
           let u = l.url.trim();
@@ -231,9 +238,9 @@ export const Settings: React.FC = () => {
             u = `https://${u}`;
           }
           return {
-            title: l.title.trim(),
-            url: u,
-            icon: l.icon || 'globe'
+            title: l.title.trim().slice(0, 32),
+            url: u.slice(0, 512),
+            icon: (l.icon || 'globe').slice(0, 32)
           };
         });
 

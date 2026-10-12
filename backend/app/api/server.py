@@ -122,14 +122,18 @@ async def get_my_guilds(
         }
 
 @router.get("/inspect-invite")
-async def inspect_discord_invite(invite: str = Query(..., description="Discord invite URL or code")):
+async def inspect_discord_invite(invite: str = Query(..., max_length=256, description="Discord invite URL or code")):
     raw_invite = invite.strip()
+    if len(raw_invite) > 256:
+        raise HTTPException(status_code=400, detail="招待URLが長すぎます")
     clean = raw_invite.split("?")[0].split("#")[0].rstrip("/")
     match = re.search(r"(?:discord\.gg/|discord\.com/invite/)?([a-zA-Z0-9_-]+)$", clean)
     if not match:
         raise HTTPException(status_code=400, detail="無効なDiscord招待URLまたはコードです")
     
     code = match.group(1)
+    if len(code) > 32:
+        raise HTTPException(status_code=400, detail="無効な招待コードです")
     url = f"https://discord.com/api/v10/invites/{code}?with_counts=true"
     
     try:
@@ -165,6 +169,13 @@ async def check_bot_installed(guild_id: str):
     公式Botが指定ギルドに導入されているか確認し、
     サーバー基本情報および招待リンクを自動取得する。
     """
+    clean_guild_id = guild_id.strip()
+    if not clean_guild_id.isdigit() or not (17 <= len(clean_guild_id) <= 21):
+        return {
+            "installed": False,
+            "message": "無効なサーバーIDです"
+        }
+
     bot_token = settings.DISCORD_BOT_TOKEN
     if not bot_token:
         # トークン未設定環境時のフォールバック
@@ -173,7 +184,6 @@ async def check_bot_installed(guild_id: str):
             "message": "Botトークンが設定されていません"
         }
 
-    clean_guild_id = guild_id.strip()
     headers = {"Authorization": f"Bot {bot_token}"}
 
     try:

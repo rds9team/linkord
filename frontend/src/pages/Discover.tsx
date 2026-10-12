@@ -51,17 +51,18 @@ export const Discover: React.FC = () => {
 
   const [servers, setServers] = useState<ServerData[]>([]);
   const [users, setUsers] = useState<ProfileSearchResult[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [isSearching, setIsSearching] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
     let isMounted = true;
+    setIsSearching(true);
 
     if (mainCategory === 'servers') {
       const loadServers = async () => {
         try {
-          setLoading(true);
           const tag = activeTab === 'minecraft' ? 'Minecraft' : undefined;
           const sortParam = activeTab === 'trending' ? 'boost' : activeTab === 'new' ? 'new' : 'popular';
           const data = await fetchServers(tag, searchTerm || undefined, sortParam);
@@ -74,12 +75,13 @@ export const Discover: React.FC = () => {
           }
         } finally {
           if (isMounted) {
-            setLoading(false);
+            setIsSearching(false);
+            setInitialLoading(false);
           }
         }
       };
 
-      const timer = setTimeout(loadServers, 300);
+      const timer = setTimeout(loadServers, 250);
       return () => {
         isMounted = false;
         clearTimeout(timer);
@@ -87,7 +89,6 @@ export const Discover: React.FC = () => {
     } else {
       const loadUsers = async () => {
         try {
-          setLoading(true);
           const data = await searchProfiles(searchTerm || undefined);
           if (isMounted) {
             setUsers(data || []);
@@ -98,12 +99,13 @@ export const Discover: React.FC = () => {
           }
         } finally {
           if (isMounted) {
-            setLoading(false);
+            setIsSearching(false);
+            setInitialLoading(false);
           }
         }
       };
 
-      const timer = setTimeout(loadUsers, 300);
+      const timer = setTimeout(loadUsers, 250);
       return () => {
         isMounted = false;
         clearTimeout(timer);
@@ -177,8 +179,13 @@ export const Discover: React.FC = () => {
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           placeholder={mainCategory === 'servers' ? 'サーバー名、タグ、キーワードで検索...' : 'ユーザー名、表示名、自己紹介で検索...'}
-          className="w-full pl-12 pr-4 py-3 rounded-2xl bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 text-sm text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-purple-500 transition shadow-sm"
+          className="w-full pl-12 pr-11 py-3 rounded-2xl bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 text-sm text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-purple-500 transition shadow-sm"
         />
+        {isSearching && (
+          <div className="absolute right-4 top-1/2 -translate-y-1/2">
+            <Loader2 className="w-4 h-4 text-purple-500 animate-spin" />
+          </div>
+        )}
       </div>
 
       {/* Server Category Tabs (Servers only) */}
@@ -215,15 +222,15 @@ export const Discover: React.FC = () => {
         </div>
       )}
 
-      {/* Loading indicator */}
-      {loading && (
-        <div className="flex justify-center py-6">
-          <Loader2 className="w-6 h-6 text-purple-500 animate-spin" />
+      {/* Initial Loading indicator */}
+      {initialLoading && (
+        <div className="flex justify-center py-12">
+          <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
         </div>
       )}
 
       {/* Main Content */}
-      {!loading && mainCategory === 'servers' && (
+      {!initialLoading && mainCategory === 'servers' && (
         servers.length === 0 ? (
           <div className="text-center py-16 px-4 rounded-3xl bg-white/[0.02] border border-white/5 max-w-md mx-auto">
             <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mx-auto mb-3 text-purple-400">
@@ -325,7 +332,7 @@ export const Discover: React.FC = () => {
         )
       )}
 
-      {!loading && mainCategory === 'users' && (
+      {!initialLoading && mainCategory === 'users' && (
         users.length === 0 ? (
           <div className="text-center py-12 text-slate-400 text-xs">
             該当するユーザーが見つかりませんでした。

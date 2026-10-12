@@ -5,7 +5,18 @@ router = APIRouter(prefix="/lanyard", tags=["lanyard"])
 
 @router.get("/{discord_id}")
 async def get_lanyard_presence(discord_id: str):
-    url = f"https://api.lanyard.rest/v1/users/{discord_id}"
+    clean_id = discord_id.strip()
+    if not clean_id.isdigit() or not (17 <= len(clean_id) <= 21):
+        return {
+            "success": False,
+            "data": {
+                "discord_status": "offline",
+                "spotify": None,
+                "activities": []
+            }
+        }
+
+    url = f"https://api.lanyard.rest/v1/users/{clean_id}"
     try:
         async with httpx.AsyncClient(timeout=3.0) as client:
             resp = await client.get(url)

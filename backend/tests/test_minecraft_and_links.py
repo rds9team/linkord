@@ -64,3 +64,26 @@ async def test_social_links_update_and_view_count():
         view_res1 = await ac.get("/api/profile/linksuser")
         assert view_res1.status_code == 200
         assert view_res1.json()["views_count"] == initial_views
+
+        # Test max 8 links (success with exactly 8 links)
+        max_links_payload = [
+            {"title": f"Site {i}", "url": f"https://example.com/{i}", "icon": "globe"}
+            for i in range(8)
+        ]
+        ok_res = await ac.patch("/api/profile/me", json={"links": max_links_payload})
+        assert ok_res.status_code == 200
+        assert len(ok_res.json()["links"]) == 8
+
+        # Test exceeding 8 links (should fail with 422 Unprocessable Entity or 400 Bad Request)
+        too_many_links = [
+            {"title": f"Site {i}", "url": f"https://example.com/{i}", "icon": "globe"}
+            for i in range(9)
+        ]
+        fail_res = await ac.patch("/api/profile/me", json={"links": too_many_links})
+        assert fail_res.status_code in (400, 422)
+
+        # Test unsafe javascript: scheme (should fail with 422)
+        unsafe_res = await ac.patch("/api/profile/me", json={
+            "links": [{"title": "XSS", "url": "javascript:alert(1)", "icon": "link"}]
+        })
+        assert unsafe_res.status_code in (400, 422)

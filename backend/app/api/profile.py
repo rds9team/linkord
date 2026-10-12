@@ -178,11 +178,16 @@ async def update_my_profile(
         setattr(current_user, field, val)
 
     if links_data is not None:
+        if len(links_data) > 8:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="登録できるリンクは最大8件までです"
+            )
         await db.execute(delete(SocialLink).where(SocialLink.account_id == current_user.id))
-        for idx, item in enumerate(links_data):
-            title = item.get("title", "") if isinstance(item, dict) else getattr(item, "title", "")
-            url = item.get("url", "") if isinstance(item, dict) else getattr(item, "url", "")
-            icon = item.get("icon", "link") if isinstance(item, dict) else getattr(item, "icon", "link")
+        for idx, item in enumerate(links_data[:8]):
+            title = (item.get("title", "") if isinstance(item, dict) else getattr(item, "title", "")).strip()[:32]
+            url = (item.get("url", "") if isinstance(item, dict) else getattr(item, "url", "")).strip()[:512]
+            icon = (item.get("icon", "link") if isinstance(item, dict) else getattr(item, "icon", "link")).strip()[:32]
             if title and url:
                 new_link = SocialLink(
                     account_id=current_user.id,

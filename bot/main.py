@@ -8,7 +8,7 @@ from typing import Optional
 
 import discord
 from discord import app_commands
-from discord.ext import commands
+from discord.ext import commands, tasks
 from dotenv import load_dotenv
 import aiosqlite
 from aiohttp import web
@@ -152,6 +152,66 @@ async def init_db():
     except Exception as e:
         logger.warning(f"DB schema check warning: {e}")
 
+async def sync_guild_stats():
+    """導入されているサーバーの人数、名前、アイコンをDBに自動同期"""
+    if not bot.guilds:
+        return
+    try:
+        async with aiosqlite.connect(DB_PATH) as db:
+            db.row_factory = aiosqlite.Row
+            for guild in bot.guilds:
+                guild_id = str(guild.id)
+                guild_name = guild.name
+                member_count = guild.member_count or len(guild.members)
+                icon_url = str(guild.icon.url) if guild.icon else None
+
+                # 1. guild_idで紐付けられているか検索
+                cursor = await db.execute(
+                    "SELECT id, member_count FROM servers WHERE guild_id = ? LIMIT 1;",
+                    (guild_id,)
+                )
+                server = await cursor.fetchone()
+
+                # 2. 未紐付けの場合はサーバー名でフォールバック紐付け
+                if not server:
+                    cursor = await db.execute(
+                        "SELECT id, member_count FROM servers WHERE name = ? LIMIT 1;",
+                        (guild_name,)
+                    )
+                    server = await cursor.fetchone()
+                    if server:
+                        await db.execute(
+                            "UPDATE servers SET guild_id = ?, member_count = ?, icon_url = COALESCE(?, icon_url) WHERE id = ?;",
+                            (guild_id, member_count, icon_url, server["id"])
+                        )
+                        await db.commit()
+                        logger.info(f"[Sync] Auto-bound & updated server '{guild_name}' (ID: {server['id']}) to {member_count} members.")
+                        continue
+
+                # 3. 紐付け済みの場合は人数やアイコンのみを更新（updated_atは更新せずバンプ順位を維持）
+                if server:
+                    await db.execute(
+                        "UPDATE servers SET member_count = ?, name = ?, icon_url = COALESCE(?, icon_url) WHERE id = ?;",
+                        (member_count, guild_name, icon_url, server["id"])
+                    )
+                    await db.commit()
+                    logger.info(f"[Sync] Updated stats for '{guild_name}' ({guild_id}): {member_count} members.")
+    except Exception as e:
+        logger.error(f"[Sync Error] Failed to sync guild stats: {e}")
+
+@tasks.loop(minutes=15)
+async def periodic_stats_sync():
+    await sync_guild_stats()
+
+@periodic_stats_sync.before_loop
+async def before_periodic_sync():
+    await bot.wait_until_ready()
+
+@bot.event
+async def on_guild_join(guild: discord.Guild):
+    logger.info(f"Joined new guild: {guild.name} (ID: {guild.id}) with {guild.member_count} members.")
+    await sync_guild_stats()
+
 @bot.event
 async def on_ready():
     logger.info(f"Logged in as {bot.user} (ID: {bot.user.id})")
@@ -168,6 +228,11 @@ async def on_ready():
         name=f"/up | {LINKORD_WEB_URL.replace('https://', '')}"
     )
     await bot.change_presence(status=discord.Status.online, activity=activity)
+
+    # 起動時の初回自動同期 & 定期タスク開始
+    await sync_guild_stats()
+    if not periodic_stats_sync.is_running():
+        periodic_stats_sync.start()
 
 @bot.tree.command(name="up", description="Linkordでのサーバー掲載順位をトップに押し上げます（Bump）")
 async def up_command(interaction: discord.Interaction):

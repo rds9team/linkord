@@ -63,6 +63,11 @@ class ProfileOut(BaseModel):
     discord_id: Optional[str] = None
     minecraft_uuid: Optional[str] = None
     analytics_id: Optional[str] = None
+
+    # Playstyle (feature 7)
+    games: Optional[str] = None
+    active_hours: Optional[str] = None
+    play_style: Optional[str] = None
     
     # Stats
     views_count: int = 0
@@ -115,6 +120,9 @@ class ProfileUpdate(BaseModel):
     video_url: Optional[str] = Field(None, max_length=512)
     minecraft_uuid: Optional[str] = Field(None, max_length=64)
     analytics_id: Optional[str] = Field(None, max_length=32)
+    games: Optional[str] = Field(None, max_length=256)
+    active_hours: Optional[str] = Field(None, max_length=128)
+    play_style: Optional[str] = Field(None, max_length=64)
     hide_badges: Optional[bool] = None
     hide_followers: Optional[bool] = None
     links: Optional[List[SocialLinkBase]] = Field(None, max_length=8)
@@ -355,5 +363,48 @@ class BatchBadgesResult(BaseModel):
     updated_users: List[str]
     not_found_users: List[str]
     message: str
+
+class VoiceRecruitmentCreate(BaseModel):
+    server_id: int
+    title: str = Field(..., min_length=2, max_length=100)
+    game_tag: Optional[str] = Field("雑談", max_length=40)
+    target_count: int = Field(2, ge=1, le=99)
+    voice_channel_url: Optional[str] = Field(None, max_length=512)
+    duration_hours: int = Field(2, ge=1, le=6) # 募集継続時間 (1〜6時間)
+
+class VoiceRecruitmentOut(BaseModel):
+    id: int
+    server_id: int
+    server_name: str
+    server_slug: str
+    server_icon_url: Optional[str] = None
+    server_invite_url: str
+    user_id: int
+    user_display_name: str
+    user_avatar_url: Optional[str] = None
+    title: str
+    game_tag: Optional[str] = None
+    target_count: int
+    voice_channel_url: Optional[str] = None
+    is_active: bool
+    expires_at: datetime.datetime
+    created_at: datetime.datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+class ServerAllianceCreate(BaseModel):
+    target_server_slug: str
+
+class ServerAllianceOut(BaseModel):
+    id: int
+    partner_server_id: int
+    partner_server_name: str
+    partner_server_slug: str
+    partner_server_icon_url: Optional[str] = None
+    partner_server_member_count: int
+    partner_server_invite_url: str
+    status: str
+    created_at: datetime.datetime
+
 
 

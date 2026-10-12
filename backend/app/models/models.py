@@ -36,6 +36,11 @@ class Account(Base):
     minecraft_uuid = Column(String(64), nullable=True)
     analytics_id = Column(String(32), nullable=True) # G-XXXXXXXXXX
 
+    # Playstyle & Matchmaking (feature 7)
+    games = Column(String(256), nullable=True) # comma-separated: Apex,Valorant,Minecraft...
+    active_hours = Column(String(128), nullable=True) # e.g. "weekday_night,holiday_all"
+    play_style = Column(String(64), nullable=True) # e.g. "casual", "competitive", "enjoy", "voice_only"
+
     # Stats
     views_count = Column(Integer, default=0, nullable=False)
     
@@ -220,4 +225,37 @@ class Announcement(Base):
     link_url = Column(String(512), nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
+
+class VoiceRecruitment(Base):
+    """グローバル通話募集（リアルタイムVCマッチング）"""
+    __tablename__ = "voice_recruitments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    server_id = Column(Integer, ForeignKey("servers.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("accounts.id", ondelete="CASCADE"), nullable=False, index=True)
+    title = Column(String(128), nullable=False)
+    game_tag = Column(String(64), nullable=True, index=True) # Valorant, Apex, Minecraft, 雑談, etc.
+    target_count = Column(Integer, default=2, nullable=False) # 募集人数 (例: @2)
+    voice_channel_url = Column(String(512), nullable=True) # VC直通リンクまたは招待リンク
+    is_active = Column(Boolean, default=True, nullable=False, index=True)
+    expires_at = Column(DateTime, nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
+
+    server = relationship("Server", foreign_keys=[server_id])
+    user = relationship("Account", foreign_keys=[user_id])
+
+class ServerAlliance(Base):
+    """サーバー同盟・姉妹提携（相互掲載）"""
+    __tablename__ = "server_alliances"
+
+    id = Column(Integer, primary_key=True, index=True)
+    server_a_id = Column(Integer, ForeignKey("servers.id", ondelete="CASCADE"), nullable=False, index=True)
+    server_b_id = Column(Integer, ForeignKey("servers.id", ondelete="CASCADE"), nullable=False, index=True)
+    status = Column(String(32), default="pending", nullable=False) # pending, accepted, rejected
+    requested_by_id = Column(Integer, ForeignKey("accounts.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
+
+    server_a = relationship("Server", foreign_keys=[server_a_id])
+    server_b = relationship("Server", foreign_keys=[server_b_id])
+
 

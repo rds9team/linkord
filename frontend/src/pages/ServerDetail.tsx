@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Flame, Flag, ExternalLink, ArrowLeft, Loader2, ServerCrash, RefreshCw, Check } from 'lucide-react';
+import { Flame, Flag, ExternalLink, ArrowLeft, Loader2, ServerCrash, RefreshCw, Check, Code, ShieldCheck, Copy } from 'lucide-react';
 import { ReportModal } from '../components/ReportModal';
-import { fetchServer, boostServer, syncServerDiscordStats } from '../api/client';
+import { fetchServer, boostServer, syncServerDiscordStats, fetchServerAlliances } from '../api/client';
 import { useAuth } from '../context/AuthContext';
-import { ServerData } from '../types';
+import { ServerData, ServerAllianceItem } from '../types';
 import { useTitle } from '../hooks/useTitle';
 import { resolveMediaUrl } from '../utils/media';
 
@@ -36,6 +36,9 @@ export const ServerDetail: React.FC = () => {
     }
   };
 
+  const [alliances, setAlliances] = useState<ServerAllianceItem[]>([]);
+  const [copiedBadge, setCopiedBadge] = useState(false);
+
   useEffect(() => {
     let isMounted = true;
     const loadServer = async () => {
@@ -46,6 +49,15 @@ export const ServerDetail: React.FC = () => {
         if (isMounted) {
           setServer(data);
           setBoosts(data.boosts_count !== undefined ? data.boosts_count : 0);
+        }
+        // Load alliances
+        try {
+          const alData = await fetchServerAlliances(slug);
+          if (isMounted) {
+            setAlliances(alData || []);
+          }
+        } catch {
+          // ignore alliance fetch errors
         }
       } catch {
         if (isMounted) {
@@ -229,6 +241,80 @@ export const ServerDetail: React.FC = () => {
           <p className="text-sm text-slate-200 leading-relaxed whitespace-pre-wrap">
             {server.description || '説明は設定されていません。'}
           </p>
+        </div>
+
+        {/* Server Alliances (Feature 4) */}
+        {alliances.length > 0 && (
+          <div className="border-t border-white/5 pt-5 mb-6">
+            <div className="flex items-center gap-2 mb-3">
+              <ShieldCheck className="w-4 h-4 text-purple-400" />
+              <h2 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                提携・同盟サーバー ({alliances.length})
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {alliances.map((al) => (
+                <Link
+                  key={al.id}
+                  to={`/server/${al.partner_server_slug}`}
+                  className="p-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 hover:border-purple-500/30 transition flex items-center justify-between group"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-9 h-9 rounded-lg overflow-hidden bg-purple-600/20 flex items-center justify-center font-bold text-white text-xs flex-shrink-0">
+                      {al.partner_server_icon_url ? (
+                        <img src={al.partner_server_icon_url} alt={al.partner_server_name} className="w-full h-full object-cover" />
+                      ) : (
+                        al.partner_server_name.charAt(0)
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-white truncate group-hover:text-purple-300 transition">
+                        {al.partner_server_name}
+                      </p>
+                      <p className="text-[10px] text-slate-400">
+                        {al.partner_server_member_count.toLocaleString()} メンバー
+                      </p>
+                    </div>
+                  </div>
+                  <ExternalLink className="w-3.5 h-3.5 text-slate-500 group-hover:text-purple-400" />
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Dynamic Badge Widget Embed (Feature 5) */}
+        <div className="border-t border-white/5 pt-5 mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Code className="w-4 h-4 text-sky-400" />
+              <h2 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                外部埋め込みバッジ (ブログ・Wiki・GitHub用)
+              </h2>
+            </div>
+            <button
+              onClick={() => {
+                const markdown = `[![${server.name} on Linkord](https://linkord.net/api/badge/${server.slug}.svg)](https://linkord.net/server/${server.slug})`;
+                navigator.clipboard.writeText(markdown);
+                setCopiedBadge(true);
+                setTimeout(() => setCopiedBadge(false), 2000);
+              }}
+              className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-[11px] font-semibold text-slate-300 transition flex items-center gap-1 cursor-pointer"
+            >
+              {copiedBadge ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+              <span>{copiedBadge ? 'コピー完了！' : 'Markdownをコピー'}</span>
+            </button>
+          </div>
+          <p className="text-[11px] text-slate-400 mb-3">
+            READMEやブログに貼ると、リアルタイム人数とLinkordへのリンクが自動反映されます。
+          </p>
+          <div className="p-3 rounded-2xl bg-black/40 border border-white/5 overflow-x-auto flex justify-center">
+            <img
+              src={`/api/badge/${server.slug}.svg`}
+              alt={`${server.name} widget badge`}
+              className="max-w-full h-auto rounded-xl shadow-md"
+            />
+          </div>
         </div>
 
         {/* Tags */}

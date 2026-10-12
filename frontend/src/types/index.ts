@@ -29,6 +29,9 @@ export interface ProfileData {
   discord_id?: string;
   minecraft_uuid?: string;
   analytics_id?: string;
+  games?: string;
+  active_hours?: string;
+  play_style?: string;
   views_count: number;
   boosts_count?: number;
   followers_count?: number;
@@ -80,9 +83,52 @@ export interface ProfileUpdateData {
   video_url?: string;
   minecraft_uuid?: string;
   analytics_id?: string;
+  games?: string;
+  active_hours?: string;
+  play_style?: string;
   hide_badges?: boolean;
   hide_followers?: boolean;
   links?: Array<{ title: string; url: string; icon: string }>;
+}
+
+export interface VoiceRecruitmentItem {
+  id: number;
+  server_id: number;
+  server_name: string;
+  server_slug: string;
+  server_icon_url?: string;
+  server_invite_url: string;
+  user_id: number;
+  user_display_name: string;
+  user_avatar_url?: string;
+  title: string;
+  game_tag?: string;
+  target_count: number;
+  voice_channel_url?: string;
+  is_active: boolean;
+  expires_at: string;
+  created_at: string;
+}
+
+export interface VoiceRecruitmentCreateData {
+  server_id: number;
+  title: string;
+  game_tag?: string;
+  target_count?: number;
+  voice_channel_url?: string;
+  duration_hours?: number;
+}
+
+export interface ServerAllianceItem {
+  id: number;
+  partner_server_id: number;
+  partner_server_name: string;
+  partner_server_slug: string;
+  partner_server_icon_url?: string;
+  partner_server_member_count: number;
+  partner_server_invite_url: string;
+  status: string;
+  created_at: string;
 }
 
 export interface ReportData {

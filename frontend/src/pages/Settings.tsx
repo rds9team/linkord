@@ -80,6 +80,9 @@ export const Settings: React.FC = () => {
   const [hideBadges, setHideBadges] = useState(false);
   const [hideFollowers, setHideFollowers] = useState(false);
   const [minecraftId, setMinecraftId] = useState('');
+  const [games, setGames] = useState('');
+  const [activeHours, setActiveHours] = useState('');
+  const [playStyle, setPlayStyle] = useState('');
   const [links, setLinks] = useState<LinkItem[]>([]);
   const [saved, setSaved] = useState(false);
   const [linkingDiscord, setLinkingDiscord] = useState(false);
@@ -113,6 +116,9 @@ export const Settings: React.FC = () => {
         setHideBadges(!!data.hide_badges);
         setHideFollowers(!!data.hide_followers);
         setMinecraftId(data.minecraft_uuid || '');
+        setGames(data.games || '');
+        setActiveHours(data.active_hours || '');
+        setPlayStyle(data.play_style || '');
         if (data.links && Array.isArray(data.links)) {
           setLinks(data.links.map(l => ({ title: l.title, url: l.url, icon: l.icon || 'link' })));
         }
@@ -257,6 +263,9 @@ export const Settings: React.FC = () => {
         hide_badges: hideBadges,
         hide_followers: hideFollowers,
         minecraft_uuid: minecraftId,
+        games: games.trim(),
+        active_hours: activeHours.trim(),
+        play_style: playStyle.trim(),
         links: cleanedLinks,
       };
 
@@ -1006,6 +1015,66 @@ export const Settings: React.FC = () => {
             <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
               Bedrock 版公式サーバー「The Hive (PlayHive)」公式APIと連携します。プロフィール画面で BedWars、The Bridge、SkyWars、Survival Games などの全ゲームモードの戦績が切り替えて表示されます。
             </p>
+          </div>
+        </div>
+
+        {/* Playstyle & Matchmaking Settings (Feature 7) */}
+        <div className="p-6 rounded-2xl bg-white/80 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/10 shadow-sm space-y-4">
+          <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white mb-2">
+            <Radio className="w-4 h-4 text-purple-500 dark:text-purple-400" />
+            <span>プレイスタイル & マッチング設定</span>
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            遊んでいるゲームや時間帯を設定すると、プロフィールに表示され相性の良いフレンドやサーバーと繋がりやすくなります。
+          </p>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              よく遊ぶゲーム (カンマ区切り)
+            </label>
+            <input
+              type="text"
+              value={games}
+              onChange={(e) => setGames(e.target.value)}
+              placeholder="例: Valorant, Apex, Minecraft, 原神"
+              className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-purple-500"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                主な活動時間帯
+              </label>
+              <select
+                value={activeHours}
+                onChange={(e) => setActiveHours(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-purple-500"
+              >
+                <option value="">未設定</option>
+                <option value="平日夜 (20時〜24時)">平日夜 (20時〜24時)</option>
+                <option value="深夜帯 (24時〜朝)">深夜帯 (24時〜朝)</option>
+                <option value="休日メイン">休日メイン</option>
+                <option value="終日・不定期">終日・不定期</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                通話・ボイスチャットスタイル
+              </label>
+              <select
+                value={playStyle}
+                onChange={(e) => setPlayStyle(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-purple-500"
+              >
+                <option value="">未設定</option>
+                <option value="ワイワイ・エンジョイ">ワイワイ・エンジョイ</option>
+                <option value="聞き専OK">聞き専OK</option>
+                <option value="ガチ・ランク志向">ガチ・ランク志向</option>
+                <option value="まったり作業・雑談">まったり作業・雑談</option>
+              </select>
+            </div>
           </div>
         </div>
 

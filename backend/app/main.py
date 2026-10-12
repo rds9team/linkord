@@ -6,7 +6,7 @@ from app.core.database import engine, Base
 import os
 from fastapi.staticfiles import StaticFiles
 import app.models
-from app.api import auth, profile, server, minecraft, lanyard, report, media, admin, donations, announcements, seo
+from app.api import auth, profile, server, minecraft, lanyard, report, media, admin, donations, announcements, seo, recruitments, badge, alliances
 
 # Ensure uploads directory exists
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
@@ -24,6 +24,12 @@ async def ensure_schema_updated(conn):
             await conn.exec_driver_sql("ALTER TABLE accounts ADD COLUMN hide_followers BOOLEAN DEFAULT 0;")
         if "username_changed_at" not in columns:
             await conn.exec_driver_sql("ALTER TABLE accounts ADD COLUMN username_changed_at DATETIME;")
+        if "games" not in columns:
+            await conn.exec_driver_sql("ALTER TABLE accounts ADD COLUMN games VARCHAR(256);")
+        if "active_hours" not in columns:
+            await conn.exec_driver_sql("ALTER TABLE accounts ADD COLUMN active_hours VARCHAR(128);")
+        if "play_style" not in columns:
+            await conn.exec_driver_sql("ALTER TABLE accounts ADD COLUMN play_style VARCHAR(64);")
 
     # Check account_identities table columns
     result_ident = await conn.exec_driver_sql("PRAGMA table_info(account_identities);")
@@ -183,6 +189,9 @@ app.include_router(admin.router, prefix="/api")
 app.include_router(donations.router, prefix="/api")
 app.include_router(announcements.router, prefix="/api")
 app.include_router(seo.router, prefix="/api")
+app.include_router(recruitments.router, prefix="/api")
+app.include_router(badge.router, prefix="/api")
+app.include_router(alliances.router, prefix="/api")
 
 
 @app.get("/api/health")

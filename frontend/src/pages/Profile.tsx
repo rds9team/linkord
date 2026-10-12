@@ -526,9 +526,37 @@ export const Profile: React.FC = () => {
               </div>
             )}
             {profile.bio && (
-              <p className="text-xs leading-relaxed max-w-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap">
+              <p className="text-xs leading-relaxed max-w-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap mb-2">
                 {profile.bio}
               </p>
+            )}
+
+            {/* Playstyle & Matchmaking Badges (Feature 7) */}
+            {(profile.games || profile.active_hours || profile.play_style) && (
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 mt-2">
+                {profile.games && profile.games.split(',').map((g) => {
+                  const clean = g.trim();
+                  if (!clean) return null;
+                  return (
+                    <span key={clean} className="px-2 py-0.5 rounded-lg bg-white/5 border border-white/10 text-[10px] font-semibold text-sky-300 flex items-center gap-1">
+                      <span>🎮</span>
+                      <span>{clean}</span>
+                    </span>
+                  );
+                })}
+                {profile.active_hours && (
+                  <span className="px-2 py-0.5 rounded-lg bg-white/5 border border-white/10 text-[10px] font-semibold text-amber-300 flex items-center gap-1">
+                    <span>⏰</span>
+                    <span>{profile.active_hours}</span>
+                  </span>
+                )}
+                {profile.play_style && (
+                  <span className="px-2 py-0.5 rounded-lg bg-white/5 border border-white/10 text-[10px] font-semibold text-purple-300 flex items-center gap-1">
+                    <span>🎧</span>
+                    <span>{profile.play_style}</span>
+                  </span>
+                )}
+              </div>
             )}
           </div>
         </div>

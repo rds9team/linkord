@@ -1,4 +1,4 @@
-import { ProfileData, ProfileUpdateData, ServerData, ServerCreateData, ReportData, FollowUser, ProfileSearchResult, ReportItem, AdminStats, DonationItem, AnnouncementItem } from '../types';
+import { ProfileData, ProfileUpdateData, ServerData, ServerCreateData, ReportData, FollowUser, ProfileSearchResult, ReportItem, AdminStats, DonationItem, AnnouncementItem, VoiceRecruitmentItem, VoiceRecruitmentCreateData, ServerAllianceItem } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
@@ -393,6 +393,38 @@ export const batchUpdateBadges = (data: BatchBadgesPayload): Promise<BatchBadges
   return request<BatchBadgesResult>('/api/admin/profiles/batch-badges', {
     method: 'POST',
     body: JSON.stringify(data),
+  });
+};
+
+// --- グローバル通話募集 (VCマッチング) ---
+export const fetchVoiceRecruitments = (game?: string): Promise<VoiceRecruitmentItem[]> => {
+  return request<VoiceRecruitmentItem[]>('/api/recruitments', {
+    params: { game },
+  });
+};
+
+export const createVoiceRecruitment = (data: VoiceRecruitmentCreateData): Promise<VoiceRecruitmentItem> => {
+  return request<VoiceRecruitmentItem>('/api/recruitments', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+};
+
+export const closeVoiceRecruitment = (recruitmentId: number): Promise<{ message: string }> => {
+  return request<{ message: string }>(`/api/recruitments/${recruitmentId}`, {
+    method: 'DELETE',
+  });
+};
+
+// --- サーバー同盟・姉妹提携 ---
+export const fetchServerAlliances = (serverSlug: string): Promise<ServerAllianceItem[]> => {
+  return request<ServerAllianceItem[]>(`/api/alliances/server/${encodeURIComponent(serverSlug)}`);
+};
+
+export const requestServerAlliance = (myServerSlug: string, targetServerSlug: string): Promise<{ message: string }> => {
+  return request<{ message: string }>(`/api/alliances/server/${encodeURIComponent(myServerSlug)}/request`, {
+    method: 'POST',
+    body: JSON.stringify({ target_server_slug: targetServerSlug }),
   });
 };
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Link2, Compass, Settings, Heart, LogIn, LogOut, User as UserIcon, Sun, Moon } from 'lucide-react';
+import { Link2, Compass, Radio, Settings, Heart, LogIn, LogOut, User as UserIcon, Sun, Moon } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { SupportModal } from './SupportModal';
@@ -51,6 +51,19 @@ export const Navbar: React.FC = () => {
         >
           <Compass className="w-3.5 h-3.5 text-sky-400" />
           <span className="hidden sm:inline">見つける</span>
+        </Link>
+
+        <Link
+          to="/discover?type=recruitments"
+          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
+            isLight
+              ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/70'
+              : 'text-slate-300 hover:text-white hover:bg-white/5'
+          }`}
+        >
+          <Radio className="w-3.5 h-3.5 text-rose-500 animate-pulse" />
+          <span className="hidden sm:inline">通話募集</span>
+          <span className="px-1.5 py-0.2 rounded-md bg-rose-500 text-[10px] font-black text-white">LIVE</span>
         </Link>
 
         {isAuthenticated && (

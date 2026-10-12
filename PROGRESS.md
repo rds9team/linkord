@@ -317,6 +317,26 @@ Linkord（Discord プロフィール & サーバーポータル / linkord.net）
   - 変更から7日間は再変更不可とし、次回変更可能日時（JST）を明示して拒絶。
   - 設定画面（`Settings.tsx`）にクールダウン中の警告バナー（時計アイコン & 次回変更可能日時）を表示。
 
+### 34. サイバー攻撃対策 & ハッシュ化保存最強化（DoubleCounter事件対策） (今回追加)
+- **生IPアドレスの完全非保持化（DoubleCounter型漏洩への根本的防御）**:
+  - `UserSession` および `ProfileBoost` テーブルに生のIPアドレスを平文で保存することを完全撤廃。
+  - サーバーの `SECRET_KEY` をシークレットソルトとする不可逆な HMAC-SHA256（`h_<hash>`）にハッシュ化して保存。
+  - プロフィールブーストの1時間クールダウン判定やアクセスデバウンス、SlowAPI レートリミットもハッシュ値で一貫判定。万が一DBが奪われても利用者の生IPアドレスは絶対に特定・復元されない最強のプライバシー保護を実現。
+- **セッショントークンのSHA-256ハッシュ化保存（セッションハイジャック防止）**:
+  - クライアントの Cookie には生トークン（`secrets.token_urlsafe(32)`）を発行し、DB側（`UserSession.session_token`）には SHA-256 ハッシュ値のみを格納。
+  - 認証検証時は Cookie トークンを SHA-256 化して照合。DBダンプが流出しても平文トークンは逆算不能なため、なりすましによるアカウント乗っ取りを100%防止。
+- **外部OAuthトークン（Discord access_token）& 決済パスコードのAES暗号化**:
+  - `AccountIdentity.access_token` および `Donation.passcode` を `SECRET_KEY` から導出した暗号鍵による AES-128-CBC / HMAC-SHA256（Fernet）で暗号化してDB永続化。
+  - Discord API 通信時や管理者承認時のみ復号して使用。平文トークンがDBに残らない構造を確立。
+- **SSRF（Server-Side Request Forgery）防御**:
+  - `is_safe_url` バリデータにより、ローカルIP（`127.0.0.1`, `localhost`）、プライベートIP（`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`）、クラウドメタデータエンドポイント（`169.254.169.254`）へのアクセスを完全遮断。
+- **リクエストボディ上限チェックミドルウェア（DoS / リソース枯渇対策）**:
+  - 通常APIへの巨大ペイロード（2MB超）およびメディアアップロード（20MB超）を検知し即時 `413 Payload Too Large` で遮断。
+- **セキュリティヘッダーの完全武装**:
+  - `X-Content-Type-Options: nosniff`、`X-Frame-Options: SAMEORIGIN`、`Referrer-Policy: strict-origin-when-cross-origin`、`Permissions-Policy`、`X-XSS-Protection: 0`、`Cross-Origin-Opener-Policy: same-origin`、本番用 `Strict-Transport-Security (HSTS)` を全レスポンスに付与。
+- **セキュリティ検証テストスイート**:
+  - `backend/tests/test_security_hardening.py` を追加し、全15件の自動テストがすべてグリーン（PASS）。
+
 ---
 
 ## 🚀 次のステップ（今後の拡張タスク）

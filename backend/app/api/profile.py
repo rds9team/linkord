@@ -8,6 +8,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
 from app.core.auth import get_current_user, get_optional_current_user, get_client_ip
+from app.core.security import hash_ip
 from app.models.models import Account, ProfileBoost, Follow, SocialLink
 from app.schemas.schemas import ProfileOut, ProfileUpdate, FollowUserOut, ProfileSearchResult
 
@@ -315,6 +316,7 @@ async def boost_profile(
 
     time_window = datetime.datetime.utcnow().strftime("%Y-%m-%d-%H")
     client_ip = get_client_ip(request)
+    client_ip_hash = hash_ip(client_ip)
 
     if current_user:
         check_stmt = select(ProfileBoost).where(
@@ -324,7 +326,10 @@ async def boost_profile(
         )
     else:
         check_stmt = select(ProfileBoost).where(
-            ProfileBoost.ip_address == client_ip,
+            or_(
+                ProfileBoost.ip_address == client_ip_hash,
+                ProfileBoost.ip_address == client_ip
+            ),
             ProfileBoost.target_account_id == target_account.id,
             ProfileBoost.time_window == time_window
         )
@@ -336,7 +341,7 @@ async def boost_profile(
     boost = ProfileBoost(
         user_id=current_user.id if current_user else None,
         target_account_id=target_account.id,
-        ip_address=client_ip,
+        ip_address=client_ip_hash,
         time_window=time_window
     )
     db.add(boost)
@@ -365,7 +370,7 @@ async def get_profile(
     # Increment view count with debounce and self-view exclusion
     now = time.time()
     client_ip = get_client_ip(request)
-    cache_key = f"{account.id}:{client_ip}"
+    cache_key = f"{account.id}:{hash_ip(client_ip)}"
 
     # Only count if:
     # 1. Visitor is not the profile owner

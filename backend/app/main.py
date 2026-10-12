@@ -95,11 +95,13 @@ async def lifespan(app: FastAPI):
 
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from fastapi.responses import JSONResponse
 from app.core.auth import get_client_ip
+from app.core.security import hash_ip
 
 def rate_limit_key_func(request) -> str:
     ip = get_client_ip(request)
-    return ip if ip else "127.0.0.1"
+    return hash_ip(ip) if ip else "unknown_client"
 
 limiter = Limiter(key_func=rate_limit_key_func, default_limits=["120/minute"])
 
@@ -126,12 +128,34 @@ app.add_middleware(
         "http://localhost:3000",
         "https://linkord.net",
         "https://www.linkord.net",
+        "https://linkord.site",
     ],
-    allow_origin_regex=r"^https://([a-zA-Z0-9-]+\.)*linkord\.net$|^https://([a-zA-Z0-9-]+\.)*pages\.dev$",
+    allow_origin_regex=r"^https://([a-zA-Z0-9-]+\.)*linkord\.(net|site)$|^https://([a-zA-Z0-9-]+\.)*pages\.dev$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+MAX_BODY_SIZE_GENERAL = 2 * 1024 * 1024  # 2MB
+MAX_BODY_SIZE_UPLOAD = 20 * 1024 * 1024   # 20MB
+
+# Request Size Limit Middleware (DoS / Resource Exhaustion Protection)
+@app.middleware("http")
+async def limit_request_size(request, call_next):
+    content_length = request.headers.get("content-length")
+    if content_length:
+        try:
+            length = int(content_length)
+            is_upload = request.url.path.startswith("/api/media/upload")
+            limit = MAX_BODY_SIZE_UPLOAD if is_upload else MAX_BODY_SIZE_GENERAL
+            if length > limit:
+                return JSONResponse(
+                    status_code=413,
+                    content={"detail": "リクエストサイズが上限を超えています（DoS防止制限）"}
+                )
+        except ValueError:
+            pass
+    return await call_next(request)
 
 # Security Headers Middleware
 @app.middleware("http")
@@ -140,7 +164,11 @@ async def add_security_headers(request, call_next):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "SAMEORIGIN"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(), payment=()"
+    response.headers["X-XSS-Protection"] = "0"
+    response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+    if settings.APP_ENV == "production":
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
     return response
 
 # Include API routers

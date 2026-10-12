@@ -11,7 +11,14 @@ from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
 from app.core.config import settings
-from app.core.security import generate_oauth_state, verify_oauth_state, hash_password, verify_password
+from app.core.security import (
+    generate_oauth_state,
+    verify_oauth_state,
+    hash_password,
+    verify_password,
+    encrypt_token,
+    decrypt_token,
+)
 from app.core.auth import (
     get_current_user,
     get_optional_current_user,
@@ -338,9 +345,10 @@ async def discord_callback(
         if discord_email and not account.email:
             account.email = discord_email
 
+        enc_token = encrypt_token(access_token)
         if identity:
             identity.account_id = account.id
-            identity.access_token = access_token
+            identity.access_token = enc_token
             identity.provider_username = discord_username
         else:
             acc_ident_stmt = select(AccountIdentity).where(
@@ -352,14 +360,14 @@ async def discord_callback(
             if existing_my_identity:
                 existing_my_identity.provider_user_id = discord_user_id
                 existing_my_identity.provider_username = discord_username
-                existing_my_identity.access_token = access_token
+                existing_my_identity.access_token = enc_token
             else:
                 new_identity = AccountIdentity(
                     account_id=account.id,
                     provider="discord",
                     provider_user_id=discord_user_id,
                     provider_username=discord_username,
-                    access_token=access_token,
+                    access_token=enc_token,
                 )
                 db.add(new_identity)
 
@@ -375,7 +383,7 @@ async def discord_callback(
         return redirect_response
 
     elif identity and identity.account:
-        identity.access_token = access_token
+        identity.access_token = encrypt_token(access_token)
         identity.provider_username = discord_username
         account = identity.account
         account.last_login_at = datetime.datetime.utcnow()
@@ -445,7 +453,7 @@ async def discord_callback(
             provider="discord",
             provider_user_id=discord_user_id,
             provider_username=discord_username,
-            access_token=access_token,
+            access_token=encrypt_token(access_token),
         )
         db.add(identity)
 

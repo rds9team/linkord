@@ -8,6 +8,7 @@ from sqlalchemy.orm import selectinload
 from app.core.database import get_db
 from app.core.config import settings
 from app.core.auth import get_optional_current_user
+from app.core.security import encrypt_token, is_safe_url
 from app.models.models import Account, Donation
 from app.schemas.schemas import DonationCreate, DonationOut, SupporterPublicOut
 from app.services.discord_notify import notify_donation_discord
@@ -20,6 +21,12 @@ async def submit_donation(
     current_user: Optional[Account] = Depends(get_optional_current_user),
     db: AsyncSession = Depends(get_db)
 ):
+    if not is_safe_url(data.paypay_url):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="無効または安全でないPayPayリンクです"
+        )
+
     donor_name = "匿名サポーター" if data.is_anonymous else "匿名"
     account_id = None
     donor_username = None
@@ -34,11 +41,14 @@ async def submit_donation(
         else:
             donor_name = "匿名サポーター"
 
+    raw_passcode = data.passcode
+    encrypted_passcode = encrypt_token(raw_passcode) if raw_passcode else None
+
     donation = Donation(
         account_id=account_id,
         donor_name=donor_name,
         paypay_url=data.paypay_url,
-        passcode=data.passcode,
+        passcode=encrypted_passcode,
         amount=data.amount,
         message=data.message,
         is_anonymous=data.is_anonymous,
@@ -49,10 +59,13 @@ async def submit_donation(
     await db.commit()
     await db.refresh(donation)
 
-    # Discord通知（匿名希望の場合はアカウント情報を出さずに通知）
-    await notify_donation_discord(donation, current_user if not data.is_anonymous else None)
+    # Discord通知用には一時的に平文パスコードを渡す
+    donation_for_notify = donation
+    donation_for_notify.passcode = raw_passcode
+    await notify_donation_discord(donation_for_notify, current_user if not data.is_anonymous else None)
 
     out = DonationOut.model_validate(donation)
+    out.passcode = raw_passcode
     out.donor_username = donor_username
     out.donor_avatar = donor_avatar
     return out

@@ -8,6 +8,7 @@ from sqlalchemy.orm import selectinload
 from app.core.database import get_db
 from app.core.config import settings
 from app.core.auth import get_current_user
+from app.core.security import decrypt_token
 from app.models.models import Account, Server, Report, Donation, AuditLog
 from app.schemas.schemas import (
     ReportOut,
@@ -295,6 +296,7 @@ async def list_donations(
     out = []
     for d in donations:
         d_out = DonationOut.model_validate(d)
+        d_out.passcode = decrypt_token(d.passcode)
         if d.account:
             d_out.donor_username = d.account.username
             d_out.donor_avatar = d.account.avatar_url
@@ -340,6 +342,7 @@ async def resolve_donation(
     await db.refresh(donation)
 
     d_out = DonationOut.model_validate(donation)
+    d_out.passcode = decrypt_token(donation.passcode)
     if donation.account:
         d_out.donor_username = donation.account.username
         d_out.donor_avatar = donation.account.avatar_url

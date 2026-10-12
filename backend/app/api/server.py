@@ -11,7 +11,7 @@ from app.models.models import Server, Boost, Account, AccountIdentity
 from app.schemas.schemas import ServerOut, ServerCreate, ServerUpdate
 
 from app.core.config import settings
-from app.core.security import generate_oauth_state
+from app.core.security import generate_oauth_state, decrypt_token
 
 router = APIRouter(prefix="/servers", tags=["servers"])
 
@@ -42,7 +42,8 @@ async def get_my_guilds(
 
     auth_url = get_discord_auth_url()
 
-    if not identity or not identity.access_token:
+    raw_token = decrypt_token(identity.access_token) if identity else None
+    if not identity or not raw_token:
         return {
             "connected": False,
             "guilds": [],
@@ -51,7 +52,7 @@ async def get_my_guilds(
         }
 
     url = "https://discord.com/api/v10/users/@me/guilds"
-    headers = {"Authorization": f"Bearer {identity.access_token}"}
+    headers = {"Authorization": f"Bearer {raw_token}"}
 
     try:
         # すでに登録済みのギルドIDをマップ化
@@ -347,11 +348,12 @@ async def create_server(
         identity = ident_res.scalars().first()
 
         if identity and identity.access_token:
+            raw_token = decrypt_token(identity.access_token)
             try:
                 async with httpx.AsyncClient(timeout=5.0) as client:
                     g_res = await client.get(
                         "https://discord.com/api/v10/users/@me/guilds",
-                        headers={"Authorization": f"Bearer {identity.access_token}"}
+                        headers={"Authorization": f"Bearer {raw_token}"}
                     )
                     if g_res.status_code == 200:
                         user_guilds = g_res.json()

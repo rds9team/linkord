@@ -140,7 +140,7 @@ class LinkordBot(commands.Bot):
 bot = LinkordBot()
 
 async def init_db():
-    """テーブルに必要なカラムが存在するか確認して追加"""
+    """テーブルに必要なカラムが存在するか確認して追加、リマインダーテーブルの作成"""
     try:
         async with aiosqlite.connect(DB_PATH) as db:
             cursor = await db.execute("PRAGMA table_info(servers);")
@@ -149,6 +149,20 @@ async def init_db():
                 await db.execute("ALTER TABLE servers ADD COLUMN guild_id VARCHAR(64);")
                 await db.commit()
                 logger.info("Added missing guild_id column to servers table.")
+
+            # UP通知用リマインダーテーブル
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS bot_reminders (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    guild_id VARCHAR(64) NOT NULL,
+                    channel_id VARCHAR(64) NOT NULL,
+                    user_id VARCHAR(64),
+                    remind_at TIMESTAMP NOT NULL,
+                    notified INTEGER DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+            """)
+            await db.commit()
     except Exception as e:
         logger.warning(f"DB schema check warning: {e}")
 
@@ -203,14 +217,84 @@ async def sync_guild_stats():
 async def periodic_stats_sync():
     await sync_guild_stats()
 
-@periodic_stats_sync.before_loop
-async def before_periodic_sync():
+@tasks.loop(seconds=30)
+async def check_reminders():
+    """UP可能時刻（2時間後）になったらチャンネルに通知"""
+    now = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+    try:
+        async with aiosqlite.connect(DB_PATH) as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute(
+                "SELECT id, guild_id, channel_id, user_id, remind_at FROM bot_reminders WHERE notified = 0 AND remind_at <= ?;",
+                (now,)
+            )
+            rows = await cursor.fetchall()
+            for row in rows:
+                channel = bot.get_channel(int(row["channel_id"]))
+                if channel:
+                    try:
+                        user_mention = f"<@{row['user_id']}> " if row["user_id"] else ""
+                        embed = discord.Embed(
+                            title="Linkord",
+                            description="サーバーをupできるようになりました！\n`/up` コマンドで掲載順位をトップに押し上げましょう！",
+                            color=0x5865F2
+                        )
+                        embed.set_footer(text="Linkord • Discordサーバー発見プラットフォーム")
+                        await channel.send(content=user_mention, embed=embed)
+                    except Exception as send_err:
+                        logger.warning(f"Failed to send reminder to channel {row['channel_id']}: {send_err}")
+
+                await db.execute("UPDATE bot_reminders SET notified = 1 WHERE id = ?;", (row["id"],))
+            if rows:
+                await db.commit()
+    except Exception as e:
+        logger.error(f"[Reminder Error] {e}")
+
+@check_reminders.before_loop
+async def before_check_reminders():
     await bot.wait_until_ready()
 
 @bot.event
 async def on_guild_join(guild: discord.Guild):
     logger.info(f"Joined new guild: {guild.name} (ID: {guild.id}) with {guild.member_count} members.")
     await sync_guild_stats()
+
+    # Linkordに未登録か確認し、未登録の場合は案内メッセージを送信
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            "SELECT id FROM servers WHERE guild_id = ? OR name = ? LIMIT 1;",
+            (str(guild.id), guild.name)
+        )
+        server = await cursor.fetchone()
+
+        if not server:
+            target_channel = guild.system_channel
+            if not target_channel:
+                for ch in guild.text_channels:
+                    if ch.permissions_for(guild.me).send_messages:
+                        target_channel = ch
+                        break
+
+            if target_channel and target_channel.permissions_for(guild.me).send_messages:
+                embed = discord.Embed(
+                    title="Linkord にご参加いただきありがとうございます！",
+                    description=(
+                        f"**{guild.name}** はまだ Linkord に登録されていません。\n\n"
+                        f"Linkord にサーバーを登録すると、サイト上で新しいメンバーを募集できたり、"
+                        f"`/up` コマンドでサーバーの掲載順位をトップに押し上げることができます！\n\n"
+                        f"👉 **[Linkord でサーバーを登録する]({LINKORD_WEB_URL})**\n\n"
+                        f"※ サイトでDiscordログイン後、「サーバーを掲載」から数秒で登録できます。"
+                    ),
+                    color=0x5865F2
+                )
+                if guild.icon:
+                    embed.set_thumbnail(url=str(guild.icon.url))
+                embed.set_footer(text="Linkord • Discordサーバー発見プラットフォーム")
+                try:
+                    await target_channel.send(embed=embed)
+                except Exception as e:
+                    logger.warning(f"Failed to send welcome message to guild {guild.id}: {e}")
 
 @bot.event
 async def on_ready():
@@ -233,6 +317,8 @@ async def on_ready():
     await sync_guild_stats()
     if not periodic_stats_sync.is_running():
         periodic_stats_sync.start()
+    if not check_reminders.is_running():
+        check_reminders.start()
 
 @bot.tree.command(name="up", description="Linkordでのサーバー掲載順位をトップに押し上げます（Bump）")
 async def up_command(interaction: discord.Interaction):
@@ -286,7 +372,7 @@ async def up_command(interaction: discord.Interaction):
             await interaction.followup.send(embed=embed)
             return
 
-        # 2. クールダウン判定（1サーバーにつき1時間 = 3600秒）
+        # 2. クールダウン判定（1サーバーにつき2時間 = 7200秒）
         now = datetime.datetime.utcnow()
         updated_at_val = server["updated_at"]
         last_up = None
@@ -302,7 +388,7 @@ async def up_command(interaction: discord.Interaction):
             except Exception as e:
                 logger.warning(f"Failed to parse updated_at '{updated_at_val}': {e}")
 
-        COOLDOWN_SECONDS = 3600
+        COOLDOWN_SECONDS = 7200  # 2時間
         if last_up:
             elapsed = (now - last_up).total_seconds()
             if elapsed < COOLDOWN_SECONDS:
@@ -322,7 +408,7 @@ async def up_command(interaction: discord.Interaction):
                     value=f"[{server['name']}]({LINKORD_WEB_URL}/server/{server['slug']})",
                     inline=False
                 )
-                embed.set_footer(text="1サーバーにつき1時間に1回 UP できます")
+                embed.set_footer(text="1サーバーにつき2時間に1回 UP できます")
                 await interaction.followup.send(embed=embed)
                 return
 
@@ -340,15 +426,26 @@ async def up_command(interaction: discord.Interaction):
             """,
             (now_str, member_count, guild_name, guild_id, icon_url, server["id"])
         )
-        await db.commit()
 
-        # 4. 成功レスポンスの送信
+        # 2時間後のリマインダーを登録（古い未通知リマインダーは無効化）
         next_dt = now + datetime.timedelta(seconds=COOLDOWN_SECONDS)
         next_ts = int(next_dt.timestamp())
+        remind_at_str = next_dt.strftime("%Y-%m-%d %H:%M:%S")
+        
+        await db.execute("UPDATE bot_reminders SET notified = 1 WHERE guild_id = ? AND notified = 0;", (guild_id,))
+        await db.execute(
+            """
+            INSERT INTO bot_reminders (guild_id, channel_id, user_id, remind_at, notified)
+            VALUES (?, ?, ?, ?, 0);
+            """,
+            (guild_id, str(interaction.channel_id), str(interaction.user.id), remind_at_str)
+        )
+        await db.commit()
 
+        # 4. 成功レスポンスの送信（タイトル: Linkord, 本文先頭: サーバーをupしました！）
         embed = discord.Embed(
-            title="🚀 サーバーをUPしました！",
-            description=f"**{guild_name}** の掲載順位をLinkordトップに押し上げました！",
+            title="Linkord",
+            description=f"サーバーをupしました！\n**{guild_name}** の掲載順位をトップに押し上げました！",
             color=0x5865F2,
             timestamp=now
         )
@@ -356,7 +453,7 @@ async def up_command(interaction: discord.Interaction):
             embed.set_thumbnail(url=icon_url)
 
         embed.add_field(name="👥 現在のメンバー数", value=f"**{member_count:,}** 名", inline=True)
-        embed.add_field(name="⏰ 次のUP可能時刻", value=f"<t:{next_ts}:R>", inline=True)
+        embed.add_field(name="⏰ 次のUP可能時刻", value=f"<t:{next_ts}:R> (通知を設定しました)", inline=True)
         embed.add_field(
             name="🌐 Linkord 掲載ページ",
             value=f"👉 **[{server['name']} を見る]({LINKORD_WEB_URL}/server/{server['slug']})**",
@@ -425,7 +522,7 @@ async def help_command(interaction: discord.Interaction):
     )
     embed.add_field(
         name="🚀 `/up`",
-        value="サーバーの掲載順位をトップに押し上げ（バンプ）ます。メンバー数やアイコンも最新状態に自動同期されます。（1時間クールダウン）",
+        value="サーバーの掲載順位をトップに押し上げ（バンプ）ます。メンバー数やアイコンも最新状態に自動同期されます。（2時間クールダウン）",
         inline=False
     )
     embed.add_field(

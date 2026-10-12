@@ -158,6 +158,84 @@ async def inspect_discord_invite(invite: str = Query(..., description="Discord i
     except httpx.RequestError as exc:
         raise HTTPException(status_code=502, detail=f"Discord APIとの通信に失敗しました: {exc}")
 
+@router.get("/bot-check/{guild_id}")
+async def check_bot_installed(guild_id: str):
+    """
+    公式Botが指定ギルドに導入されているか確認し、
+    サーバー基本情報および招待リンクを自動取得する。
+    """
+    bot_token = settings.DISCORD_BOT_TOKEN
+    if not bot_token:
+        # トークン未設定環境時のフォールバック
+        return {
+            "installed": False,
+            "message": "Botトークンが設定されていません"
+        }
+
+    clean_guild_id = guild_id.strip()
+    headers = {"Authorization": f"Bot {bot_token}"}
+
+    try:
+        async with httpx.AsyncClient(timeout=6.0) as client:
+            # 1. ギルド情報取得
+            guild_url = f"https://discord.com/api/v10/guilds/{clean_guild_id}?with_counts=true"
+            g_resp = await client.get(guild_url, headers=headers)
+            if g_resp.status_code != 200:
+                return {
+                    "installed": False,
+                    "message": "Botがまだこのサーバーに導入されていないか、確認できませんでした。"
+                }
+
+            g_data = g_resp.json()
+            guild_name = g_data.get("name", "")
+            icon_hash = g_data.get("icon")
+            icon_url = f"https://cdn.discordapp.com/icons/{clean_guild_id}/{icon_hash}.png" if icon_hash else None
+            member_count = g_data.get("approximate_member_count") or 0
+            vanity_code = g_data.get("vanity_url_code")
+
+            # 2. 招待リンクの取得・自動生成
+            invite_url = f"https://discord.gg/{vanity_code}" if vanity_code else None
+
+            # 既存の招待一覧を取得してみる
+            if not invite_url:
+                inv_resp = await client.get(f"https://discord.com/api/v10/guilds/{clean_guild_id}/invites", headers=headers)
+                if inv_resp.status_code == 200:
+                    inv_data = inv_resp.json()
+                    if isinstance(inv_data, list) and len(inv_data) > 0:
+                        invite_url = f"https://discord.gg/{inv_data[0].get('code')}"
+
+            # 招待がない場合はチャンネルから無期限招待を新規作成
+            if not invite_url:
+                ch_resp = await client.get(f"https://discord.com/api/v10/guilds/{clean_guild_id}/channels", headers=headers)
+                if ch_resp.status_code == 200:
+                    channels = ch_resp.json()
+                    text_channels = [c for c in channels if c.get("type") == 0]
+                    target_ch = text_channels[0] if text_channels else (channels[0] if channels else None)
+                    if target_ch and "id" in target_ch:
+                        create_inv = await client.post(
+                            f"https://discord.com/api/v10/channels/{target_ch['id']}/invites",
+                            headers=headers,
+                            json={"max_age": 0, "max_uses": 0, "unique": False}
+                        )
+                        if create_inv.status_code in (200, 201):
+                            code = create_inv.json().get("code")
+                            if code:
+                                invite_url = f"https://discord.gg/{code}"
+
+            return {
+                "installed": true if True else True,
+                "guild_id": clean_guild_id,
+                "name": guild_name,
+                "icon_url": icon_url,
+                "member_count": member_count,
+                "invite_url": invite_url or ""
+            }
+    except Exception as exc:
+        return {
+            "installed": False,
+            "message": f"通信エラーが発生しました: {exc}"
+        }
+
 async def get_server_boosts_count(db: AsyncSession, server_id: int) -> int:
     stmt = select(func.count(Boost.id)).where(Boost.server_id == server_id)
     res = await db.execute(stmt)

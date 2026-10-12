@@ -128,6 +128,20 @@ export const fetchMyGuilds = (): Promise<{
   return request(`/api/servers/my-guilds`);
 };
 
+export interface BotCheckResult {
+  installed: boolean;
+  guild_id?: string;
+  name?: string;
+  icon_url?: string | null;
+  member_count?: number;
+  invite_url?: string;
+  message?: string;
+}
+
+export const checkBotInstalled = (guildId: string): Promise<BotCheckResult> => {
+  return request<BotCheckResult>(`/api/servers/bot-check/${encodeURIComponent(guildId)}`);
+};
+
 export const syncServerDiscordStats = (slug: string): Promise<{ status: string; member_count: number; icon_url?: string; message: string }> => {
   return request<{ status: string; member_count: number; icon_url?: string; message: string }>(`/api/servers/${encodeURIComponent(slug)}/sync`, {
     method: 'POST',

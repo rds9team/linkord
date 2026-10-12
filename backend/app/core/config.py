@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     DISCORD_CLIENT_ID: Optional[str] = None
     DISCORD_CLIENT_SECRET: Optional[str] = None
     DISCORD_REDIRECT_URI: str = "http://localhost:8000/api/auth/discord/callback"
+    DISCORD_BOT_TOKEN: Optional[str] = None
     
     GOOGLE_CLIENT_ID: Optional[str] = None
     GOOGLE_CLIENT_SECRET: Optional[str] = None

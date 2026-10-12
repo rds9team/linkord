@@ -67,6 +67,7 @@ export interface ServerCreateData {
 }
 
 export interface ProfileUpdateData {
+  username?: string;
   display_name?: string;
   bio?: string;
   theme_id?: string;

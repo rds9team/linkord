@@ -99,6 +99,7 @@ class UserLogin(BaseModel):
     password: str = Field(..., min_length=1, max_length=128)
 
 class ProfileUpdate(BaseModel):
+    username: Optional[str] = Field(None, min_length=2, max_length=32)
     display_name: Optional[str] = Field(None, max_length=64)
     bio: Optional[str] = Field(None, max_length=1000)
     theme_id: Optional[str] = Field(None, max_length=32)
@@ -113,6 +114,16 @@ class ProfileUpdate(BaseModel):
     hide_badges: Optional[bool] = None
     hide_followers: Optional[bool] = None
     links: Optional[List[SocialLinkBase]] = None
+
+    @field_validator("username")
+    @classmethod
+    def validate_username_format(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        v = v.strip().lower()
+        if not re.match(r"^[a-zA-Z0-9_\.]+$", v):
+            raise ValueError("ユーザー名は半角英数字、アンダースコア（_）、ドット（.）のみ使用できます")
+        return v
 
     @field_validator("avatar_url", "background_url", "music_url", "video_url")
     @classmethod

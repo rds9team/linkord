@@ -63,6 +63,7 @@ export const Settings: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [notLoggedIn, setNotLoggedIn] = useState(false);
 
+  const [username, setUsername] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [bio, setBio] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
@@ -97,6 +98,7 @@ export const Settings: React.FC = () => {
       try {
         setInitialLoading(true);
         const data = await fetchMe();
+        setUsername(data.username || '');
         setDisplayName(data.display_name || '');
         setBio(data.bio || '');
         setAvatarUrl(data.avatar_url || '');
@@ -229,6 +231,7 @@ export const Settings: React.FC = () => {
         });
 
       const payload: ProfileUpdateData = {
+        username: username.trim().toLowerCase(),
         display_name: displayName,
         bio: bio,
         avatar_url: avatarUrl,
@@ -583,6 +586,30 @@ export const Settings: React.FC = () => {
                 <p className="text-[11px] text-slate-500 mt-1">プロフィール訪問時にBGMプレイヤーが表示されます</p>
               </div>
             </div>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                ユーザー名 (ページURL)
+              </label>
+              <span className="text-[10px] text-slate-400">
+                半角英数・アンダースコア・ドット (2〜32文字)
+              </span>
+            </div>
+            <div className="relative">
+              <span className="absolute left-3 top-2 text-slate-400 text-xs font-mono">@</span>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-zA-Z0-9_\.]/g, ''))}
+                className="w-full pl-7 pr-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-xs text-slate-800 dark:text-white font-mono focus:outline-none focus:border-purple-500 shadow-sm"
+                required
+              />
+            </div>
+            <p className="text-[11px] text-slate-500 mt-1">
+              プロフィールURL: <span className="font-mono text-purple-600 dark:text-purple-400">linkord.site/@{username || 'username'}</span>
+            </p>
           </div>
 
           <div>

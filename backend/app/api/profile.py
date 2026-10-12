@@ -142,6 +142,19 @@ async def update_my_profile(
 ):
     update_dict = data.model_dump(exclude_unset=True)
     links_data = update_dict.pop("links", None)
+    new_username = update_dict.pop("username", None)
+
+    if new_username is not None:
+        clean_user = new_username.strip().lower()
+        if clean_user != current_user.username:
+            check_stmt = select(Account).where(Account.username == clean_user, Account.id != current_user.id)
+            check_res = await db.execute(check_stmt)
+            if check_res.scalars().first():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"ユーザー名「@{clean_user}」は既に使用されています。別のユーザー名をお試しください。"
+                )
+            current_user.username = clean_user
 
     for field, val in update_dict.items():
         if field in ("avatar_url", "background_url", "music_url", "video_url", "minecraft_uuid", "bio") and val == "":

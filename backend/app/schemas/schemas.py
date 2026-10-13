@@ -406,5 +406,15 @@ class ServerAllianceOut(BaseModel):
     status: str
     created_at: datetime.datetime
 
+class GameOut(BaseModel):
+    id: int
+    name: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+class GameCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=64)
+
+
 
 

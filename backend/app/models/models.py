@@ -258,4 +258,13 @@ class ServerAlliance(Base):
     server_a = relationship("Server", foreign_keys=[server_a_id])
     server_b = relationship("Server", foreign_keys=[server_b_id])
 
+class Game(Base):
+    """ゲームタイトル一覧（検索・自動補完・新規追加用）"""
+    __tablename__ = "games"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(64), unique=True, index=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
+
+
 

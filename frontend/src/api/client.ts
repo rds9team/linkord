@@ -434,6 +434,21 @@ export const requestServerAlliance = (myServerSlug: string, targetServerSlug: st
   });
 };
 
+// --- ゲームマスター (検索 & 自動補完・登録) ---
+export const fetchGames = (q?: string): Promise<{ id: number; name: string }[]> => {
+  return request<{ id: number; name: string }[]>('/api/games', {
+    params: { q },
+  });
+};
+
+export const createGame = (name: string): Promise<{ id: number; name: string }> => {
+  return request<{ id: number; name: string }>('/api/games', {
+    method: 'POST',
+    body: JSON.stringify({ name }),
+  });
+};
+
+
 
 
 

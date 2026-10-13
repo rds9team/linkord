@@ -233,14 +233,13 @@ async def check_reminders():
                 channel = bot.get_channel(int(row["channel_id"]))
                 if channel:
                     try:
-                        user_mention = f"<@{row['user_id']}> " if row["user_id"] else ""
                         embed = discord.Embed(
                             title="Linkord",
                             description="サーバーをupできるようになりました！\n`/up` コマンドで掲載順位をトップに押し上げましょう！",
                             color=0x5865F2
                         )
                         embed.set_footer(text="Linkord • Discordサーバー発見プラットフォーム")
-                        await channel.send(content=user_mention, embed=embed)
+                        await channel.send(embed=embed)
                     except Exception as send_err:
                         logger.warning(f"Failed to send reminder to channel {row['channel_id']}: {send_err}")
 
@@ -373,7 +372,7 @@ async def up_command(interaction: discord.Interaction):
             return
 
         # 2. クールダウン判定（1サーバーにつき2時間 = 7200秒）
-        now = datetime.datetime.utcnow()
+        now = datetime.datetime.now(datetime.timezone.utc)
         updated_at_val = server["updated_at"]
         last_up = None
 
@@ -382,9 +381,9 @@ async def up_command(interaction: discord.Interaction):
                 if isinstance(updated_at_val, str):
                     # ISO format or SQLite format
                     clean_ts = updated_at_val.replace("T", " ").split(".")[0]
-                    last_up = datetime.datetime.strptime(clean_ts, "%Y-%m-%d %H:%M:%S")
+                    last_up = datetime.datetime.strptime(clean_ts, "%Y-%m-%d %H:%M:%S").replace(tzinfo=datetime.timezone.utc)
                 elif isinstance(updated_at_val, (int, float)):
-                    last_up = datetime.datetime.utcfromtimestamp(updated_at_val)
+                    last_up = datetime.datetime.fromtimestamp(updated_at_val, tz=datetime.timezone.utc)
             except Exception as e:
                 logger.warning(f"Failed to parse updated_at '{updated_at_val}': {e}")
 
@@ -465,6 +464,7 @@ async def up_command(interaction: discord.Interaction):
         )
 
         await interaction.followup.send(embed=embed)
+
 
 @bot.tree.command(name="info", description="このサーバーのLinkord掲載ステータスを表示します")
 async def info_command(interaction: discord.Interaction):

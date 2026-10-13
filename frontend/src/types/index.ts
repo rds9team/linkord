@@ -214,3 +214,9 @@ export interface AnnouncementItem {
   created_at: string;
 }
 
+export interface GameItem {
+  id: number;
+  name: string;
+}
+
+

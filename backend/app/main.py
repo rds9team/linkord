@@ -24,7 +24,7 @@ Request.form = _patched_request_form
 
 from fastapi.staticfiles import StaticFiles
 import app.models
-from app.api import auth, profile, server, minecraft, lanyard, report, media, admin, donations, announcements, seo, recruitments, badge, alliances
+from app.api import auth, profile, server, minecraft, lanyard, report, media, admin, donations, announcements, seo, recruitments, badge, alliances, games
 
 # Ensure uploads directory exists
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
@@ -210,6 +210,7 @@ app.include_router(seo.router, prefix="/api")
 app.include_router(recruitments.router, prefix="/api")
 app.include_router(badge.router, prefix="/api")
 app.include_router(alliances.router, prefix="/api")
+app.include_router(games.router, prefix="/api")
 
 
 @app.get("/api/health")

@@ -69,6 +69,8 @@ async def ensure_schema_updated(conn):
     if columns_servers:
         if "guild_id" not in columns_servers:
             await conn.exec_driver_sql("ALTER TABLE servers ADD COLUMN guild_id VARCHAR(64);")
+        if "minecraft_tags" not in columns_servers:
+            await conn.exec_driver_sql("ALTER TABLE servers ADD COLUMN minecraft_tags VARCHAR(256) DEFAULT '';")
 
 async def ensure_defaults(conn):
     # Ensure rds9 admin account exists with founder badge

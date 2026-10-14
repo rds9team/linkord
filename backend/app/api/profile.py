@@ -22,14 +22,15 @@ VIEW_DEBOUNCE_SECONDS = 600
 @router.get("/search", response_model=list[ProfileSearchResult])
 async def search_profiles(
     q: Optional[str] = None,
+    badge: Optional[str] = None,
+    game: Optional[str] = None,
+    sort: Optional[str] = "views",
     limit: int = 20,
     db: AsyncSession = Depends(get_db)
 ):
     stmt = (
         select(Account)
         .where(Account.is_public == True, Account.deleted_at.is_(None))
-        .order_by(Account.views_count.desc())
-        .limit(min(limit, 50))
     )
     if q and q.strip():
         term = f"%{q.strip()}%"
@@ -40,6 +41,25 @@ async def search_profiles(
                 Account.bio.ilike(term)
             )
         )
+    if badge:
+        b = badge.lower().strip()
+        if b == "authed":
+            stmt = stmt.where(Account.has_discord_authed == True)
+        elif b == "supporter":
+            stmt = stmt.where(Account.has_supporter == True)
+        elif b == "team":
+            stmt = stmt.where(Account.has_team == True)
+        elif b == "founder":
+            stmt = stmt.where(Account.has_founder == True)
+    if game:
+        stmt = stmt.where(Account.games.ilike(f"%{game.strip()}%"))
+
+    if sort == "new":
+        stmt = stmt.order_by(Account.created_at.desc())
+    else:
+        stmt = stmt.order_by(Account.views_count.desc())
+
+    stmt = stmt.limit(min(limit, 50))
     result = await db.execute(stmt)
     accounts = result.scalars().all()
     

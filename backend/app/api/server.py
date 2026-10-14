@@ -3,6 +3,7 @@ import datetime
 from typing import Optional
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_
 from app.core.database import get_db
@@ -247,6 +248,91 @@ async def check_bot_installed(guild_id: str):
             "message": f"通信エラーが発生しました: {exc}"
         }
 
+async def get_bot_invite_for_guild(guild_id: str) -> Optional[str]:
+    """Botトークンを使って指定ギルドの有効な招待URLを取得・生成する"""
+    clean_id = str(guild_id).strip()
+    if not clean_id.isdigit():
+        return None
+    bot_token = settings.DISCORD_BOT_TOKEN
+    if not bot_token:
+        return None
+    headers = {"Authorization": f"Bot {bot_token}"}
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            g_resp = await client.get(f"https://discord.com/api/v10/guilds/{clean_id}", headers=headers)
+            if g_resp.status_code == 200:
+                g_data = g_resp.json()
+                vanity_code = g_data.get("vanity_url_code")
+                if vanity_code:
+                    return f"https://discord.gg/{vanity_code}"
+            
+            # 既存の招待一覧を取得
+            inv_resp = await client.get(f"https://discord.com/api/v10/guilds/{clean_id}/invites", headers=headers)
+            if inv_resp.status_code == 200:
+                inv_data = inv_resp.json()
+                if isinstance(inv_data, list) and len(inv_data) > 0:
+                    code = inv_data[0].get("code")
+                    if code:
+                        return f"https://discord.gg/{code}"
+            
+            # 新規招待を作成
+            ch_resp = await client.get(f"https://discord.com/api/v10/guilds/{clean_id}/channels", headers=headers)
+            if ch_resp.status_code == 200:
+                channels = ch_resp.json()
+                text_channels = [c for c in channels if c.get("type") == 0]
+                target_ch = text_channels[0] if text_channels else (channels[0] if channels else None)
+                if target_ch and "id" in target_ch:
+                    create_inv = await client.post(
+                        f"https://discord.com/api/v10/channels/{target_ch['id']}/invites",
+                        headers=headers,
+                        json={"max_age": 0, "max_uses": 0, "unique": False}
+                    )
+                    if create_inv.status_code in (200, 201):
+                        code = create_inv.json().get("code")
+                        if code:
+                            return f"https://discord.gg/{code}"
+    except Exception:
+        pass
+    return None
+
+async def check_server_manage_permission(server: Server, current_user: Optional[Account], db: AsyncSession) -> bool:
+    """サーバーの所有者、またはDiscordギルドの管理者/所有者、またはLinkord運営ならTrueを返す"""
+    if not current_user:
+        return False
+    if server.owner_id == current_user.id:
+        return True
+    if current_user.has_founder or current_user.has_team:
+        return True
+    
+    # Discordギルドの管理者/所有者権限をチェック
+    if server.guild_id:
+        stmt = select(AccountIdentity).where(
+            AccountIdentity.account_id == current_user.id,
+            AccountIdentity.provider == "discord"
+        )
+        res = await db.execute(stmt)
+        identity = res.scalars().first()
+        if identity and identity.access_token:
+            raw_token = decrypt_token(identity.access_token)
+            if raw_token:
+                try:
+                    headers = {"Authorization": f"Bearer {raw_token}"}
+                    async with httpx.AsyncClient(timeout=5.0) as client:
+                        resp = await client.get("https://discord.com/api/v10/users/@me/guilds", headers=headers)
+                        if resp.status_code == 200:
+                            guilds = resp.json()
+                            for g in guilds:
+                                if str(g.get("id")) == str(server.guild_id):
+                                    perms = int(g.get("permissions", 0))
+                                    is_owner = g.get("owner") is True
+                                    has_admin = (perms & 0x8) != 0
+                                    has_manage = (perms & 0x20) != 0
+                                    if is_owner or has_admin or has_manage:
+                                        return True
+                except Exception:
+                    pass
+    return False
+
 async def get_server_boosts_count(db: AsyncSession, server_id: int) -> int:
     stmt = select(func.count(Boost.id)).where(Boost.server_id == server_id)
     res = await db.execute(stmt)
@@ -257,21 +343,32 @@ async def list_servers(
     tag: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
     language: Optional[str] = Query(None),
+    min_members: Optional[int] = Query(None),
+    max_members: Optional[int] = Query(None),
     sort: str = Query("popular"),
     db: AsyncSession = Depends(get_db)
 ):
     stmt = select(Server).where(Server.is_public == True)
     if tag:
-        stmt = stmt.where(Server.tags.contains(tag))
+        t = tag.strip()
+        if t.lower() == "minecraft":
+            stmt = stmt.where(or_(Server.tags.ilike("%minecraft%"), Server.minecraft_tags != ""))
+        else:
+            stmt = stmt.where(or_(Server.tags.contains(t), Server.minecraft_tags.contains(t)))
     if language:
         stmt = stmt.where(Server.language == language)
+    if min_members is not None:
+        stmt = stmt.where(Server.member_count >= min_members)
+    if max_members is not None:
+        stmt = stmt.where(Server.member_count <= max_members)
     if search:
         search_filter = f"%{search}%"
         stmt = stmt.where(
             or_(
                 Server.name.ilike(search_filter),
                 Server.description.ilike(search_filter),
-                Server.tags.ilike(search_filter)
+                Server.tags.ilike(search_filter),
+                Server.minecraft_tags.ilike(search_filter)
             )
         )
 
@@ -392,6 +489,13 @@ async def create_server(
                 detail="サーバーを掲載するには、Discordアカウントの連携が必要です"
             )
 
+    target_tags = data.tags
+    if data.minecraft_tags:
+        tags_list = [t.strip() for t in (target_tags or "").split(",") if t.strip()]
+        if not any(t.lower() == "minecraft" for t in tags_list):
+            tags_list.append("Minecraft")
+        target_tags = ",".join(tags_list)
+
     server = Server(
         owner_id=current_user.id,
         slug=data.slug,
@@ -400,7 +504,8 @@ async def create_server(
         description=data.description,
         icon_url=real_icon_url,
         invite_url=clean_invite,
-        tags=data.tags,
+        tags=target_tags,
+        minecraft_tags=data.minecraft_tags or "",
         language=data.language,
         member_count=member_count,
     )
@@ -408,16 +513,48 @@ async def create_server(
     await db.commit()
     await db.refresh(server)
     server.boosts_count = 0
+    server.can_edit = True
     return server
 
+@router.get("/{slug}/join")
+async def join_server_via_bot(slug: str, db: AsyncSession = Depends(get_db)):
+    """Botから最新の有効招待URLを取得してDiscord参加リンクへリダイレクト"""
+    stmt = select(Server).where(Server.slug == slug)
+    result = await db.execute(stmt)
+    server = result.scalars().first()
+    if not server:
+        raise HTTPException(status_code=404, detail="Server not found")
+
+    target_invite = None
+    if server.guild_id:
+        bot_invite = await get_bot_invite_for_guild(server.guild_id)
+        if bot_invite:
+            target_invite = bot_invite
+            if server.invite_url != bot_invite:
+                server.invite_url = bot_invite
+                await db.commit()
+
+    if not target_invite:
+        target_invite = server.invite_url
+
+    if not (target_invite.startswith("http://") or target_invite.startswith("https://")):
+        target_invite = f"https://discord.gg/{target_invite}"
+
+    return RedirectResponse(url=target_invite, status_code=307)
+
 @router.get("/{slug}", response_model=ServerOut)
-async def get_server(slug: str, db: AsyncSession = Depends(get_db)):
+async def get_server(
+    slug: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[Account] = Depends(get_optional_current_user)
+):
     stmt = select(Server).where(Server.slug == slug, Server.is_public == True)
     result = await db.execute(stmt)
     server = result.scalars().first()
     if not server:
         raise HTTPException(status_code=404, detail="Server not found")
     server.boosts_count = await get_server_boosts_count(db, server.id)
+    server.can_edit = await check_server_manage_permission(server, current_user, db)
     return server
 
 @router.patch("/{slug}", response_model=ServerOut)
@@ -433,10 +570,19 @@ async def update_server(
     if not server:
         raise HTTPException(status_code=404, detail="Server not found")
 
-    if server.owner_id != current_user.id:
-        raise HTTPException(status_code=403, detail="このサーバーの編集権限がありません")
+    can_edit = await check_server_manage_permission(server, current_user, db)
+    if not can_edit:
+        raise HTTPException(status_code=403, detail="このサーバーの編集権限がありません（サーバー所有者または管理者権限が必要です）")
 
     update_dict = data.model_dump(exclude_unset=True)
+    
+    # Minecraftタグが指定された場合、tagsにもMinecraftを含める
+    if "minecraft_tags" in update_dict and update_dict["minecraft_tags"]:
+        current_tags = [t.strip() for t in (update_dict.get("tags") or server.tags or "").split(",") if t.strip()]
+        if not any(t.lower() == "minecraft" for t in current_tags):
+            current_tags.append("Minecraft")
+        update_dict["tags"] = ",".join(current_tags)
+
     for field, val in update_dict.items():
         setattr(server, field, val)
 
@@ -444,6 +590,7 @@ async def update_server(
     await db.commit()
     await db.refresh(server)
     server.boosts_count = await get_server_boosts_count(db, server.id)
+    server.can_edit = True
     return server
 
 @router.delete("/{slug}")
@@ -458,7 +605,8 @@ async def delete_server(
     if not server:
         raise HTTPException(status_code=404, detail="Server not found")
 
-    if server.owner_id != current_user.id:
+    can_edit = await check_server_manage_permission(server, current_user, db)
+    if not can_edit:
         raise HTTPException(status_code=403, detail="このサーバーの削除権限がありません")
 
     await db.delete(server)
@@ -478,8 +626,15 @@ async def sync_server_discord_stats(
     if not server:
         raise HTTPException(status_code=404, detail="Server not found")
 
-    if server.owner_id != current_user.id:
+    can_edit = await check_server_manage_permission(server, current_user, db)
+    if not can_edit:
         raise HTTPException(status_code=403, detail="このサーバーの同期権限がありません")
+
+    # Botから最新招待を取得して同期
+    if server.guild_id:
+        bot_inv = await get_bot_invite_for_guild(server.guild_id)
+        if bot_inv:
+            server.invite_url = bot_inv
 
     # Match invite code
     match = re.search(r"(?:discord\.gg/|discord\.com/invite/)?([a-zA-Z0-9_-]+)$", server.invite_url.strip())

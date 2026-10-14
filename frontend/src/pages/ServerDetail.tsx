@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Flame, Flag, ExternalLink, ArrowLeft, Loader2, ServerCrash, RefreshCw, Check, Code, ShieldCheck, Copy, Share2 } from 'lucide-react';
+import { Flame, Flag, ExternalLink, ArrowLeft, Loader2, ServerCrash, RefreshCw, Check, Code, ShieldCheck, Copy, Share2, Edit, Sparkles } from 'lucide-react';
 import { ReportModal } from '../components/ReportModal';
-import { fetchServer, boostServer, syncServerDiscordStats, fetchServerAlliances } from '../api/client';
+import { EditServerModal } from '../components/EditServerModal';
+import { fetchServer, boostServer, syncServerDiscordStats, fetchServerAlliances, getServerJoinUrl } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { ServerData, ServerAllianceItem } from '../types';
 import { useTitle } from '../hooks/useTitle';
@@ -25,6 +26,7 @@ export const ServerDetail: React.FC = () => {
   const [boosts, setBoosts] = useState(0);
   const [boosted, setBoosted] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [boostError, setBoostError] = useState<string | null>(null);
 
   const handleGoBack = () => {
@@ -185,22 +187,23 @@ export const ServerDetail: React.FC = () => {
 
           {/* Action Buttons */}
           <div className="flex sm:flex-col gap-2 w-full sm:w-auto">
-            {isSafeHttpUrl(server.invite_url) ? (
-              <a
-                href={server.invite_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition shadow-lg shadow-indigo-600/20"
-              >
-                <span>サーバーに参加</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
-            ) : (
+            <a
+              href={getServerJoinUrl(server.slug)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition shadow-lg shadow-indigo-600/20"
+            >
+              <span>サーバーに参加</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+            {server.can_edit && (
               <button
-                disabled
-                className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl bg-slate-700 text-slate-400 font-bold text-xs flex items-center justify-center gap-1.5 cursor-not-allowed"
+                type="button"
+                onClick={() => setIsEditModalOpen(true)}
+                className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl border border-purple-500/40 hover:border-purple-500/60 bg-purple-600/20 hover:bg-purple-600/30 text-purple-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition"
               >
-                <span>招待リンク無効</span>
+                <Edit className="w-3.5 h-3.5" />
+                <span>サーバー情報を編集</span>
               </button>
             )}
             <button
@@ -320,7 +323,7 @@ export const ServerDetail: React.FC = () => {
             </button>
           </div>
           <p className="text-[11px] text-slate-400 mb-3">
-            READMEやブログに貼ると、リアルタイム人数とLinkordへのリンクが自動反映されます。
+            READMEやブログに貼ると、サーバーアイコン・リアルタイム人数・Linkordへのリンクが自動反映されます。
           </p>
           <div className="p-3 rounded-2xl bg-black/40 border border-white/5 overflow-x-auto flex justify-center">
             <img
@@ -330,6 +333,26 @@ export const ServerDetail: React.FC = () => {
             />
           </div>
         </div>
+
+        {/* Minecraft Tags */}
+        {server.minecraft_tags && (
+          <div className="border-t border-white/5 pt-5 mb-6">
+            <div className="flex items-center gap-2 mb-2 text-xs font-bold text-emerald-400 uppercase tracking-wider">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Minecraft対応サーバー</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {server.minecraft_tags.split(',').map(t => t.trim()).filter(Boolean).map(mcTag => (
+                <span
+                  key={mcTag}
+                  className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-300 border border-emerald-500/20"
+                >
+                  {mcTag}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Tags */}
         {tagsList.length > 0 && (
@@ -360,6 +383,13 @@ export const ServerDetail: React.FC = () => {
         onClose={() => setIsReportOpen(false)}
         targetType="server"
         targetId={server.slug}
+      />
+
+      <EditServerModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        server={server}
+        onUpdated={(updated) => setServer(updated)}
       />
     </div>
   );

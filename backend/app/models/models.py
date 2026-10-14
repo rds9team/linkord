@@ -107,6 +107,7 @@ class Server(Base):
     icon_url = Column(String(512), nullable=True)
     invite_url = Column(String(512), nullable=False)
     tags = Column(String(256), default="", nullable=False)
+    minecraft_tags = Column(String(256), default="", nullable=False)
     language = Column(String(16), default="ja", nullable=False)
     member_count = Column(Integer, default=0, nullable=False)
     is_public = Column(Boolean, default=True, nullable=False)

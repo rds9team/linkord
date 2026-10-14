@@ -15,6 +15,8 @@ import {
   batchUpdateBadges,
   fetchAdminAuditLogs,
   fetchAnnouncements,
+  fetchAdminAllAnnouncements,
+  toggleAdminAnnouncement,
   createAdminAnnouncement,
   deleteAdminAnnouncement,
   AdminAuditLogItem,
@@ -61,7 +63,7 @@ export const Admin: React.FC = () => {
   const loadAnnouncements = async () => {
     try {
       setLoadingAnnouncements(true);
-      const items = await fetchAnnouncements(50);
+      const items = await fetchAdminAllAnnouncements(100);
       setAnnouncements(items || []);
     } catch {
       setAnnouncements([]);
@@ -87,7 +89,7 @@ export const Admin: React.FC = () => {
             fetchAdminStats(),
             fetchAdminReports(statusFilter || undefined),
             fetchAdminDonations(donationFilter || undefined),
-            fetchAnnouncements(50),
+            fetchAdminAllAnnouncements(100),
           ]);
           if (statsData.status === 'fulfilled') setStats(statsData.value);
           if (reportsData.status === 'fulfilled') setReports(reportsData.value);
@@ -132,14 +134,31 @@ export const Admin: React.FC = () => {
     }
   };
 
-  const handleDeleteAnnouncement = async (id: number) => {
-    if (!confirm(`お知らせ #${id} を削除しますか？`)) return;
+  const handleToggleAnnouncement = async (id: number) => {
+    try {
+      const res = await toggleAdminAnnouncement(id);
+      setAnnouncements((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, is_active: res.is_active } : a))
+      );
+      setMessage({
+        text: res.is_active
+          ? `お知らせ #${id} を再公開しました`
+          : `お知らせ #${id} を取り下げました（非公開）`,
+        type: 'success',
+      });
+    } catch (err: any) {
+      setMessage({ text: err.message || '公開状態の変更に失敗しました', type: 'error' });
+    }
+  };
+
+  const handleDeleteAnnouncementHistory = async (id: number) => {
+    if (!confirm(`お知らせ #${id} を配信履歴データベースから完全に抹消しますか？\n※この操作は取り消せません。`)) return;
     try {
       await deleteAdminAnnouncement(id);
       setAnnouncements((prev) => prev.filter((a) => a.id !== id));
-      setMessage({ text: `お知らせ #${id} を削除しました`, type: 'success' });
+      setMessage({ text: `お知らせ #${id} の配信履歴を完全に削除しました`, type: 'success' });
     } catch (err: any) {
-      setMessage({ text: err.message || '削除に失敗しました', type: 'error' });
+      setMessage({ text: err.message || '履歴の削除に失敗しました', type: 'error' });
     }
   };
 
@@ -1016,13 +1035,22 @@ export const Admin: React.FC = () => {
                   >
                     <div className="space-y-1.5 min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-300 border border-purple-500/30">
                           #{item.id}
                         </span>
                         <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-md bg-white/10 text-slate-300">
                           {item.type}
                         </span>
-                        <h4 className="text-xs font-bold text-white">
+                        {item.is_active !== false ? (
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                            公開中
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                            取り下げ済み (非公開)
+                          </span>
+                        )}
+                        <h4 className={`text-xs font-bold ${item.is_active !== false ? 'text-white' : 'text-slate-400 line-through'}`}>
                           {item.title}
                         </h4>
                       </div>
@@ -1041,18 +1069,46 @@ export const Admin: React.FC = () => {
                         </a>
                       )}
                     </div>
-                    <div className="flex items-center sm:flex-col items-end gap-2 shrink-0">
+                    <div className="flex flex-col sm:items-end gap-2 shrink-0">
                       <span className="text-[10px] text-slate-500 font-mono">
                         {new Date(item.created_at).toLocaleString('ja-JP')}
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteAnnouncement(item.id)}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer"
-                        title="お知らせを削除"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {/* お知らせ削除 (取り下げ / 再公開) */}
+                        <button
+                          type="button"
+                          onClick={() => handleToggleAnnouncement(item.id)}
+                          className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition flex items-center gap-1 cursor-pointer ${
+                            item.is_active !== false
+                              ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                              : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                          }`}
+                          title={item.is_active !== false ? '全ユーザーへの公開を取り下げます（履歴は保持）' : '再公開します'}
+                        >
+                          {item.is_active !== false ? (
+                            <>
+                              <EyeOff className="w-3 h-3" />
+                              <span>お知らせ取り下げ</span>
+                            </>
+                          ) : (
+                            <>
+                              <Eye className="w-3 h-3" />
+                              <span>再公開</span>
+                            </>
+                          )}
+                        </button>
+
+                        {/* 履歴削除 (DB完全抹消) */}
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteAnnouncementHistory(item.id)}
+                          className="px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[11px] font-semibold transition flex items-center gap-1 cursor-pointer"
+                          title="配信履歴データベースから完全に抹消します"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>履歴削除</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}

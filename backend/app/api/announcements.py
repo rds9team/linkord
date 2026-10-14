@@ -55,12 +55,54 @@ async def create_announcement(
 
     return announcement
 
+@router.get("/all", response_model=List[AnnouncementOut])
+async def list_all_announcements_for_admin(
+    admin: Account = Depends(require_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """管理者用: 配信中・取り下げ済みを含む全お知らせ履歴一覧"""
+    stmt = (
+        select(Announcement)
+        .order_by(Announcement.created_at.desc())
+        .limit(100)
+    )
+    res = await db.execute(stmt)
+    return res.scalars().all()
+
+@router.patch("/{announcement_id}/toggle", response_model=AnnouncementOut)
+async def toggle_announcement_active(
+    announcement_id: int,
+    admin: Account = Depends(require_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """お知らせ削除（一般公開の終了/取り下げ）および再公開トグル"""
+    stmt = select(Announcement).where(Announcement.id == announcement_id)
+    res = await db.execute(stmt)
+    announcement = res.scalars().first()
+    if not announcement:
+        raise HTTPException(status_code=404, detail="お知らせが見つかりません")
+
+    announcement.is_active = not announcement.is_active
+    action_name = "publish_announcement" if announcement.is_active else "unpublish_announcement"
+    await log_audit_action(
+        db=db,
+        admin_id=admin.id,
+        action=action_name,
+        target_type="announcement",
+        target_id=announcement_id,
+        details=f"タイトル: {announcement.title} (公開状態: {announcement.is_active})"
+    )
+    await db.commit()
+    await db.refresh(announcement)
+    return announcement
+
 @router.delete("/{announcement_id}")
 async def delete_announcement(
     announcement_id: int,
     admin: Account = Depends(require_admin_user),
     db: AsyncSession = Depends(get_db)
 ):
+    """履歴削除: お知らせをDBおよび配信履歴から完全に抹消"""
     stmt = select(Announcement).where(Announcement.id == announcement_id)
     res = await db.execute(stmt)
     announcement = res.scalars().first()
@@ -71,10 +113,10 @@ async def delete_announcement(
     await log_audit_action(
         db=db,
         admin_id=admin.id,
-        action="delete_announcement",
+        action="delete_announcement_history",
         target_type="announcement",
         target_id=announcement_id,
-        details=f"タイトル: {announcement.title}"
+        details=f"履歴完全削除: {announcement.title}"
     )
     await db.commit()
-    return {"status": "ok", "message": f"お知らせ #{announcement_id} を削除しました"}
+    return {"status": "ok", "message": f"お知らせ #{announcement_id} の配信履歴を完全に削除しました"}

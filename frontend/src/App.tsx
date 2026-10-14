@@ -28,6 +28,7 @@ const AppContent: React.FC = () => {
     >
 
       <Navbar />
+      <div className="pt-16" />
       <DiscordReauthBanner />
 
       <PageTransition>

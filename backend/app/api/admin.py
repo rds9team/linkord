@@ -195,6 +195,9 @@ async def update_profile_badges(
         target.has_team = has_team
         changes.append(f"team={has_team}")
     if has_founder is not None:
+        admin_usernames = [u.strip().lower() for u in settings.get_admin_usernames()]
+        if not (admin.username.lower() in admin_usernames or bool(admin.has_founder)):
+            raise HTTPException(status_code=403, detail="Founderバッジの変更には最上位管理者権限が必要です")
         target.has_founder = has_founder
         changes.append(f"founder={has_founder}")
     if has_discord_authed is not None:
@@ -225,6 +228,10 @@ async def batch_update_badges(
     admin: Account = Depends(require_admin_user),
     db: AsyncSession = Depends(get_db)
 ):
+    if data.has_founder is not None:
+        admin_usernames = [u.strip().lower() for u in settings.get_admin_usernames()]
+        if not (admin.username.lower() in admin_usernames or bool(admin.has_founder)):
+            raise HTTPException(status_code=403, detail="Founderバッジの一括変更には最上位管理者権限が必要です")
     raw_names = [u.strip().lstrip("@") for u in data.usernames if u.strip()]
     unique_names = list(dict.fromkeys(raw_names))
     if not unique_names:

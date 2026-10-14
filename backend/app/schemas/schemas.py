@@ -158,10 +158,12 @@ class ServerOut(BaseModel):
     icon_url: Optional[str] = None
     invite_url: str
     tags: str
+    minecraft_tags: Optional[str] = ""
     language: str
     member_count: int
     boosts_count: int = 0
     is_public: bool
+    can_edit: Optional[bool] = False
     created_at: datetime.datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -174,6 +176,7 @@ class ServerCreate(BaseModel):
     icon_url: Optional[str] = None
     invite_url: str = Field(..., max_length=512)
     tags: str = ""
+    minecraft_tags: Optional[str] = ""
     language: str = "ja"
 
     @field_validator("invite_url")
@@ -200,6 +203,7 @@ class ServerUpdate(BaseModel):
     icon_url: Optional[str] = None
     invite_url: Optional[str] = Field(None, max_length=512)
     tags: Optional[str] = None
+    minecraft_tags: Optional[str] = None
     language: Optional[str] = None
 
     @field_validator("invite_url")

@@ -361,32 +361,7 @@ export const Profile: React.FC = () => {
           linkord.net/@{profile.username}
         </span>
         
-        <div className="flex items-center gap-2 flex-shrink-0">
-          {/* Audio Status Pill Button */}
-          {profile.music_url && (
-            <button
-              type="button"
-              onClick={() => {
-                window.dispatchEvent(new CustomEvent('linkord:toggle-bgm'));
-              }}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-full border transition cursor-pointer select-none active:scale-95 ${
-                isPlayingAudio
-                  ? 'border-purple-500/50 bg-purple-500/20 text-purple-200 shadow-sm shadow-purple-500/30'
-                  : 'border-slate-300 dark:border-white/10 bg-slate-200/50 dark:bg-white/5 hover:bg-purple-500/10 text-slate-400 hover:text-purple-300'
-              }`}
-              title={isPlayingAudio ? 'BGMを停止' : 'BGMを再生'}
-            >
-              {isPlayingAudio ? (
-                <Pause className="w-3 h-3 text-purple-400" />
-              ) : (
-                <Play className="w-3 h-3 text-purple-400 ml-0.5" />
-              )}
-              <span className="text-[10px] font-semibold">
-                {isPlayingAudio ? 'BGM停止' : 'BGM再生'}
-              </span>
-            </button>
-          )}
-        </div>
+        <div className="w-8 flex-shrink-0" />
       </div>
 
       {/* Main Profile Panel */}
@@ -449,91 +424,106 @@ export const Profile: React.FC = () => {
                 </div>
 
                 <div className="flex-1 text-center sm:text-left min-w-0 pt-1 sm:pt-0">
-                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1.5">
+                  {/* Display Name & Badges */}
+                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1">
                     <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight truncate text-white">{profile.display_name}</h1>
-                    {/* Badges in User's Requested Uniform Pill Style */}
                     {!profile.hide_badges && (
-                      <Badges
-                        hasDiscordAuthed={profile.has_discord_authed}
-                        hasFounder={profile.has_founder}
-                        hasTeam={profile.has_team}
-                        hasSupporter={profile.has_supporter}
-                      />
+                      <div className="inline-flex items-center">
+                        <Badges
+                          hasDiscordAuthed={profile.has_discord_authed}
+                          hasFounder={profile.has_founder}
+                          hasTeam={profile.has_team}
+                          hasSupporter={profile.has_supporter}
+                        />
+                      </div>
                     )}
                   </div>
 
-            <div className="flex items-center justify-center sm:justify-start gap-2.5 mb-2 flex-wrap">
-              <p className="font-mono text-xs text-slate-500 dark:text-slate-400 flex items-center">
-                <span>@{profile.username}</span>
-                {profile.tag && <span className="text-purple-400 font-semibold opacity-90">#{profile.tag}</span>}
-              </p>
-              {!profile.hide_followers && (
-                <>
-                  <button
-                    onClick={() => {
-                      setFollowModalType('followers');
-                      setIsFollowModalOpen(true);
-                    }}
-                    className="text-[11px] text-slate-400 hover:text-white flex items-center gap-1 font-medium bg-white/5 hover:bg-white/10 px-2 py-0.5 rounded-full transition cursor-pointer"
-                    title="フォロワー一覧を表示"
-                  >
-                    <Users className="w-3 h-3 text-slate-400" />
-                    <span className="font-semibold text-slate-200">{followersCount}</span> フォロワー
-                  </button>
-                  <button
-                    onClick={() => {
-                      setFollowModalType('following');
-                      setIsFollowModalOpen(true);
-                    }}
-                    className="text-[11px] text-slate-400 hover:text-white flex items-center gap-1 font-medium bg-white/5 hover:bg-white/10 px-2 py-0.5 rounded-full transition cursor-pointer"
-                    title="フォロー中一覧を表示"
-                  >
-                    <span className="font-semibold text-slate-200">{profile.following_count || 0}</span> フォロー中
-                  </button>
-                </>
-              )}
-              {currentUser?.username !== profile.username && (
-                <button
-                  onClick={handleToggleFollow}
-                  disabled={followLoading}
-                  className={`px-3 py-1 rounded-full text-[11px] font-semibold transition flex items-center gap-1 shadow-sm ${
-                    isFollowing
-                      ? 'bg-white/10 hover:bg-rose-500/20 text-slate-200 hover:text-rose-300 border border-white/10 hover:border-rose-500/30'
-                      : 'bg-purple-600 hover:bg-purple-500 text-white shadow-purple-600/30'
-                  }`}
-                >
-                  {followLoading ? (
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                  ) : isFollowing ? (
-                    <>
-                      <UserCheck className="w-3 h-3 text-emerald-400" />
-                      <span>フォロー中</span>
-                    </>
-                  ) : (
-                    <>
-                      <UserPlus className="w-3 h-3" />
-                      <span>フォロー</span>
-                    </>
-                  )}
-                </button>
-              )}
+                  {/* Username & Tag */}
+                  <div className="flex items-center justify-center sm:justify-start gap-1.5 mb-2.5">
+                    <p className="font-mono text-xs text-slate-400 flex items-center">
+                      <span>@{profile.username}</span>
+                      {profile.tag && <span className="text-purple-400 font-semibold opacity-90">#{profile.tag}</span>}
+                    </p>
+                  </div>
 
-              {/* Share Profile to X (Twitter) */}
-              <button
-                onClick={() => {
-                  const tweetText = `Linkordで ${profile.display_name} (@${profile.username}) のプロフィールをチェック！\n\n`;
-                  const shareUrl = `https://linkord.net/@${profile.username}`;
-                  const hashtags = `Linkord,プロフィール`;
-                  const xUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(shareUrl)}&hashtags=${encodeURIComponent(hashtags)}`;
-                  window.open(xUrl, '_blank', 'noopener,noreferrer');
-                }}
-                className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white transition flex items-center gap-1 cursor-pointer"
-                title="X (Twitter) でこのプロフィールをシェア"
-              >
-                <Share2 className="w-3 h-3 text-sky-400" />
-                <span>シェア</span>
-              </button>
-            </div>
+                  {/* Followers & Action Buttons Row */}
+                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-3">
+                    {!profile.hide_followers && (
+                      <div className="inline-flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full px-2.5 py-1 text-[11px] text-slate-300">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFollowModalType('followers');
+                            setIsFollowModalOpen(true);
+                          }}
+                          className="hover:text-white transition cursor-pointer font-medium flex items-center gap-1"
+                          title="フォロワー一覧を表示"
+                        >
+                          <Users className="w-3 h-3 text-slate-400" />
+                          <span className="font-bold text-white">{followersCount}</span>
+                          <span className="text-slate-400">フォロワー</span>
+                        </button>
+                        <span className="text-slate-600">·</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFollowModalType('following');
+                            setIsFollowModalOpen(true);
+                          }}
+                          className="hover:text-white transition cursor-pointer font-medium flex items-center gap-1"
+                          title="フォロー中一覧を表示"
+                        >
+                          <span className="font-bold text-white">{profile.following_count || 0}</span>
+                          <span className="text-slate-400">フォロー中</span>
+                        </button>
+                      </div>
+                    )}
+
+                    {currentUser?.username !== profile.username && (
+                      <button
+                        type="button"
+                        onClick={handleToggleFollow}
+                        disabled={followLoading}
+                        className={`px-3 py-1 rounded-full text-[11px] font-semibold transition flex items-center gap-1 shadow-sm cursor-pointer ${
+                          isFollowing
+                            ? 'bg-white/10 hover:bg-rose-500/20 text-slate-200 hover:text-rose-300 border border-white/10 hover:border-rose-500/30'
+                            : 'bg-purple-600 hover:bg-purple-500 text-white shadow-purple-600/30'
+                        }`}
+                      >
+                        {followLoading ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : isFollowing ? (
+                          <>
+                            <UserCheck className="w-3 h-3 text-emerald-400" />
+                            <span>フォロー中</span>
+                          </>
+                        ) : (
+                          <>
+                            <UserPlus className="w-3 h-3" />
+                            <span>フォロー</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+
+                    {/* Share Profile to X (Twitter) */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const tweetText = `Linkordで ${profile.display_name} (@${profile.username}) のプロフィールをチェック！\n\n`;
+                        const shareUrl = `https://linkord.net/@${profile.username}`;
+                        const hashtags = `Linkord,プロフィール`;
+                        const xUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(shareUrl)}&hashtags=${encodeURIComponent(hashtags)}`;
+                        window.open(xUrl, '_blank', 'noopener,noreferrer');
+                      }}
+                      className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white transition flex items-center gap-1 cursor-pointer"
+                      title="X (Twitter) でこのプロフィールをシェア"
+                    >
+                      <Share2 className="w-3 h-3 text-sky-400" />
+                      <span>シェア</span>
+                    </button>
+                  </div>
 
             {/* Discord Custom Status Bubble (Lanyard) */}
             {customStatusActivity && (
@@ -577,58 +567,17 @@ export const Profile: React.FC = () => {
           </div>
         </div>
 
-        {/* Profile BGM Widget (Interactive play/pause card) */}
+        {/* Profile BGM Integrated Player */}
         {profile.music_url && (
-          <div
-            onClick={() => {
-              window.dispatchEvent(new CustomEvent('linkord:toggle-bgm'));
-            }}
-            className={`mb-4 p-3 rounded-2xl flex items-center justify-between gap-3 border transition cursor-pointer select-none group ${
-              isPlayingAudio
-                ? isLight
-                  ? 'bg-purple-50 border-purple-300 shadow-md shadow-purple-200/50'
-                  : 'bg-purple-950/30 border-purple-500/40 shadow-lg shadow-purple-900/20'
-                : isLight
-                  ? 'bg-white/60 hover:bg-white/90 border-slate-200'
-                  : 'bg-white/[0.03] hover:bg-white/[0.06] border-white/10'
-            }`}
-          >
-            <div className="flex items-center gap-3 min-w-0">
-              <div
-                className={`w-9 h-9 rounded-xl flex items-center justify-center transition shadow-md flex-shrink-0 ${
-                  isPlayingAudio
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-purple-600/20 text-purple-400 group-hover:bg-purple-600 group-hover:text-white'
-                }`}
-              >
-                {isPlayingAudio ? (
-                  <Pause className="w-4 h-4" />
-                ) : (
-                  <Play className="w-4 h-4 ml-0.5" />
-                )}
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-bold text-slate-800 dark:text-white truncate">
-                    {profile.display_name || profile.username} のBGM
-                  </span>
-                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 border border-purple-500/30">
-                    BGM
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                  {isPlayingAudio ? '再生中 (タップして停止)' : 'タップして再生'}
-                </p>
-              </div>
-            </div>
-
-            {isPlayingAudio && (
-              <div className="flex items-end gap-0.5 h-4 px-2 flex-shrink-0">
-                <span className="w-1 bg-purple-500 rounded-full animate-[bounce_0.6s_ease-in-out_infinite] h-full" />
-                <span className="w-1 bg-purple-500 rounded-full animate-[bounce_0.8s_ease-in-out_infinite_0.2s] h-3/4" />
-                <span className="w-1 bg-purple-500 rounded-full animate-[bounce_0.5s_ease-in-out_infinite_0.4s] h-1/2" />
-              </div>
-            )}
+          <div className="mb-4">
+            <MusicPlayer
+              musicUrl={resolveMediaUrl(profile.music_url) || profile.music_url}
+              username={profile.username}
+              displayName={profile.display_name}
+              avatarUrl={profile.avatar_url}
+              embedded={true}
+              onPlayStateChange={(playing) => setIsPlayingAudio(playing)}
+            />
           </div>
         )}
 
@@ -893,11 +842,6 @@ export const Profile: React.FC = () => {
         </p>
       </footer>
 
-      {/* Spacer to prevent overlapping with floating music player */}
-      {profile.music_url && (
-        <div className="h-16 sm:h-20 pointer-events-none" aria-hidden="true" />
-      )}
-
       {/* Report Modal */}
       <ReportModal
         isOpen={isReportOpen}
@@ -913,17 +857,6 @@ export const Profile: React.FC = () => {
         username={profile.username}
         type={followModalType}
       />
-
-      {/* Rich BGM Player (User-controlled playback, no overlay, resolved URL) */}
-      {profile.music_url && (
-        <MusicPlayer
-          musicUrl={resolveMediaUrl(profile.music_url) || profile.music_url}
-          username={profile.username}
-          displayName={profile.display_name}
-          avatarUrl={profile.avatar_url}
-          onPlayStateChange={(playing) => setIsPlayingAudio(playing)}
-        />
-      )}
     </div>
   );
 };

@@ -3,6 +3,7 @@ import pytest
 from httpx import AsyncClient, ASGITransport
 from app.main import app
 from app.core.database import engine, Base, AsyncSessionLocal
+from sqlalchemy import select, delete
 from tests.conftest import create_test_account_and_session
 from app.models.models import Account, Report, Follow
 
@@ -40,7 +41,8 @@ async def test_follow_list_and_search_and_admin():
         admin_id = admin_acc.id
         user2_id = user2_acc.id
 
-        # Make user2 follow admin
+        # Make user2 follow admin cleanly
+        await db.execute(delete(Follow).where(Follow.follower_id == user2_id, Follow.following_id == admin_id))
         follow = Follow(follower_id=user2_id, following_id=admin_id)
         # Create a sample report
         rep = Report(

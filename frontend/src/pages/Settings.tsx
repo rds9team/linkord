@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Palette, User, Gamepad2, Save, Check, Loader2, AlertCircle, LogIn, LogOut, Upload, Image as ImageIcon, Trash2, Radio, ExternalLink, Music, Film, Share2, Plus, X, Globe, MessageSquare, Github, Twitter, Code, Youtube, Twitch, Clock, Search, ChevronDown } from 'lucide-react';
 import { fetchMe, updateMyProfile, uploadMedia, deleteAccount, getDiscordLoginUrl, fetchGames, createGame } from '../api/client';
@@ -92,6 +92,8 @@ export const Settings: React.FC = () => {
   const [saved, setSaved] = useState(false);
   const [linkingDiscord, setLinkingDiscord] = useState(false);
 
+  const initialValues = useRef<string>('');
+
   const handleConnectDiscord = async () => {
     try {
       setLinkingDiscord(true);
@@ -176,6 +178,26 @@ export const Settings: React.FC = () => {
         if (data.links && Array.isArray(data.links)) {
           setLinks(data.links.map(l => ({ title: l.title, url: l.url, icon: l.icon || 'link' })));
         }
+        
+        const initialSnapshot = JSON.stringify({
+          username: (data.username || '').trim().toLowerCase(),
+          displayName: data.display_name || '',
+          bio: data.bio || '',
+          avatarUrl: data.avatar_url || '',
+          backgroundUrl: data.background_url || '',
+          musicUrl: data.music_url || '',
+          videoUrl: data.video_url || '',
+          themeMode: data.theme_mode === 'light' ? 'light' : 'dark',
+          themeId: data.theme_id || 'midnight',
+          hideBadges: !!data.hide_badges,
+          hideFollowers: !!data.hide_followers,
+          minecraftId: data.minecraft_uuid || '',
+          games: (data.games || '').trim(),
+          activeHours: (data.active_hours || '').trim(),
+          playStyle: (data.play_style || '').trim(),
+          links: (data.links || []).map(l => ({ title: l.title, url: l.url, icon: l.icon || 'link' }))
+        });
+        initialValues.current = initialSnapshot;
       } catch (err: any) {
         if (err.message && (err.message.includes('401') || err.message.includes('Not authenticated'))) {
           setNotLoggedIn(true);
@@ -189,6 +211,38 @@ export const Settings: React.FC = () => {
 
     loadProfile();
   }, []);
+
+  const currentSnapshot = JSON.stringify({
+    username: username.trim().toLowerCase(),
+    displayName,
+    bio,
+    avatarUrl,
+    backgroundUrl,
+    musicUrl,
+    videoUrl,
+    themeMode,
+    themeId,
+    hideBadges,
+    hideFollowers,
+    minecraftId,
+    games: games.trim(),
+    activeHours: activeHours.trim(),
+    playStyle: playStyle.trim(),
+    links
+  });
+
+  const isDirty = Boolean(initialValues.current && initialValues.current !== currentSnapshot);
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDirty]);
 
   const addCustomLink = () => {
     if (links.length >= 8) return;
@@ -341,6 +395,24 @@ export const Settings: React.FC = () => {
 
       await updateMyProfile(payload);
       setLinks(cleanedLinks);
+      initialValues.current = JSON.stringify({
+        username: payload.username,
+        displayName: payload.display_name,
+        bio: payload.bio,
+        avatarUrl: payload.avatar_url,
+        backgroundUrl: payload.background_url,
+        musicUrl: payload.music_url,
+        videoUrl: payload.video_url,
+        themeMode: payload.theme_mode,
+        themeId: payload.theme_id,
+        hideBadges: payload.hide_badges,
+        hideFollowers: payload.hide_followers,
+        minecraftId: payload.minecraft_uuid,
+        games: payload.games,
+        activeHours: payload.active_hours,
+        playStyle: payload.play_style,
+        links: cleanedLinks
+      });
       await refreshUser();
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
@@ -1387,18 +1459,46 @@ export const Settings: React.FC = () => {
         } : undefined}
       />
       {/* Sticky Bottom Floating Save Bar */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-[calc(100%-2rem)] max-w-xl pointer-events-none">
-        <div className="pointer-events-auto bg-white/90 dark:bg-[#12131a]/90 backdrop-blur-xl border border-slate-200/80 dark:border-white/10 shadow-2xl rounded-2xl px-5 py-3 flex items-center justify-between gap-4">
+      <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 w-[calc(100%-2rem)] max-w-xl pointer-events-none transition-all duration-300">
+        <div
+          className={`pointer-events-auto backdrop-blur-xl border shadow-2xl rounded-2xl px-5 py-3.5 flex items-center justify-between gap-4 transition-all duration-300 ${
+            isDirty
+              ? 'bg-amber-950/40 dark:bg-amber-950/60 border-amber-500/60 shadow-amber-500/10 ring-2 ring-amber-400/30'
+              : saved
+              ? 'bg-emerald-950/40 dark:bg-emerald-950/60 border-emerald-500/60 shadow-emerald-500/10'
+              : 'bg-white/90 dark:bg-[#12131a]/90 border-slate-200/80 dark:border-white/10'
+          }`}
+        >
           <div className="flex items-center gap-2.5 min-w-0">
-            <span className={`w-2 h-2 rounded-full flex-shrink-0 transition-colors ${saved ? 'bg-emerald-400 shadow-sm shadow-emerald-400/50' : 'bg-slate-400/60'}`} />
-            <span className="text-xs text-slate-600 dark:text-slate-300 truncate">
-              {saved ? '設定を保存しました' : '未保存の変更がある場合は保存してください'}
+            <span
+              className={`w-2.5 h-2.5 rounded-full flex-shrink-0 transition-all ${
+                saved
+                  ? 'bg-emerald-400 shadow-md shadow-emerald-400/50 scale-110'
+                  : isDirty
+                  ? 'bg-amber-400 shadow-md shadow-amber-400/50 animate-ping'
+                  : 'bg-slate-400/60'
+              }`}
+            />
+            <span
+              className={`text-xs font-semibold truncate transition-colors ${
+                saved
+                  ? 'text-emerald-400'
+                  : isDirty
+                  ? 'text-amber-300 font-bold'
+                  : 'text-slate-600 dark:text-slate-300'
+              }`}
+            >
+              {saved
+                ? '設定を保存しました！'
+                : isDirty
+                ? '未保存の変更があります'
+                : 'すべての変更は保存されています'}
             </span>
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0">
             {saved && (
-              <span className="text-xs text-emerald-500 dark:text-emerald-400 font-medium flex items-center gap-1 animate-fade-in mr-1">
+              <span className="text-xs text-emerald-400 font-medium flex items-center gap-1 animate-fade-in mr-1">
                 <Check className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">完了</span>
               </span>
@@ -1407,14 +1507,18 @@ export const Settings: React.FC = () => {
               type="submit"
               form="settings-form"
               disabled={saving}
-              className="px-5 py-2 rounded-xl bg-[#5865F2] hover:bg-[#4752c4] active:scale-[0.98] disabled:opacity-50 text-white font-semibold text-xs flex items-center gap-1.5 shadow-md shadow-[#5865F2]/20 transition cursor-pointer"
+              className={`px-5 py-2.5 rounded-xl text-white font-bold text-xs flex items-center gap-1.5 shadow-lg active:scale-[0.98] disabled:opacity-50 transition cursor-pointer ${
+                isDirty
+                  ? 'bg-[#5865F2] hover:bg-[#4752c4] shadow-[#5865F2]/40 ring-2 ring-white/20'
+                  : 'bg-slate-700 hover:bg-slate-600 opacity-80'
+              }`}
             >
               {saving ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
               ) : (
                 <Save className="w-3.5 h-3.5" />
               )}
-              <span>{saving ? '保存中...' : '変更を保存'}</span>
+              <span>{saving ? '保存中...' : isDirty ? '変更を保存する' : '保存'}</span>
             </button>
           </div>
         </div>

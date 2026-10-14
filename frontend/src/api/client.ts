@@ -1,4 +1,4 @@
-import { ProfileData, ProfileUpdateData, ServerData, ServerCreateData, ReportData, FollowUser, ProfileSearchResult, ReportItem, AdminStats, DonationItem, AnnouncementItem, VoiceRecruitmentItem, VoiceRecruitmentCreateData, ServerAllianceItem } from '../types';
+import { ProfileData, ProfileUpdateData, ServerData, ServerCreateData, ServerUpdateData, ReportData, FollowUser, ProfileSearchResult, ReportItem, AdminStats, DonationItem, AnnouncementItem, VoiceRecruitmentItem, VoiceRecruitmentCreateData, ServerAllianceItem } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
@@ -72,18 +72,55 @@ export const logout = (): Promise<{ status: string }> => {
   });
 };
 
-export const fetchServers = (category?: string, search?: string, sort?: string): Promise<ServerData[]> => {
-  return request<ServerData[]>('/api/servers', {
-    params: {
-      tag: category,
+export interface FetchServersOptions {
+  tag?: string;
+  search?: string;
+  language?: string;
+  minMembers?: number;
+  maxMembers?: number;
+  minecraftTags?: string;
+  sort?: string;
+}
+
+export const fetchServers = (
+  categoryOrOptions?: string | FetchServersOptions,
+  search?: string,
+  sort?: string
+): Promise<ServerData[]> => {
+  let params: Record<string, string | undefined> = {};
+  if (typeof categoryOrOptions === 'object' && categoryOrOptions !== null) {
+    params = {
+      tag: categoryOrOptions.tag,
+      search: categoryOrOptions.search,
+      language: categoryOrOptions.language,
+      min_members: categoryOrOptions.minMembers !== undefined ? String(categoryOrOptions.minMembers) : undefined,
+      max_members: categoryOrOptions.maxMembers !== undefined ? String(categoryOrOptions.maxMembers) : undefined,
+      minecraft_tags: categoryOrOptions.minecraftTags,
+      sort: categoryOrOptions.sort,
+    };
+  } else {
+    params = {
+      tag: typeof categoryOrOptions === 'string' ? categoryOrOptions : undefined,
       search: search,
       sort: sort,
-    },
-  });
+    };
+  }
+  return request<ServerData[]>('/api/servers', { params });
 };
 
 export const fetchServer = (slug: string): Promise<ServerData> => {
   return request<ServerData>(`/api/servers/${encodeURIComponent(slug)}`);
+};
+
+export const updateServer = (slug: string, data: ServerUpdateData): Promise<ServerData> => {
+  return request<ServerData>(`/api/servers/${encodeURIComponent(slug)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+};
+
+export const getServerJoinUrl = (slug: string): string => {
+  return `${API_BASE_URL}/api/servers/${encodeURIComponent(slug)}/join`;
 };
 
 export const createServer = (data: ServerCreateData): Promise<ServerData> => {
@@ -229,10 +266,28 @@ export const fetchFollowing = (username: string): Promise<FollowUser[]> => {
   return request<FollowUser[]>(`/api/profile/${encodeURIComponent(username)}/following`);
 };
 
-export const searchProfiles = (query?: string): Promise<ProfileSearchResult[]> => {
-  return request<ProfileSearchResult[]>('/api/profile/search', {
-    params: { q: query },
-  });
+export interface SearchProfilesOptions {
+  q?: string;
+  badge?: string;
+  game?: string;
+  sort?: string;
+}
+
+export const searchProfiles = (
+  queryOrOptions?: string | SearchProfilesOptions
+): Promise<ProfileSearchResult[]> => {
+  let params: Record<string, string | undefined> = {};
+  if (typeof queryOrOptions === 'object' && queryOrOptions !== null) {
+    params = {
+      q: queryOrOptions.q,
+      badge: queryOrOptions.badge,
+      game: queryOrOptions.game,
+      sort: queryOrOptions.sort,
+    };
+  } else {
+    params = { q: typeof queryOrOptions === 'string' ? queryOrOptions : undefined };
+  }
+  return request<ProfileSearchResult[]>('/api/profile/search', { params });
 };
 
 export const checkAdminAccess = (): Promise<{ status: string; is_admin: boolean; username: string }> => {
@@ -356,6 +411,12 @@ export const fetchAnnouncements = (limit: number = 20): Promise<AnnouncementItem
   });
 };
 
+export const fetchAdminAllAnnouncements = (limit?: number): Promise<AnnouncementItem[]> => {
+  return request<AnnouncementItem[]>('/api/announcements/all', {
+    params: { limit: limit !== undefined ? String(limit) : undefined },
+  });
+};
+
 export const createAdminAnnouncement = (data: {
   title: string;
   content: string;
@@ -365,6 +426,12 @@ export const createAdminAnnouncement = (data: {
   return request<AnnouncementItem>('/api/announcements', {
     method: 'POST',
     body: JSON.stringify(data),
+  });
+};
+
+export const toggleAdminAnnouncement = (id: number): Promise<AnnouncementItem> => {
+  return request<AnnouncementItem>(`/api/announcements/${id}/toggle`, {
+    method: 'PATCH',
   });
 };
 

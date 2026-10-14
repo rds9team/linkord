@@ -8,8 +8,8 @@ from app.models.models import Server
 
 router = APIRouter(prefix="/badge", tags=["Dynamic Badge Widgets"])
 
-def render_server_badge_svg(server_name: str, member_count: int, tags: str) -> str:
-    """サーバーの動的埋め込みバッジSVG（依存関係ゼロ・超高解像度ベクター）を生成"""
+def render_server_badge_svg(server_name: str, member_count: int, tags: str, icon_url: str | None = None) -> str:
+    """サーバーの動的埋め込みバッジSVG（依存関係ゼロ・超高解像度ベクター・サーバーアイコン対応）を生成"""
     safe_name = html.escape(server_name if len(server_name) <= 22 else server_name[:21] + "…")
     initial = html.escape((server_name[0] if server_name else "L").upper())
     
@@ -18,6 +18,12 @@ def render_server_badge_svg(server_name: str, member_count: int, tags: str) -> s
         tag_list = [html.escape(t.strip()) for t in tags.split(",") if t.strip()][:2]
         if tag_list:
             tag_str = " • ".join(f"#{t}" for t in tag_list)
+
+    if icon_url and (icon_url.startswith("http://") or icon_url.startswith("https://") or icon_url.startswith("/uploads/")):
+        safe_icon_url = html.escape(icon_url)
+        icon_element = f"""<image href="{safe_icon_url}" x="18" y="18" width="94" height="94" preserveAspectRatio="xMidYMid slice" clip-path="url(#iconClip)" />"""
+    else:
+        icon_element = f"""<text x="65" y="74" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="36" font-weight="800" text-anchor="middle" dominant-baseline="middle">{initial}</text>"""
 
     return f"""<svg xmlns="http://www.w3.org/2000/svg" width="480" height="130" viewBox="0 0 480 130" fill="none">
   <defs>
@@ -33,6 +39,9 @@ def render_server_badge_svg(server_name: str, member_count: int, tags: str) -> s
       <stop offset="0%" stop-color="#4f46e5" />
       <stop offset="100%" stop-color="#9333ea" />
     </linearGradient>
+    <clipPath id="iconClip">
+      <rect x="18" y="18" width="94" height="94" rx="16" />
+    </clipPath>
   </defs>
 
   <!-- Card Background with Gradient Border -->
@@ -40,7 +49,7 @@ def render_server_badge_svg(server_name: str, member_count: int, tags: str) -> s
 
   <!-- Server Icon Box -->
   <rect x="18" y="18" width="94" height="94" rx="16" fill="url(#iconGrad)" />
-  <text x="65" y="74" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="36" font-weight="800" text-anchor="middle" dominant-baseline="middle">{initial}</text>
+  {icon_element}
 
   <!-- Server Name -->
   <text x="128" y="44" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="18" font-weight="700">{safe_name}</text>
@@ -72,7 +81,8 @@ async def get_server_badge_widget(slug: str, db: AsyncSession = Depends(get_db))
     svg_content = render_server_badge_svg(
         server_name=server.name,
         member_count=server.member_count,
-        tags=server.tags or ""
+        tags=server.tags or "",
+        icon_url=server.icon_url
     )
 
     return Response(

@@ -112,8 +112,11 @@ def decrypt_token(cipher_text: Optional[str]) -> Optional[str]:
     except (InvalidToken, Exception):
         return cipher_text
 
+import socket
+import ipaddress
+
 def is_safe_url(url: Optional[str]) -> bool:
-    """SSRF攻撃（内部IP、クラウドメタデータへのアクセス等）を防止するURLバリデータ"""
+    """SSRF攻撃（内部IP、クラウドメタデータ、DNSリバインディング等）を厳格に防止するURLバリデータ"""
     if not url:
         return False
     url = url.strip()
@@ -125,15 +128,23 @@ def is_safe_url(url: Optional[str]) -> bool:
         if not hostname:
             return False
         hostname = hostname.lower()
-        if hostname in ("localhost", "127.0.0.1", "0.0.0.0", "169.254.169.254", "metadata.google.internal"):
+        if hostname in ("localhost", "127.0.0.1", "0.0.0.0", "169.254.169.254", "metadata.google.internal", "instance-data"):
             return False
         try:
             ip = ipaddress.ip_address(hostname)
             if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_multicast or ip.is_reserved:
                 return False
         except ValueError:
-            if hostname.endswith(".local") or hostname.endswith(".internal"):
+            if hostname.endswith(".local") or hostname.endswith(".internal") or hostname.endswith(".localhost"):
                 return False
+            # Resolve DNS to check if it points to internal/private IP (DNS rebinding prevention)
+            try:
+                resolved_ip_str = socket.gethostbyname(hostname)
+                resolved_ip = ipaddress.ip_address(resolved_ip_str)
+                if resolved_ip.is_private or resolved_ip.is_loopback or resolved_ip.is_link_local or resolved_ip.is_multicast or resolved_ip.is_reserved:
+                    return False
+            except Exception:
+                pass
         return True
     except Exception:
         return False

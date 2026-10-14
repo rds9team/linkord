@@ -11,6 +11,7 @@ interface MusicPlayerProps {
   onPlayStateChange?: (playing: boolean) => void;
   isExternalPlaying?: boolean;
   onTogglePlayExternal?: () => void;
+  embedded?: boolean;
 }
 
 export const MusicPlayer: React.FC<MusicPlayerProps> = ({
@@ -19,6 +20,7 @@ export const MusicPlayer: React.FC<MusicPlayerProps> = ({
   displayName,
   avatarUrl,
   onPlayStateChange,
+  embedded = false,
 }) => {
   const { theme } = useTheme();
   const isLight = theme === 'light';
@@ -215,13 +217,17 @@ export const MusicPlayer: React.FC<MusicPlayerProps> = ({
 
       {/* Floating Bottom Music Player Bar (No overlay, user controls play) */}
       <div
-        className={`fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-30 transition-all duration-300 pointer-events-auto ${
-          isMinimized
-            ? 'w-auto'
-            : 'w-[calc(100%-2rem)] max-w-sm sm:max-w-md'
-        }`}
+        className={`${
+          embedded
+            ? 'relative w-full'
+            : `fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-30 ${
+                isMinimized
+                  ? 'w-auto'
+                  : 'w-[calc(100%-2rem)] max-w-sm sm:max-w-md'
+              }`
+        } transition-all duration-300 pointer-events-auto`}
       >
-        {isMinimized ? (
+        {!embedded && isMinimized ? (
           /* Minimized Compact Pill Player */
           <div
             className={`flex items-center gap-2 px-3 py-1.5 rounded-full border shadow-2xl backdrop-blur-2xl transition-all cursor-pointer ${

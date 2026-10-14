@@ -51,10 +51,12 @@ export interface ServerData {
   icon_url?: string;
   invite_url: string;
   tags: string;
+  minecraft_tags?: string;
   language: string;
   member_count: number;
   boosts_count?: number;
   is_public: boolean;
+  can_edit?: boolean;
   owner_id?: number;
   created_at: string;
 }
@@ -67,6 +69,17 @@ export interface ServerCreateData {
   icon_url?: string;
   invite_url: string;
   tags?: string;
+  minecraft_tags?: string;
+  language?: string;
+}
+
+export interface ServerUpdateData {
+  name?: string;
+  description?: string;
+  icon_url?: string;
+  invite_url?: string;
+  tags?: string;
+  minecraft_tags?: string;
   language?: string;
 }
 

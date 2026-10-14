@@ -480,7 +480,7 @@ export const Settings: React.FC = () => {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8 relative z-10 pb-24">
+    <div className="max-w-2xl mx-auto px-4 py-8 relative z-10 pb-36 sm:pb-24">
       <div className="mb-6">
         <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-1">
           プロフィール設定
@@ -1459,9 +1459,9 @@ export const Settings: React.FC = () => {
         } : undefined}
       />
       {/* Sticky Bottom Floating Save Bar */}
-      <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 w-[calc(100%-2rem)] max-w-xl pointer-events-none transition-all duration-300">
+      <div className="fixed bottom-20 sm:bottom-6 left-1/2 -translate-x-1/2 z-40 w-[calc(100%-1.5rem)] sm:w-[calc(100%-2rem)] max-w-xl pointer-events-none transition-all duration-300">
         <div
-          className={`pointer-events-auto backdrop-blur-xl border shadow-2xl rounded-2xl px-5 py-3.5 flex items-center justify-between gap-4 transition-all duration-300 ${
+          className={`pointer-events-auto backdrop-blur-xl border shadow-2xl rounded-2xl px-3.5 py-2.5 sm:px-5 sm:py-3.5 flex items-center justify-between gap-3 sm:gap-4 transition-all duration-300 ${
             isDirty
               ? 'bg-amber-950/40 dark:bg-amber-950/60 border-amber-500/60 shadow-amber-500/10 ring-2 ring-amber-400/30'
               : saved

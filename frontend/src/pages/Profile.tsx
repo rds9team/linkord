@@ -389,11 +389,11 @@ export const Profile: React.FC = () => {
               </div>
             ) : null}
 
-            <div className={`px-6 pb-6 ${hasBanner ? 'pt-0' : 'pt-6'}`}>
+            <div className={`px-4 sm:px-6 pb-6 ${hasBanner ? 'pt-0' : 'pt-5 sm:pt-6'}`}>
               {/* Top: Avatar & User Info */}
-              <div className="flex flex-col sm:flex-row items-center sm:items-end gap-4 mb-5">
-                <div className={`relative group flex-shrink-0 z-10 ${hasBanner ? '-mt-14 sm:-mt-16' : ''}`}>
-                  <div className="w-24 h-24 rounded-2xl overflow-hidden border-2 border-slate-300 dark:border-white/20 shadow-xl bg-slate-800 flex items-center justify-center ring-4 ring-[#0b0c10]">
+              <div className="flex flex-col sm:flex-row items-center sm:items-end gap-3 sm:gap-4 mb-4 sm:mb-5">
+                <div className={`relative group flex-shrink-0 z-10 ${hasBanner ? '-mt-12 sm:-mt-16' : ''}`}>
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-2 border-slate-300 dark:border-white/20 shadow-xl bg-slate-800 flex items-center justify-center ring-4 ring-[#0b0c10]">
                     {profile.avatar_url ? (
                       <img
                         src={resolveMediaUrl(profile.avatar_url)}
@@ -401,7 +401,7 @@ export const Profile: React.FC = () => {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full bg-[#5865F2] flex items-center justify-center text-white text-3xl font-extrabold">
+                      <div className="w-full h-full bg-[#5865F2] flex items-center justify-center text-white text-2xl sm:text-3xl font-extrabold">
                         {profile.display_name.charAt(0).toUpperCase()}
                       </div>
                     )}

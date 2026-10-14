@@ -186,63 +186,73 @@ export const ServerDetail: React.FC = () => {
           </div>
 
           {/* Action Buttons */}
-          <div className="flex sm:flex-col gap-2 w-full sm:w-auto">
+          <div className="flex flex-col gap-2 w-full sm:w-44">
             <a
               href={getServerJoinUrl(server.slug)}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition shadow-lg shadow-indigo-600/20"
+              className="w-full px-5 py-3 sm:py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition shadow-lg shadow-indigo-600/30 active:scale-[0.98]"
             >
               <span>サーバーに参加</span>
               <ExternalLink className="w-3.5 h-3.5" />
             </a>
-            {server.can_edit && (
+
+            <div className="grid grid-cols-2 sm:flex sm:flex-col gap-2 w-full">
+              {server.can_edit && (
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(true)}
+                  className="px-3 py-2.5 rounded-xl border border-purple-500/40 hover:border-purple-500/60 bg-purple-600/20 hover:bg-purple-600/30 text-purple-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition active:scale-[0.98]"
+                >
+                  <Edit className="w-3.5 h-3.5" />
+                  <span>編集</span>
+                </button>
+              )}
               <button
                 type="button"
-                onClick={() => setIsEditModalOpen(true)}
-                className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl border border-purple-500/40 hover:border-purple-500/60 bg-purple-600/20 hover:bg-purple-600/30 text-purple-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition"
+                onClick={handleBoost}
+                disabled={boosted}
+                className={`px-3 py-2.5 rounded-xl border border-amber-500/30 text-xs font-semibold flex items-center justify-center gap-1.5 transition active:scale-[0.98] ${
+                  boosted
+                    ? 'bg-amber-500/20 text-amber-300'
+                    : 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-400'
+                }`}
               >
-                <Edit className="w-3.5 h-3.5" />
-                <span>サーバー情報を編集</span>
+                <Flame className="w-3.5 h-3.5" />
+                <span>{boosted ? 'ブースト済み' : 'ブースト'}</span>
               </button>
-            )}
-            <button
-              onClick={handleBoost}
-              disabled={boosted}
-              className={`flex-1 sm:flex-initial px-4 py-2.5 rounded-xl border border-amber-500/30 text-xs font-semibold flex items-center justify-center gap-1.5 transition ${boosted ? 'bg-amber-500/20 text-amber-300' : 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-400'}`}
-            >
-              <Flame className="w-3.5 h-3.5" />
-              <span>{boosted ? 'ブースト済み' : 'ブーストする'}</span>
-            </button>
-            <button
-              onClick={handleSync}
-              disabled={syncing}
-              className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-medium flex items-center justify-center gap-1.5 transition"
-              title="Discordから最新のメンバー数とアイコンを再取得"
-            >
-              {syncing ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-purple-400" />
-              ) : syncSuccess ? (
-                <Check className="w-3.5 h-3.5 text-emerald-400" />
-              ) : (
-                <RefreshCw className="w-3.5 h-3.5 text-slate-400" />
-              )}
-              <span>{syncSuccess ? '同期完了' : '最新同期'}</span>
-            </button>
-            <button
-              onClick={() => {
-                const tweetText = `Discordサーバー「${server.name}」(${server.member_count}名) をチェック！\n\n参加はこちら👇`;
-                const shareUrl = `https://linkord.net/server/${server.slug}`;
-                const hashtags = `Discordサーバー,ディスコード,Linkord`;
-                const xUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(shareUrl)}&hashtags=${encodeURIComponent(hashtags)}`;
-                window.open(xUrl, '_blank', 'noopener,noreferrer');
-              }}
-              className="px-3.5 py-2.5 rounded-xl border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-xs font-medium flex items-center justify-center gap-1.5 transition cursor-pointer"
-              title="X (Twitter) でシェア"
-            >
-              <Share2 className="w-3.5 h-3.5 text-sky-400" />
-              <span>シェア</span>
-            </button>
+              <button
+                type="button"
+                onClick={handleSync}
+                disabled={syncing}
+                className="px-3 py-2.5 rounded-xl border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-medium flex items-center justify-center gap-1.5 transition active:scale-[0.98]"
+                title="Discordから最新のメンバー数とアイコンを再取得"
+              >
+                {syncing ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-purple-400" />
+                ) : syncSuccess ? (
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                ) : (
+                  <RefreshCw className="w-3.5 h-3.5 text-slate-400" />
+                )}
+                <span>{syncSuccess ? '同期完了' : '最新同期'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const tweetText = `Discordサーバー「${server.name}」(${server.member_count}名) をチェック！\n\n参加はこちら👇`;
+                  const shareUrl = `https://linkord.net/server/${server.slug}`;
+                  const hashtags = `Discordサーバー,ディスコード,Linkord`;
+                  const xUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(shareUrl)}&hashtags=${encodeURIComponent(hashtags)}`;
+                  window.open(xUrl, '_blank', 'noopener,noreferrer');
+                }}
+                className="px-3 py-2.5 rounded-xl border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-xs font-medium flex items-center justify-center gap-1.5 transition cursor-pointer active:scale-[0.98]"
+                title="X (Twitter) でシェア"
+              >
+                <Share2 className="w-3.5 h-3.5 text-sky-400" />
+                <span>シェア</span>
+              </button>
+            </div>
           </div>
         </div>
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Navbar } from './components/Navbar';
+import { BottomNav } from './components/BottomNav';
 import { DiscordReauthBanner } from './components/DiscordReauthBanner';
 import { Footer } from './components/Footer';
 import { PageTransition } from './components/PageTransition';
@@ -47,6 +48,9 @@ const AppContent: React.FC = () => {
       </PageTransition>
 
       <Footer />
+      {/* Spacer for mobile BottomNav */}
+      <div className="h-16 sm:hidden" />
+      <BottomNav />
     </div>
   );
 };

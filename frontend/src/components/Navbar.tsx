@@ -88,26 +88,26 @@ export const Navbar: React.FC = () => {
         <nav className="flex items-center gap-1 sm:gap-2">
           <Link
             to="/discover"
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
+            className={`hidden sm:flex px-3 py-1.5 rounded-xl text-xs font-semibold transition items-center gap-1.5 ${
               isLight
                 ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/70'
                 : 'text-slate-300 hover:text-white hover:bg-white/5'
             }`}
           >
             <Compass className="w-3.5 h-3.5 text-slate-400" />
-            <span className="hidden sm:inline">見つける</span>
+            <span>見つける</span>
           </Link>
 
           <Link
             to="/discover?type=recruitments"
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
+            className={`hidden sm:flex px-3 py-1.5 rounded-xl text-xs font-semibold transition items-center gap-1.5 ${
               isLight
                 ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/70'
                 : 'text-slate-300 hover:text-white hover:bg-white/5'
             }`}
           >
             <Radio className="w-3.5 h-3.5 text-rose-400" />
-            <span className="hidden sm:inline">通話募集</span>
+            <span>通話募集</span>
             <span className="px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-400 text-[10px] font-bold">LIVE</span>
           </Link>
 

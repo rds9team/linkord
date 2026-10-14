@@ -217,48 +217,48 @@ export const Discover: React.FC = () => {
       </div>
 
       {/* Main Mode Toggle: Servers vs Users vs Recruitments */}
-      <div className="flex items-center gap-1.5 p-1.5 rounded-xl bg-slate-200/70 dark:bg-white/[0.04] border border-slate-300/80 dark:border-white/10 w-fit mb-6 overflow-x-auto max-w-full">
+      <div className="w-full sm:w-fit grid grid-cols-3 sm:flex items-center gap-1.5 p-1.5 rounded-2xl bg-slate-200/70 dark:bg-white/[0.04] border border-slate-300/80 dark:border-white/10 mb-6">
         <button
           onClick={() => {
             setMainCategory('recruitments');
             setSearchTerm('');
           }}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap ${
+          className={`flex items-center justify-center gap-1.5 py-2 px-2 sm:px-4 rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap ${
             mainCategory === 'recruitments'
-              ? 'bg-rose-600 text-white'
+              ? 'bg-rose-600 text-white shadow-sm'
               : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
           }`}
         >
-          <Radio className="w-4 h-4 text-rose-300" />
+          <Radio className="w-3.5 h-3.5 text-rose-300 shrink-0" />
           <span>通話募集</span>
-          <span className="px-1.5 py-0.2 rounded bg-white/20 text-[10px] font-black">LIVE</span>
+          <span className="hidden sm:inline px-1.5 py-0.2 rounded bg-white/20 text-[10px] font-black">LIVE</span>
         </button>
         <button
           onClick={() => {
             setMainCategory('servers');
             setSearchTerm('');
           }}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap ${
+          className={`flex items-center justify-center gap-1.5 py-2 px-2 sm:px-4 rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap ${
             mainCategory === 'servers'
-              ? 'bg-[#5865F2] text-white'
+              ? 'bg-[#5865F2] text-white shadow-sm'
               : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
           }`}
         >
-          <Compass className="w-4 h-4" />
-          <span>Discord サーバー</span>
+          <Compass className="w-3.5 h-3.5 shrink-0" />
+          <span>サーバー</span>
         </button>
         <button
           onClick={() => {
             setMainCategory('users');
             setSearchTerm('');
           }}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap ${
+          className={`flex items-center justify-center gap-1.5 py-2 px-2 sm:px-4 rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap ${
             mainCategory === 'users'
-              ? 'bg-[#5865F2] text-white'
+              ? 'bg-[#5865F2] text-white shadow-sm'
               : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
           }`}
         >
-          <Users className="w-4 h-4" />
+          <Users className="w-3.5 h-3.5 shrink-0" />
           <span>ユーザー</span>
         </button>
       </div>
@@ -289,32 +289,32 @@ export const Discover: React.FC = () => {
       {/* Server Category Tabs & Filters (Servers only) */}
       {mainCategory === 'servers' && (
         <div className="space-y-3 mb-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-full">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full scrollbar-none">
               <button
                 onClick={() => setActiveTab('popular')}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${activeTab === 'popular' ? 'bg-[#5865F2] text-white shadow-sm' : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 dark:border-transparent dark:bg-white/5 dark:text-slate-400 dark:hover:text-white'}`}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer shrink-0 ${activeTab === 'popular' ? 'bg-[#5865F2] text-white shadow-sm' : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 dark:border-transparent dark:bg-white/5 dark:text-slate-400 dark:hover:text-white'}`}
               >
                 <Flame className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
-                <span>人気ランキング</span>
+                <span>人気順</span>
               </button>
               <button
                 onClick={() => setActiveTab('trending')}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${activeTab === 'trending' ? 'bg-[#5865F2] text-white shadow-sm' : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 dark:border-transparent dark:bg-white/5 dark:text-slate-400 dark:hover:text-white'}`}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer shrink-0 ${activeTab === 'trending' ? 'bg-[#5865F2] text-white shadow-sm' : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 dark:border-transparent dark:bg-white/5 dark:text-slate-400 dark:hover:text-white'}`}
               >
                 <TrendingUp className="w-3.5 h-3.5 text-rose-500 dark:text-rose-400" />
-                <span>急上昇 (ブースト順)</span>
+                <span>急上昇</span>
               </button>
               <button
                 onClick={() => setActiveTab('new')}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${activeTab === 'new' ? 'bg-[#5865F2] text-white shadow-sm' : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 dark:border-transparent dark:bg-white/5 dark:text-slate-400 dark:hover:text-white'}`}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer shrink-0 ${activeTab === 'new' ? 'bg-[#5865F2] text-white shadow-sm' : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 dark:border-transparent dark:bg-white/5 dark:text-slate-400 dark:hover:text-white'}`}
               >
                 <Sparkles className="w-3.5 h-3.5 text-sky-500 dark:text-sky-400" />
-                <span>新着サーバー</span>
+                <span>新着順</span>
               </button>
               <button
                 onClick={() => setActiveTab('minecraft')}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${activeTab === 'minecraft' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 dark:border-transparent dark:bg-white/5 dark:text-slate-400 dark:hover:text-white'}`}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer shrink-0 ${activeTab === 'minecraft' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 dark:border-transparent dark:bg-white/5 dark:text-slate-400 dark:hover:text-white'}`}
               >
                 <Compass className="w-3.5 h-3.5 text-emerald-400" />
                 <span>Minecraft</span>
@@ -322,13 +322,13 @@ export const Discover: React.FC = () => {
             </div>
 
             {/* Member count & Language filters */}
-            <div className="flex items-center gap-2 text-xs">
-              <div className="flex items-center gap-1 bg-white/5 border border-white/10 rounded-xl px-2.5 py-1 text-slate-300">
-                <Users className="w-3.5 h-3.5 text-slate-400" />
+            <div className="grid grid-cols-2 sm:flex items-center gap-2 text-xs">
+              <div className="flex items-center gap-1 bg-white/5 border border-white/10 rounded-xl px-2.5 py-1.5 text-slate-300">
+                <Users className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                 <select
                   value={serverMemberFilter || 0}
                   onChange={(e) => setServerMemberFilter(Number(e.target.value) || undefined)}
-                  className="bg-transparent text-white text-xs focus:outline-none cursor-pointer"
+                  className="bg-transparent text-white text-xs focus:outline-none cursor-pointer w-full"
                 >
                   <option value={0} className="bg-slate-900 text-white">人数: 指定なし</option>
                   <option value={50} className="bg-slate-900 text-white">50人以上</option>
@@ -338,11 +338,11 @@ export const Discover: React.FC = () => {
                 </select>
               </div>
 
-              <div className="flex items-center gap-1 bg-white/5 border border-white/10 rounded-xl px-2.5 py-1 text-slate-300">
+              <div className="flex items-center gap-1 bg-white/5 border border-white/10 rounded-xl px-2.5 py-1.5 text-slate-300">
                 <select
                   value={serverLangFilter}
                   onChange={(e) => setServerLangFilter(e.target.value)}
-                  className="bg-transparent text-white text-xs focus:outline-none cursor-pointer"
+                  className="bg-transparent text-white text-xs focus:outline-none cursor-pointer w-full"
                 >
                   <option value="all" className="bg-slate-900 text-white">言語: すべて</option>
                   <option value="ja" className="bg-slate-900 text-white">日本語</option>
@@ -618,12 +618,12 @@ export const Discover: React.FC = () => {
 
       {/* User Filters (Users only) */}
       {!initialLoading && mainCategory === 'users' && (
-        <div className="mb-6 p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="mb-6 p-3 sm:p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
             {/* Badge Filter */}
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-xs font-semibold text-slate-400 flex items-center gap-1 mr-1">
-                <Award className="w-3.5 h-3.5 text-amber-400" />
+              <span className="text-[11px] sm:text-xs font-semibold text-slate-400 flex items-center gap-1 mr-1">
+                <Award className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                 <span>バッジ:</span>
               </span>
               {[
@@ -639,9 +639,9 @@ export const Discover: React.FC = () => {
                     key={b.val}
                     type="button"
                     onClick={() => setUserBadgeFilter(b.val)}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition cursor-pointer ${
+                    className={`px-2 py-1 rounded-lg text-[11px] sm:text-xs font-medium transition cursor-pointer ${
                       isSelected
-                        ? 'bg-purple-600 text-white font-bold'
+                        ? 'bg-purple-600 text-white font-bold shadow-sm'
                         : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white'
                     }`}
                   >
@@ -652,8 +652,8 @@ export const Discover: React.FC = () => {
             </div>
 
             {/* Sort Filter */}
-            <div className="flex items-center gap-1.5 text-xs">
-              <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
+            <div className="flex items-center gap-1.5 text-xs self-end sm:self-auto">
+              <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
               <select
                 value={userSortFilter}
                 onChange={(e) => setUserSortFilter(e.target.value)}
@@ -667,14 +667,14 @@ export const Discover: React.FC = () => {
 
           {/* Game Filter */}
           <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-white/5">
-            <span className="text-xs font-semibold text-slate-400 flex items-center gap-1 mr-1">
-              <Gamepad2 className="w-3.5 h-3.5 text-indigo-400" />
+            <span className="text-[11px] sm:text-xs font-semibold text-slate-400 flex items-center gap-1 mr-1">
+              <Gamepad2 className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
               <span>プレイゲーム:</span>
             </span>
             {[
               { label: 'すべて', val: '' },
               { label: 'Valorant', val: 'Valorant' },
-              { label: 'Apex Legends', val: 'Apex Legends' },
+              { label: 'Apex', val: 'Apex Legends' },
               { label: 'Minecraft', val: 'Minecraft' },
               { label: '原神', val: 'Genshin Impact' },
               { label: 'Overwatch 2', val: 'Overwatch 2' },
@@ -685,9 +685,9 @@ export const Discover: React.FC = () => {
                   key={g.val}
                   type="button"
                   onClick={() => setUserGameFilter(g.val)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition cursor-pointer ${
+                  className={`px-2 py-1 rounded-lg text-[11px] sm:text-xs font-medium transition cursor-pointer ${
                     isSelected
-                      ? 'bg-indigo-600 text-white font-bold'
+                      ? 'bg-indigo-600 text-white font-bold shadow-sm'
                       : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white'
                   }`}
                 >

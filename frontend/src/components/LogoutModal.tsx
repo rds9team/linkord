@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { LogOut, X, Loader2 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
@@ -37,8 +38,8 @@ export const LogoutModal: React.FC<LogoutModalProps> = ({
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-page-fade-in">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-page-fade-in">
       {/* Backdrop */}
       <div
         className="absolute inset-0"
@@ -143,6 +144,7 @@ export const LogoutModal: React.FC<LogoutModalProps> = ({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

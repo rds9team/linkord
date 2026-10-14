@@ -18,7 +18,7 @@ async def init_test_db():
         await ensure_schema_updated(conn)
 
 async def create_test_account_and_session(
-    username: str = "yuto",
+    username: str = "test_default_user",
     display_name: str = "Test User",
     has_founder: Optional[bool] = None,
     has_team: Optional[bool] = None,

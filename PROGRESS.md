@@ -490,6 +490,15 @@ Linkord（Discord プロフィール & サーバーポータル / linkord.net）
 - **モーダル類のモバイル全画面スクロール対応**:
   - 通話募集作成モーダル等の各ダイアログに `max-h-[90vh]` と `overflow-y-auto` を適用し、小型端末（iPhone SEなど）でも確実に操作・送信できるように改善。
 
+### 57. 寄付モーダル・ログアウト画面の画面中央固定化 & Test User データ完全クリーンアップ
+- **寄付画面（SupportModal）およびログアウト画面（LogoutModal）の中央配置バグ解消**:
+  - `Navbar` の auto-hide ヘッダーに `transition-transform` が付与されたことで、その子要素となっていた `fixed` モーダルがビューポートではなく高さ64pxのヘッダー要素を基準に配置され、画面上部へズレたりスクロール時に上に巻き込まれるバグを解消。
+  - `SupportModal` と `LogoutModal` を `createPortal(..., document.body)` 化し、かつ `Navbar` 内の `<header>` の外に配置。最前面（`z-[9999]`）かつ完全に画面中央（ビューポート中央）へセンタリングされるよう恒久対策。
+- **Test User / Updated bio via test の完全排除**:
+  - バックエンドのテストコード（`test_auth.py`, `conftest.py`）でデフォルトユーザーに `yuto` が指定されており、`display_name="Test User"`、`bio="Updated bio via test"` に上書きされていた問題を特定。
+  - テスト用ユーザーを独立した `test_auth_runner` / `test_default_user` に分離し、本番および開発用ユーザーを一切汚染しないよう隔離。
+  - VPS 本番DBおよびローカルDBの `accounts` テーブルに残存していた `yuto` の表示名を `display_name='yuto'`、自己紹介を `bio=''` に完全修正。
+
 ---
 
 ## 🚀 次のステップ（今後の最重要タスク）

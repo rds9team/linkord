@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Heart, CheckCircle2, AlertCircle, Loader2, Users, ShieldCheck, Sparkles, ExternalLink } from 'lucide-react';
 import { submitDonation, fetchPublicSupporters, PublicSupporterItem } from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -94,9 +95,9 @@ export const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose, def
     onClose();
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-      <div className={`relative w-full max-w-lg border rounded-2xl p-6 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col ${
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+      <div className={`relative w-full max-w-lg border rounded-2xl p-5 sm:p-6 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col ${
         isLight
           ? 'bg-slate-50 border-slate-200 text-slate-800'
           : 'bg-[#0e1017] border-white/10 text-white'
@@ -396,6 +397,7 @@ export const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose, def
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

@@ -14,7 +14,7 @@ async def test_full_auth_and_api_flow():
     ts = int(time.time())
     test_slug = f"test-srv-{ts}"
 
-    account, token = await create_test_account_and_session("yuto", has_supporter=True)
+    account, token = await create_test_account_and_session("test_auth_runner", display_name="Test Runner", has_supporter=True)
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
@@ -34,13 +34,13 @@ async def test_full_auth_and_api_flow():
         me_res = await ac.get("/api/auth/me")
         assert me_res.status_code == 200
         me_data = me_res.json()
-        assert me_data["username"] == "yuto"
+        assert me_data["username"] == "test_auth_runner"
         assert me_data["has_discord_authed"] is True
 
         # 5. Get profile /api/profile/me
         p_res = await ac.get("/api/profile/me")
         assert p_res.status_code == 200
-        assert p_res.json()["username"] == "yuto"
+        assert p_res.json()["username"] == "test_auth_runner"
 
         # 6. Update profile /api/profile/me
         patch_res = await ac.patch("/api/profile/me", json={"bio": "Updated bio via test"})

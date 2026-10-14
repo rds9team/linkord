@@ -72,7 +72,8 @@ export const Navbar: React.FC = () => {
   const isLight = theme === 'light';
 
   return (
-    <header
+    <>
+      <header
       className={`fixed top-0 left-0 w-full z-50 transition-transform duration-300 ${
         isVisible ? 'translate-y-0' : '-translate-y-full'
       } ${isLight ? 'bg-white/80' : 'bg-[#0b0c10]/80'} backdrop-blur-xl`}
@@ -239,19 +240,20 @@ export const Navbar: React.FC = () => {
           )}
         </nav>
       </div>
-
-      <SupportModal isOpen={isSupportOpen} onClose={() => setIsSupportOpen(false)} />
-      {user && (
-        <LogoutModal
-          isOpen={isLogoutModalOpen}
-          onClose={() => setIsLogoutModalOpen(false)}
-          onConfirm={handleConfirmLogout}
-          isLoading={isLoggingOut}
-          username={user.username}
-          displayName={user.display_name}
-          avatarUrl={user.avatar_url}
-        />
-      )}
     </header>
+
+    <SupportModal isOpen={isSupportOpen} onClose={() => setIsSupportOpen(false)} />
+    {user && (
+      <LogoutModal
+        isOpen={isLogoutModalOpen}
+        onClose={() => setIsLogoutModalOpen(false)}
+        onConfirm={handleConfirmLogout}
+        isLoading={isLoggingOut}
+        username={user.username}
+        displayName={user.display_name}
+        avatarUrl={user.avatar_url}
+      />
+    )}
+  </>
   );
 };

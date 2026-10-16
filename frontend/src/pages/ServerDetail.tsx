@@ -8,7 +8,7 @@ import { fetchServer, boostServer, syncServerDiscordStats, fetchServerAlliances,
 import { useAuth } from '../context/AuthContext';
 import { ServerData, ServerAllianceItem } from '../types';
 import { useTitle } from '../hooks/useTitle';
-import { resolveMediaUrl } from '../utils/media';
+import { resolveMediaUrl, formatDiscordInviteUrl } from '../utils/media';
 
 const isSafeHttpUrl = (url?: string): boolean => {
   if (!url) return false;
@@ -160,6 +160,9 @@ export const ServerDetail: React.FC = () => {
               <img
                 src={resolveMediaUrl(server.icon_url)}
                 alt={server.name}
+                width={80}
+                height={80}
+                decoding="async"
                 className="w-full h-full object-cover"
                 onError={(e) => {
                   const target = e.currentTarget;
@@ -192,7 +195,7 @@ export const ServerDetail: React.FC = () => {
 
             <div className="flex items-center justify-center sm:justify-start gap-4 text-xs">
               <span className="flex items-center gap-1.5 text-slate-300">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
                 <span>{server.member_count.toLocaleString()} メンバー</span>
               </span>
               <span className="flex items-center gap-1.5 text-amber-400 font-mono font-bold">
@@ -205,10 +208,10 @@ export const ServerDetail: React.FC = () => {
           {/* Action Buttons */}
           <div className="flex flex-col gap-2 w-full sm:w-44">
             <a
-              href={getServerJoinUrl(server.slug)}
+              href={formatDiscordInviteUrl(server.invite_url, server.slug)}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full px-5 py-3 sm:py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition shadow-lg shadow-indigo-600/30 active:scale-[0.98]"
+              className="w-full px-5 py-3 sm:py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition shadow-sm active:scale-[0.98]"
             >
               <span>サーバーに参加</span>
               <ExternalLink className="w-3.5 h-3.5" />

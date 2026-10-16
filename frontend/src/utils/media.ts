@@ -46,3 +46,22 @@ export function getDiscordBannerUrl(userId?: string | null, bannerHash?: string 
   const ext = isAnimated ? 'gif' : 'png';
   return `https://cdn.discordapp.com/banners/${userId}/${bannerHash}.${ext}?size=1024`;
 }
+
+/**
+ * Normalizes Discord invite URLs to ensure direct universal linking (https://discord.gg/...)
+ * Falls back to server join API proxy if inviteUrl is not available.
+ */
+export function formatDiscordInviteUrl(inviteUrl?: string | null, fallbackSlug?: string): string {
+  if (!inviteUrl || !inviteUrl.trim()) {
+    if (fallbackSlug) {
+      const baseClean = (API_BASE_URL || '').replace(/\/+$/, '');
+      return `${baseClean}/api/servers/${encodeURIComponent(fallbackSlug)}/join`;
+    }
+    return '#';
+  }
+  const clean = inviteUrl.trim();
+  if (clean.startsWith('http://') || clean.startsWith('https://')) {
+    return clean;
+  }
+  return `https://discord.gg/${clean}`;
+}

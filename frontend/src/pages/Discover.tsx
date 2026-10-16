@@ -9,7 +9,7 @@ import { ShareModal } from '../components/ShareModal';
 import { Badges } from '../components/Badges';
 import { useTitle } from '../hooks/useTitle';
 import { useAuth } from '../context/AuthContext';
-import { resolveMediaUrl } from '../utils/media';
+import { resolveMediaUrl, formatDiscordInviteUrl } from '../utils/media';
 
 export const Discover: React.FC = () => {
   useTitle('発見');
@@ -142,7 +142,8 @@ export const Discover: React.FC = () => {
         }
       };
 
-      const timer = setTimeout(loadServers, 250);
+      const delay = searchTerm ? 200 : 0;
+      const timer = setTimeout(loadServers, delay);
       return () => {
         isMounted = false;
         clearTimeout(timer);
@@ -166,7 +167,8 @@ export const Discover: React.FC = () => {
         }
       };
 
-      const timer = setTimeout(loadRecruitments, 250);
+      const delay = searchTerm ? 200 : 0;
+      const timer = setTimeout(loadRecruitments, delay);
       return () => {
         isMounted = false;
         clearTimeout(timer);
@@ -195,7 +197,8 @@ export const Discover: React.FC = () => {
         }
       };
 
-      const timer = setTimeout(loadUsers, 250);
+      const delay = searchTerm ? 200 : 0;
+      const timer = setTimeout(loadUsers, delay);
       return () => {
         isMounted = false;
         clearTimeout(timer);
@@ -472,8 +475,12 @@ export const Discover: React.FC = () => {
                         <div className="w-12 h-12 rounded-xl bg-[#5865F2] flex items-center justify-center font-extrabold text-white text-base shadow-sm overflow-hidden">
                           {server.icon_url ? (
                             <img
-                              src={server.icon_url}
+                              src={resolveMediaUrl(server.icon_url)}
                               alt={server.name}
+                              width={48}
+                              height={48}
+                              loading="lazy"
+                              decoding="async"
                               className="w-full h-full rounded-xl object-cover"
                               onError={(e) => {
                                 const target = e.currentTarget;
@@ -536,10 +543,10 @@ export const Discover: React.FC = () => {
                       詳細を見る
                     </Link>
                     <a
-                      href={getServerJoinUrl(server.slug)}
+                      href={formatDiscordInviteUrl(server.invite_url, server.slug)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition flex items-center gap-1"
+                      className="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition flex items-center gap-1 shadow-sm active:scale-[0.98]"
                     >
                       <span>参加</span>
                       <ExternalLink className="w-3.5 h-3.5" />
@@ -615,7 +622,15 @@ export const Discover: React.FC = () => {
                     >
                       <div className="w-8 h-8 rounded-lg overflow-hidden bg-[#5865F2]/20 flex items-center justify-center font-bold text-xs text-white flex-shrink-0">
                         {r.server_icon_url ? (
-                          <img src={r.server_icon_url} alt={r.server_name} className="w-full h-full object-cover" />
+                          <img
+                            src={resolveMediaUrl(r.server_icon_url)}
+                            alt={r.server_name}
+                            width={32}
+                            height={32}
+                            loading="lazy"
+                            decoding="async"
+                            className="w-full h-full object-cover"
+                          />
                         ) : (
                           r.server_name.charAt(0)
                         )}
@@ -769,7 +784,15 @@ export const Discover: React.FC = () => {
                   <div className="flex items-start gap-3 mb-3">
                     <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-100 dark:bg-[#21262d] border border-slate-200 dark:border-white/10 flex-shrink-0">
                       {u.avatar_url ? (
-                        <img src={resolveMediaUrl(u.avatar_url)} alt={u.display_name} className="w-full h-full object-cover" />
+                        <img
+                          src={resolveMediaUrl(u.avatar_url)}
+                          alt={u.display_name}
+                          width={48}
+                          height={48}
+                          loading="lazy"
+                          decoding="async"
+                          className="w-full h-full object-cover"
+                        />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center font-bold text-white text-base bg-[#5865F2]">
                           {u.display_name.charAt(0).toUpperCase()}

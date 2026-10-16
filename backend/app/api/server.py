@@ -1,5 +1,6 @@
 import re
 import datetime
+import asyncio
 from typing import Optional
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -258,7 +259,7 @@ async def get_bot_invite_for_guild(guild_id: str) -> Optional[str]:
         return None
     headers = {"Authorization": f"Bot {bot_token}"}
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
+        async with httpx.AsyncClient(timeout=2.5) as client:
             g_resp = await client.get(f"https://discord.com/api/v10/guilds/{clean_id}", headers=headers)
             if g_resp.status_code == 200:
                 g_data = g_resp.json()
@@ -538,24 +539,27 @@ async def create_server(
 
 @router.get("/{slug}/join")
 async def join_server_via_bot(slug: str, db: AsyncSession = Depends(get_db)):
-    """Botから最新の有効招待URLを取得してDiscord参加リンクへリダイレクト"""
+    """サーバーのDiscord参加リンクへ即時リダイレクト（招待URL優先）"""
     stmt = select(Server).where(Server.slug == slug)
     result = await db.execute(stmt)
     server = result.scalars().first()
     if not server:
         raise HTTPException(status_code=404, detail="Server not found")
 
-    target_invite = None
-    if server.guild_id:
-        bot_invite = await get_bot_invite_for_guild(server.guild_id)
-        if bot_invite:
-            target_invite = bot_invite
-            if server.invite_url != bot_invite:
+    target_invite = (server.invite_url or "").strip()
+    # 招待URLが未設定の場合のみBot経由で取得を試みる
+    if not target_invite and server.guild_id:
+        try:
+            bot_invite = await asyncio.wait_for(get_bot_invite_for_guild(server.guild_id), timeout=2.5)
+            if bot_invite:
+                target_invite = bot_invite
                 server.invite_url = bot_invite
                 await db.commit()
+        except Exception:
+            pass
 
     if not target_invite:
-        target_invite = server.invite_url
+        raise HTTPException(status_code=404, detail="Invite URL not available")
 
     if not (target_invite.startswith("http://") or target_invite.startswith("https://")):
         target_invite = f"https://discord.gg/{target_invite}"

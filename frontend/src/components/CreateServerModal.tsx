@@ -5,7 +5,7 @@ import {
   Crown, ExternalLink, Bot, AlertCircle, Info, ArrowLeft, ArrowRight, RefreshCw, Check
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { createServer, fetchMyGuilds, checkBotInstalled, DiscordGuildItem, BotCheckResult } from '../api/client';
+import { createServer, fetchMyGuilds, checkBotInstalled, inspectDiscordInvite, DiscordGuildItem, BotCheckResult } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
 interface CreateServerModalProps {
@@ -103,6 +103,10 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
       .then((res) => {
         if (res.installed) {
           setBotCheckData(res);
+          if (res.invite_url) {
+            setCustomInvite(res.invite_url);
+            setInviteVerified(true);
+          }
           // 既に導入済みの場合は自動でステップ3へ進む
           setStep(3);
         }
@@ -113,6 +117,39 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
       });
   };
 
+  const [inspectingInvite, setInspectingInvite] = useState(false);
+  const [inviteVerified, setInviteVerified] = useState(false);
+
+  const handleInspectCustomInvite = async (inviteInput: string) => {
+    const trimmed = inviteInput.trim();
+    if (!trimmed) {
+      setInviteVerified(false);
+      return;
+    }
+    try {
+      setInspectingInvite(true);
+      setError(null);
+      const res = await inspectDiscordInvite(trimmed);
+      setInviteVerified(true);
+      setCustomInvite(res.invite_url);
+      if (res.name) {
+        setBotCheckData(prev => ({
+          installed: prev?.installed || false,
+          guild_id: res.guild_id || prev?.guild_id,
+          name: res.name || prev?.name || '',
+          icon_url: res.icon_url || prev?.icon_url,
+          member_count: res.member_count || prev?.member_count || 0,
+          invite_url: res.invite_url,
+        }));
+      }
+    } catch (err: any) {
+      setInviteVerified(false);
+      setError(err.message || 'Discord招待リンクの検証に失敗しました。有効なリンクか確認してください。');
+    } finally {
+      setInspectingInvite(false);
+    }
+  };
+
   const handleVerifyBot = async () => {
     if (!selectedGuild) return;
     try {
@@ -121,6 +158,10 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
       const res = await checkBotInstalled(selectedGuild.id);
       if (res.installed) {
         setBotCheckData(res);
+        if (res.invite_url) {
+          setCustomInvite(res.invite_url);
+          setInviteVerified(true);
+        }
         setStep(3);
       } else {
         setError(res.message || 'Botの参加が確認できませんでした。サーバーにBotを追加してからもう一度お試しください。');
@@ -516,19 +557,50 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
                   <div className="space-y-1">
                     <div className="flex items-center justify-between">
                       <label className="text-xs font-semibold text-slate-300">
-                        招待リンク (Discord Invite)
+                        招待リンク (Discord Invite) <span className="text-rose-400">*</span>
                       </label>
                       <span className="text-[10px] text-slate-400">
-                        {botCheckData?.invite_url ? 'Botから自動取得済み（変更可）' : '未取得（手動入力推奨）'}
+                        {inviteVerified ? (
+                          <span className="text-emerald-400 font-medium flex items-center gap-1">
+                            <Check className="w-3 h-3" /> 有効な招待リンク
+                          </span>
+                        ) : botCheckData?.invite_url ? (
+                          'Botから取得済み（カスタムURL変更可）'
+                        ) : (
+                          '手動入力推奨'
+                        )}
                       </span>
                     </div>
-                    <input
-                      type="text"
-                      placeholder={botCheckData?.invite_url || 'https://discord.gg/...'}
-                      value={customInvite}
-                      onChange={(e) => setCustomInvite(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-black/40 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 text-xs font-mono"
-                    />
+                    <div className="relative">
+                      <input
+                        type="text"
+                        required
+                        placeholder={botCheckData?.invite_url || 'https://discord.gg/...'}
+                        value={customInvite}
+                        onChange={(e) => {
+                          setCustomInvite(e.target.value);
+                          setInviteVerified(false);
+                        }}
+                        onBlur={() => {
+                          if (customInvite.trim()) {
+                            handleInspectCustomInvite(customInvite);
+                          }
+                        }}
+                        className={`w-full px-3.5 py-2.5 rounded-xl bg-black/40 border text-white placeholder-slate-500 focus:outline-none text-xs font-mono transition ${
+                          inviteVerified
+                            ? 'border-emerald-500/50 focus:border-emerald-500'
+                            : 'border-white/10 focus:border-purple-500'
+                        }`}
+                      />
+                      {inspectingInvite && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <Loader2 className="w-3.5 h-3.5 text-purple-400 animate-spin" />
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-slate-400">
+                      ※ サーバーの永続招待リンクまたはカスタムURL（https://discord.gg/...）を入力してください
+                    </p>
                   </div>
 
                   {/* Server Description Input */}

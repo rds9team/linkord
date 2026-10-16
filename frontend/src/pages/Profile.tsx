@@ -363,7 +363,18 @@ export const Profile: React.FC = () => {
           linkord.net/@{profile.username}
         </span>
         
-        <div className="w-8 flex-shrink-0" />
+        <button
+          type="button"
+          onClick={() => setIsShareModalOpen(true)}
+          className={`p-1.5 rounded-full border transition cursor-pointer flex-shrink-0 ${
+            isLight
+              ? 'bg-white/80 hover:bg-white border-slate-300 text-slate-700 hover:text-slate-900 shadow-sm'
+              : 'bg-white/5 hover:bg-white/10 border-white/10 text-slate-300 hover:text-white'
+          }`}
+          title="プロフィールをシェア"
+        >
+          <Share2 className="w-3.5 h-3.5 text-sky-400" />
+        </button>
       </div>
 
       {/* Main Profile Panel */}

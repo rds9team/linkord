@@ -94,22 +94,22 @@ export const ShareModal: React.FC<ShareModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
       <div
-        className="w-full max-w-md rounded-3xl bg-slate-900 border border-white/10 shadow-2xl overflow-hidden flex flex-col animate-scaleUp"
+        className="w-full max-w-md max-h-[88vh] rounded-3xl bg-slate-900 border border-white/10 shadow-2xl overflow-hidden flex flex-col animate-scaleUp"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
+        <div className="px-5 sm:px-6 py-4 border-b border-white/10 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-purple-600/20 text-purple-400 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-purple-600/20 text-purple-400 flex items-center justify-center shrink-0">
               <Share2 className="w-4 h-4" />
             </div>
             <div>
               <h2 className="text-sm font-bold text-white">
                 {customTitle || '共有・シェア'}
               </h2>
-              <p className="text-[10px] text-slate-400 truncate max-w-[240px]">
+              <p className="text-[10px] text-slate-400 truncate max-w-[200px] sm:max-w-[240px]">
                 {title}
               </p>
             </div>
@@ -124,7 +124,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
         </div>
 
         {/* Tab switch */}
-        <div className="px-6 pt-3 flex items-center gap-2">
+        <div className="px-5 sm:px-6 pt-3 flex items-center gap-2 shrink-0">
           <button
             type="button"
             onClick={() => setActiveTab('sns')}
@@ -154,7 +154,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
         </div>
 
         {/* Body Content */}
-        <div className="p-6 space-y-4">
+        <div className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1 overscroll-contain">
           {activeTab === 'sns' ? (
             <>
               {/* Native System Share (Android, iOS, Safari) */}

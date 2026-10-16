@@ -114,14 +114,14 @@ export const Navbar: React.FC = () => {
 
           <button
             onClick={() => setIsSupportOpen(true)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-medium border flex items-center gap-1.5 transition cursor-pointer ${
+            className={`hidden sm:flex px-3 py-1.5 rounded-xl text-xs font-medium border items-center gap-1.5 transition cursor-pointer ${
               isLight
                 ? 'bg-rose-50/80 border-rose-200 text-rose-600 hover:bg-rose-100'
                 : 'bg-white/[0.04] hover:bg-white/[0.08] border-white/10 text-slate-300 hover:text-white'
             }`}
           >
             <Heart className="w-3.5 h-3.5 text-rose-400" />
-            <span className="hidden sm:inline">応援する</span>
+            <span>応援する</span>
           </button>
 
           {/* Global Dark / White Theme Toggle */}
@@ -151,28 +151,29 @@ export const Navbar: React.FC = () => {
           <NotificationBox />
 
           {isAuthenticated && user ? (
-            <div className="relative ml-1" ref={dropdownRef}>
+            <div className="relative ml-0.5 sm:ml-1" ref={dropdownRef}>
               <button
                 onClick={() => setIsDropdownOpen((prev) => !prev)}
-                className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold border flex items-center gap-2 transition cursor-pointer ${
+                className={`p-1 sm:px-2.5 sm:py-1.5 rounded-xl text-xs font-semibold border flex items-center gap-1.5 sm:gap-2 transition cursor-pointer ${
                   isLight
                     ? 'bg-white border-slate-200 text-slate-900 shadow-sm hover:bg-slate-50'
                     : 'bg-white/5 hover:bg-white/10 border-white/10 text-white'
                 }`}
+                title={user.display_name}
               >
                 {user.avatar_url ? (
                   <img
                     src={resolveMediaUrl(user.avatar_url)}
                     alt={user.display_name}
-                    className="w-5 h-5 rounded-full object-cover"
+                    className="w-5 h-5 rounded-full object-cover shrink-0"
                   />
                 ) : (
-                  <div className="w-5 h-5 rounded-full bg-purple-600 flex items-center justify-center text-[10px] font-bold text-white">
+                  <div className="w-5 h-5 rounded-full bg-purple-600 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
                     {user.display_name.charAt(0).toUpperCase()}
                   </div>
                 )}
-                <span className="max-w-[80px] sm:max-w-[120px] truncate">{user.display_name}</span>
-                <ChevronDown className={`w-3 h-3 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                <span className="hidden sm:inline max-w-[120px] truncate">{user.display_name}</span>
+                <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
 
               {isDropdownOpen && (
@@ -207,6 +208,20 @@ export const Navbar: React.FC = () => {
                     <Settings className="w-3.5 h-3.5" />
                     設定
                   </Link>
+                  <button
+                    onClick={() => {
+                      setIsDropdownOpen(false);
+                      setIsSupportOpen(true);
+                    }}
+                    className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-medium transition text-left cursor-pointer ${
+                      isLight
+                        ? 'text-rose-600 hover:bg-rose-50'
+                        : 'text-rose-400 hover:bg-white/5'
+                    }`}
+                  >
+                    <Heart className="w-3.5 h-3.5 text-rose-400" />
+                    <span>Linkordを応援する</span>
+                  </button>
                   <div className={`my-1 border-t ${isLight ? 'border-slate-200' : 'border-white/10'}`} />
                   <button
                     onClick={() => {

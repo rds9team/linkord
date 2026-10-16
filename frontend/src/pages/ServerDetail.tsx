@@ -214,12 +214,12 @@ export const ServerDetail: React.FC = () => {
               <ExternalLink className="w-3.5 h-3.5" />
             </a>
 
-            <div className="grid grid-cols-2 sm:flex sm:flex-col gap-2 w-full">
+            <div className={`grid ${server.can_edit ? 'grid-cols-2' : 'grid-cols-3'} sm:flex sm:flex-col gap-2 w-full`}>
               {server.can_edit && (
                 <button
                   type="button"
                   onClick={() => setIsEditModalOpen(true)}
-                  className="px-3 py-2.5 rounded-xl border border-purple-500/40 hover:border-purple-500/60 bg-purple-600/20 hover:bg-purple-600/30 text-purple-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition active:scale-[0.98]"
+                  className="px-2 py-2 sm:px-3 sm:py-2.5 rounded-xl border border-purple-500/40 hover:border-purple-500/60 bg-purple-600/20 hover:bg-purple-600/30 text-purple-200 text-[11px] sm:text-xs font-semibold flex items-center justify-center gap-1 sm:gap-1.5 transition active:scale-[0.98]"
                 >
                   <Edit className="w-3.5 h-3.5" />
                   <span>編集</span>
@@ -229,20 +229,20 @@ export const ServerDetail: React.FC = () => {
                 type="button"
                 onClick={handleBoost}
                 disabled={boosted}
-                className={`px-3 py-2.5 rounded-xl border border-amber-500/30 text-xs font-semibold flex items-center justify-center gap-1.5 transition active:scale-[0.98] ${
+                className={`px-2 py-2 sm:px-3 sm:py-2.5 rounded-xl border border-amber-500/30 text-[11px] sm:text-xs font-semibold flex items-center justify-center gap-1 sm:gap-1.5 transition active:scale-[0.98] ${
                   boosted
                     ? 'bg-amber-500/20 text-amber-300'
                     : 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-400'
                 }`}
               >
                 <Flame className="w-3.5 h-3.5" />
-                <span>{boosted ? 'ブースト済み' : 'ブースト'}</span>
+                <span>{boosted ? 'ブースト済' : 'ブースト'}</span>
               </button>
               <button
                 type="button"
                 onClick={handleSync}
                 disabled={syncing}
-                className="px-3 py-2.5 rounded-xl border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-medium flex items-center justify-center gap-1.5 transition active:scale-[0.98]"
+                className="px-2 py-2 sm:px-3 sm:py-2.5 rounded-xl border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-slate-300 text-[11px] sm:text-xs font-medium flex items-center justify-center gap-1 sm:gap-1.5 transition active:scale-[0.98]"
                 title="Discordから最新のメンバー数とアイコンを再取得"
               >
                 {syncing ? (
@@ -257,7 +257,7 @@ export const ServerDetail: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setIsShareModalOpen(true)}
-                className="px-3 py-2.5 rounded-xl border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-xs font-medium flex items-center justify-center gap-1.5 transition cursor-pointer active:scale-[0.98]"
+                className="px-2 py-2 sm:px-3 sm:py-2.5 rounded-xl border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-[11px] sm:text-xs font-medium flex items-center justify-center gap-1 sm:gap-1.5 transition cursor-pointer active:scale-[0.98]"
                 title="サーバーを共有・埋め込み"
               >
                 <Share2 className="w-3.5 h-3.5 text-sky-400" />

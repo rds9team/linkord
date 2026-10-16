@@ -30,18 +30,7 @@ export function resolveMediaUrl(url?: string | null): string | undefined {
       return `${baseClean}${cleanPath}`;
     }
 
-    // 2. Production fallback when hosted on linkord.net or Cloudflare Pages
-    if (typeof window !== 'undefined' && window.location) {
-      const hostname = window.location.hostname;
-      if (
-        hostname.endsWith('linkord.net') ||
-        hostname.endsWith('linkord.site') ||
-        hostname.includes('pages.dev')
-      ) {
-        return `https://api.linkord.net${cleanPath}`;
-      }
-    }
-
+    // 2. Production fallback: return cleanPath directly so it routes via same-origin proxy (/uploads/...)
     return cleanPath;
   }
 

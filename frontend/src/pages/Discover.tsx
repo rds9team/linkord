@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Flame, Sparkles, Compass, ExternalLink, Loader2, Plus, Users, User, ArrowRight, Eye, TrendingUp, Radio, PhoneCall, Clock, Headphones, Share2, Filter, Check, Award, Gamepad2, ArrowUpDown } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { fetchServers, searchProfiles, fetchVoiceRecruitments } from '../api/client';
+import { fetchServers, searchProfiles, fetchVoiceRecruitments, getServerJoinUrl } from '../api/client';
 import { ServerData, ProfileSearchResult, VoiceRecruitmentItem } from '../types';
 import { CreateServerModal } from '../components/CreateServerModal';
 import { CreateRecruitmentModal } from '../components/CreateRecruitmentModal';
+import { ShareModal } from '../components/ShareModal';
 import { Badges } from '../components/Badges';
 import { useTitle } from '../hooks/useTitle';
 import { useAuth } from '../context/AuthContext';
@@ -25,6 +26,26 @@ export const Discover: React.FC = () => {
   const [activeTab, setActiveTabState] = useState<'popular' | 'trending' | 'new' | 'minecraft'>(() => {
     return urlTab || 'popular';
   });
+
+  // Sync state when URL search params change (e.g. clicking navbar or browser back/forward)
+  useEffect(() => {
+    if (urlType && urlType !== mainCategory) {
+      setMainCategoryState(urlType);
+      sessionStorage.setItem('linkord_discover_type', urlType);
+    }
+  }, [urlType]);
+
+  useEffect(() => {
+    if (urlTab && urlTab !== activeTab) {
+      setActiveTabState(urlTab);
+    }
+  }, [urlTab]);
+
+  useEffect(() => {
+    if (urlQuery !== searchTerm) {
+      setSearchTermState(urlQuery);
+    }
+  }, [urlQuery]);
 
   // Server Filtering States
   const [serverMemberFilter, setServerMemberFilter] = useState<number | undefined>(undefined);
@@ -70,6 +91,19 @@ export const Discover: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isRecruitmentModalOpen, setIsRecruitmentModalOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [shareModalData, setShareModalData] = useState<{
+    isOpen: boolean;
+    title: string;
+    shareUrl: string;
+    shareText?: string;
+    badgeSlugOrUsername?: string;
+    type?: 'server' | 'user' | 'recruitment';
+    customTitle?: string;
+  }>({
+    isOpen: false,
+    title: '',
+    shareUrl: '',
+  });
 
   useEffect(() => {
     let isMounted = true;
@@ -401,7 +435,7 @@ export const Discover: React.FC = () => {
 
       {/* Main Content */}
       {!initialLoading && mainCategory === 'servers' && (
-        servers.length === 0 ? (
+        !isSearching && servers.length === 0 ? (
           <div className="text-center py-16 px-4 rounded-3xl bg-white/[0.02] border border-white/5 max-w-md mx-auto">
             <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mx-auto mb-3 text-purple-400">
               <Users className="w-6 h-6" />
@@ -434,9 +468,24 @@ export const Discover: React.FC = () => {
                   <div>
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-xl bg-[#5865F2] flex items-center justify-center font-extrabold text-white text-base shadow-sm">
+                        <div className="w-12 h-12 rounded-xl bg-[#5865F2] flex items-center justify-center font-extrabold text-white text-base shadow-sm overflow-hidden">
                           {server.icon_url ? (
-                            <img src={server.icon_url} alt={server.name} className="w-full h-full rounded-xl object-cover" />
+                            <img
+                              src={server.icon_url}
+                              alt={server.name}
+                              className="w-full h-full rounded-xl object-cover"
+                              onError={(e) => {
+                                const target = e.currentTarget;
+                                if (target.src.endsWith('.gif')) {
+                                  target.src = target.src.replace(/\.gif($|\?)/, '.png$1');
+                                } else {
+                                  target.style.display = 'none';
+                                  if (target.parentElement) {
+                                    target.parentElement.innerText = server.name.substring(0, 2);
+                                  }
+                                }
+                              }}
+                            />
                           ) : (
                             server.name.substring(0, 2)
                           )}
@@ -486,7 +535,7 @@ export const Discover: React.FC = () => {
                       詳細を見る
                     </Link>
                     <a
-                      href={server.invite_url}
+                      href={getServerJoinUrl(server.slug)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition flex items-center gap-1"
@@ -504,7 +553,7 @@ export const Discover: React.FC = () => {
 
       {/* Recruitments Grid */}
       {!initialLoading && mainCategory === 'recruitments' && (
-        recruitments.length === 0 ? (
+        !isSearching && recruitments.length === 0 ? (
           <div className="text-center py-16 px-4 rounded-3xl bg-white/[0.02] border border-white/5 max-w-md mx-auto">
             <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mx-auto mb-3 text-rose-400">
               <Radio className="w-6 h-6 animate-pulse" />
@@ -583,7 +632,7 @@ export const Discover: React.FC = () => {
                     </Link>
                   </div>
 
-                  {/* Actions: Join VC Button + X Share Button */}
+                  {/* Actions: Join VC Button + Share Button */}
                   <div className="pt-2 flex items-center gap-2">
                     <a
                       href={inviteTarget}
@@ -597,14 +646,17 @@ export const Discover: React.FC = () => {
                     </a>
                     <button
                       onClick={() => {
-                        const tweetText = `【${r.game_tag || '通話'} @${r.target_count}】${r.title}\nサーバー: ${r.server_name}\n\n通話・VC参加はこちら👇`;
-                        const shareUrl = `https://linkord.net/discover?type=recruitments`;
-                        const hashtags = `Discord募集,${r.game_tag ? r.game_tag.replace(/\s+/g, '') + '募集,' : ''}Linkord`;
-                        const xUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(shareUrl)}&hashtags=${encodeURIComponent(hashtags)}`;
-                        window.open(xUrl, '_blank', 'noopener,noreferrer');
+                        setShareModalData({
+                          isOpen: true,
+                          title: r.title,
+                          shareUrl: 'https://linkord.net/discover?type=recruitments',
+                          shareText: `【${r.game_tag || '通話'} @${r.target_count}】${r.title}\nサーバー: ${r.server_name}\n\n通話・VC参加はこちら👇`,
+                          type: 'recruitment',
+                          customTitle: '通話募集を共有',
+                        });
                       }}
                       className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white transition flex items-center justify-center cursor-pointer"
-                      title="X (Twitter) でこの通話募集をシェア"
+                      title="この通話募集をシェア"
                     >
                       <Share2 className="w-4 h-4 text-sky-400" />
                     </button>
@@ -701,7 +753,7 @@ export const Discover: React.FC = () => {
 
       {/* Users Grid */}
       {!initialLoading && mainCategory === 'users' && (
-        users.length === 0 ? (
+        !isSearching && users.length === 0 ? (
           <div className="text-center py-12 text-slate-400 text-xs">
             該当するユーザーが見つかりませんでした。
           </div>
@@ -790,6 +842,17 @@ export const Discover: React.FC = () => {
         }}
       />
 
+      {/* Share Modal */}
+      <ShareModal
+        isOpen={shareModalData.isOpen}
+        onClose={() => setShareModalData(prev => ({ ...prev, isOpen: false }))}
+        title={shareModalData.title}
+        shareUrl={shareModalData.shareUrl}
+        shareText={shareModalData.shareText}
+        badgeSlugOrUsername={shareModalData.badgeSlugOrUsername}
+        type={shareModalData.type}
+        customTitle={shareModalData.customTitle}
+      />
     </div>
   );
 };

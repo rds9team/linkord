@@ -8,6 +8,7 @@ import {
 import { Badges } from '../components/Badges';
 import { ReportModal } from '../components/ReportModal';
 import { FollowListModal } from '../components/FollowListModal';
+import { ShareModal } from '../components/ShareModal';
 import { MusicPlayer } from '../components/MusicPlayer';
 import { SpotifyWidget, ActivityWidget, CustomStatusBubble } from '../components/LanyardWidgets';
 import { useLanyard } from '../hooks/useLanyard';
@@ -125,6 +126,7 @@ export const Profile: React.FC = () => {
   const { theme } = useTheme();
   const isLight = theme === 'light';
   const [isReportOpen, setIsReportOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [boostCount, setBoostCount] = useState(0);
   const [hasBoosted, setHasBoosted] = useState(false);
 
@@ -507,18 +509,12 @@ export const Profile: React.FC = () => {
                       </button>
                     )}
 
-                    {/* Share Profile to X (Twitter) */}
+                    {/* Share Profile Modal */}
                     <button
                       type="button"
-                      onClick={() => {
-                        const tweetText = `Linkordで ${profile.display_name} (@${profile.username}) のプロフィールをチェック！\n\n`;
-                        const shareUrl = `https://linkord.net/@${profile.username}`;
-                        const hashtags = `Linkord,プロフィール`;
-                        const xUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(shareUrl)}&hashtags=${encodeURIComponent(hashtags)}`;
-                        window.open(xUrl, '_blank', 'noopener,noreferrer');
-                      }}
+                      onClick={() => setIsShareModalOpen(true)}
                       className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white transition flex items-center gap-1 cursor-pointer"
-                      title="X (Twitter) でこのプロフィールをシェア"
+                      title="このプロフィールをシェア・埋め込み"
                     >
                       <Share2 className="w-3 h-3 text-sky-400" />
                       <span>シェア</span>
@@ -856,6 +852,18 @@ export const Profile: React.FC = () => {
         onClose={() => setIsFollowModalOpen(false)}
         username={profile.username}
         type={followModalType}
+      />
+
+      {/* Share & Embed Modal */}
+      <ShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        title={`${profile.display_name} (@${profile.username})`}
+        shareUrl={`https://linkord.net/@${profile.username}`}
+        shareText={`Linkordで ${profile.display_name} (@${profile.username}) のプロフィールをチェック！`}
+        badgeSlugOrUsername={profile.username}
+        type="user"
+        customTitle="プロフィールを共有・埋め込み"
       />
     </div>
   );

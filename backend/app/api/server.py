@@ -376,8 +376,8 @@ async def list_servers(
         stmt = stmt.order_by(Server.created_at.desc())
     elif sort == "small":
         stmt = stmt.order_by(Server.member_count.asc())
-    elif sort in ("bump", "up", "trending"):
-        stmt = stmt.order_by(Server.updated_at.desc())
+    elif sort in ("bump", "up", "trending", "boost"):
+        stmt = stmt.order_by(Server.updated_at.desc(), Server.created_at.desc())
     else:
         stmt = stmt.order_by(Server.member_count.desc(), Server.updated_at.desc())
 
@@ -386,8 +386,8 @@ async def list_servers(
     for s in servers:
         s.boosts_count = await get_server_boosts_count(db, s.id)
 
-    if sort == "boost":
-        servers.sort(key=lambda s: (s.boosts_count, s.updated_at), reverse=True)
+    if sort in ("boost", "trending"):
+        servers.sort(key=lambda s: (s.updated_at or s.created_at, s.boosts_count), reverse=True)
 
     return servers
 
@@ -415,26 +415,46 @@ async def create_server(
     member_count = 0
     real_icon_url = data.icon_url
     clean_invite = data.invite_url.strip()
-    clean_code_src = clean_invite.split("?")[0].split("#")[0].rstrip("/")
-    match = re.search(r"(?:discord\.gg/|discord\.com/invite/)?([a-zA-Z0-9_-]+)$", clean_code_src)
-    if match:
-        code = match.group(1)
-        clean_invite = f"https://discord.gg/{code}"
-        try:
-            async with httpx.AsyncClient(timeout=4.0) as client:
-                d_res = await client.get(f"https://discord.com/api/v10/invites/{code}?with_counts=true")
-                if d_res.status_code == 200:
-                    d_data = d_res.json()
-                    member_count = d_data.get("approximate_member_count") or 0
-                    guild = d_data.get("guild", {})
-                    guild_id = guild.get("id")
-                    icon_hash = guild.get("icon")
-                    if guild_id and icon_hash and not real_icon_url:
-                        real_icon_url = f"https://cdn.discordapp.com/icons/{guild_id}/{icon_hash}.png"
-        except Exception:
-            pass
 
-    target_guild_id = data.guild_id or (guild_id if 'guild_id' in locals() else None)
+    # CDN画像URLや無効URLの混入を防止
+    is_image_url = bool(re.search(r"\.(png|jpg|jpeg|gif|webp)(\?.*)?$", clean_invite, re.IGNORECASE)) or "cdn.discordapp.com" in clean_invite
+    if is_image_url:
+        clean_invite = ""
+
+    # Botから有効な招待URLを取得できるか確認
+    target_guild_id = data.guild_id
+    if target_guild_id:
+        bot_invite = await get_bot_invite_for_guild(target_guild_id)
+        if bot_invite:
+            clean_invite = bot_invite
+
+    if clean_invite:
+        clean_code_src = clean_invite.split("?")[0].split("#")[0].rstrip("/")
+        match = re.search(r"(?:discord\.gg/|discord\.com/invite/)?([a-zA-Z0-9_-]+)$", clean_code_src)
+        if match:
+            code = match.group(1)
+            clean_invite = f"https://discord.gg/{code}"
+            try:
+                async with httpx.AsyncClient(timeout=4.0) as client:
+                    d_res = await client.get(f"https://discord.com/api/v10/invites/{code}?with_counts=true")
+                    if d_res.status_code == 200:
+                        d_data = d_res.json()
+                        member_count = d_data.get("approximate_member_count") or 0
+                        guild = d_data.get("guild", {})
+                        fetched_guild_id = guild.get("id")
+                        if fetched_guild_id and not target_guild_id:
+                            target_guild_id = fetched_guild_id
+                        icon_hash = guild.get("icon")
+                        if fetched_guild_id and icon_hash and not real_icon_url:
+                            real_icon_url = f"https://cdn.discordapp.com/icons/{fetched_guild_id}/{icon_hash}.png"
+            except Exception:
+                pass
+
+    if not clean_invite:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="有効なDiscord招待URLを入力するか、公式Botを導入して招待作成権限を付与してください"
+        )
     if target_guild_id:
         # 重複掲載チェック
         dup_stmt = select(Server).where(Server.guild_id == str(target_guild_id))
@@ -707,6 +727,7 @@ async def boost_server(
         time_window=time_window
     )
     db.add(new_boost)
+    server.updated_at = now
     await db.commit()
 
     return {"status": "ok", "message": f"{server.name} をブーストしました！"}

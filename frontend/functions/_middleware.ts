@@ -18,7 +18,7 @@ export async function onRequest(context: any): Promise<Response> {
     const res = await next();
     if (res.status === 404 && request.method === 'GET') {
       const u = new URL(request.url);
-      if (!u.pathname.startsWith('/api') && !u.pathname.includes('.')) {
+      if (!u.pathname.startsWith('/api') && !u.pathname.startsWith('/uploads') && !u.pathname.includes('.')) {
         return env.ASSETS ? env.ASSETS.fetch(new Request(new URL('/', request.url), request)) : res;
       }
     }
@@ -185,7 +185,7 @@ ${jsonLd}
   const res = await next();
   if (res.status === 404 && request.method === 'GET') {
     const u = new URL(request.url);
-    if (!u.pathname.startsWith('/api') && !u.pathname.includes('.')) {
+    if (!u.pathname.startsWith('/api') && !u.pathname.startsWith('/uploads') && !u.pathname.includes('.')) {
       return env.ASSETS ? env.ASSETS.fetch(new Request(new URL('/', request.url), request)) : res;
     }
   }

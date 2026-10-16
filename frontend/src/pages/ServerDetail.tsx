@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Flame, Flag, ExternalLink, ArrowLeft, Loader2, ServerCrash, RefreshCw, Check, Code, ShieldCheck, Copy, Share2, Edit, Sparkles } from 'lucide-react';
 import { ReportModal } from '../components/ReportModal';
 import { EditServerModal } from '../components/EditServerModal';
+import { ShareModal } from '../components/ShareModal';
 import { fetchServer, boostServer, syncServerDiscordStats, fetchServerAlliances, getServerJoinUrl } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { ServerData, ServerAllianceItem } from '../types';
@@ -27,6 +28,7 @@ export const ServerDetail: React.FC = () => {
   const [boosted, setBoosted] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [boostError, setBoostError] = useState<string | null>(null);
 
   const handleGoBack = () => {
@@ -155,7 +157,22 @@ export const ServerDetail: React.FC = () => {
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5 mb-6 text-center sm:text-left">
           <div className="w-20 h-20 rounded-2xl bg-indigo-600 flex items-center justify-center font-extrabold text-2xl text-white shadow-xl shadow-indigo-600/30 overflow-hidden flex-shrink-0">
             {server.icon_url ? (
-              <img src={resolveMediaUrl(server.icon_url)} alt={server.name} className="w-full h-full object-cover" />
+              <img
+                src={resolveMediaUrl(server.icon_url)}
+                alt={server.name}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  if (target.src.endsWith('.gif')) {
+                    target.src = target.src.replace(/\.gif($|\?)/, '.png$1');
+                  } else {
+                    target.style.display = 'none';
+                    if (target.parentElement) {
+                      target.parentElement.innerText = server.name.substring(0, 3);
+                    }
+                  }
+                }}
+              />
             ) : (
               server.name.substring(0, 3)
             )}
@@ -239,15 +256,9 @@ export const ServerDetail: React.FC = () => {
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  const tweetText = `Discordサーバー「${server.name}」(${server.member_count}名) をチェック！\n\n参加はこちら👇`;
-                  const shareUrl = `https://linkord.net/server/${server.slug}`;
-                  const hashtags = `Discordサーバー,ディスコード,Linkord`;
-                  const xUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(shareUrl)}&hashtags=${encodeURIComponent(hashtags)}`;
-                  window.open(xUrl, '_blank', 'noopener,noreferrer');
-                }}
+                onClick={() => setIsShareModalOpen(true)}
                 className="px-3 py-2.5 rounded-xl border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-xs font-medium flex items-center justify-center gap-1.5 transition cursor-pointer active:scale-[0.98]"
-                title="X (Twitter) でシェア"
+                title="サーバーを共有・埋め込み"
               >
                 <Share2 className="w-3.5 h-3.5 text-sky-400" />
                 <span>シェア</span>
@@ -400,6 +411,18 @@ export const ServerDetail: React.FC = () => {
         onClose={() => setIsEditModalOpen(false)}
         server={server}
         onUpdated={(updated) => setServer(updated)}
+      />
+
+      {/* Share & Embed Modal */}
+      <ShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        title={server.name}
+        shareUrl={`https://linkord.net/server/${server.slug}`}
+        shareText={`Discordサーバー「${server.name}」(${server.member_count}名) をチェック！\n\n参加はこちら👇`}
+        badgeSlugOrUsername={server.slug}
+        type="server"
+        customTitle="サーバーを共有・埋め込み"
       />
     </div>
   );

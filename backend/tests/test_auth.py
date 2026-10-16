@@ -77,7 +77,7 @@ async def test_full_auth_and_api_flow():
         assert boost_dup.status_code == 429
 
         # 10. Self profile boost should fail -> 400
-        self_boost = await ac.post("/api/profile/yuto/boost")
+        self_boost = await ac.post("/api/profile/test_auth_runner/boost")
         assert self_boost.status_code == 400
 
         # 11. OAuth login endpoints

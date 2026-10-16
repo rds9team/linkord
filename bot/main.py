@@ -340,7 +340,7 @@ async def up_command(interaction: discord.Interaction):
 
         # 1. guild_id または サーバー名で Linkord 上のサーバーを検索
         cursor = await db.execute(
-            "SELECT id, slug, name, guild_id, updated_at, member_count, icon_url FROM servers WHERE guild_id = ? LIMIT 1;",
+            "SELECT id, slug, name, guild_id, owner_id, updated_at, member_count, icon_url FROM servers WHERE guild_id = ? LIMIT 1;",
             (guild_id,)
         )
         server = await cursor.fetchone()
@@ -348,7 +348,7 @@ async def up_command(interaction: discord.Interaction):
         if not server:
             # サーバー名でフォールバック検索（未紐付けの場合の自動紐付け）
             cursor = await db.execute(
-                "SELECT id, slug, name, guild_id, updated_at, member_count, icon_url FROM servers WHERE name = ? LIMIT 1;",
+                "SELECT id, slug, name, guild_id, owner_id, updated_at, member_count, icon_url FROM servers WHERE name = ? LIMIT 1;",
                 (guild_name,)
             )
             server = await cursor.fetchone()
@@ -426,6 +426,33 @@ async def up_command(interaction: discord.Interaction):
             (now_str, member_count, guild_name, guild_id, icon_url, server["id"])
         )
 
+        # ブースト実行者の account_id を特定（未連携の場合は server の owner_id をフォールバック）
+        boost_user_id = server["owner_id"]
+        cursor = await db.execute(
+            "SELECT account_id FROM account_identities WHERE provider = 'discord' AND provider_user_id = ? LIMIT 1;",
+            (str(interaction.user.id),)
+        )
+        ident = await cursor.fetchone()
+        if ident and ident["account_id"]:
+            boost_user_id = ident["account_id"]
+
+        time_window = now.strftime("%Y-%m-%d-%H")
+        try:
+            await db.execute(
+                """
+                INSERT OR IGNORE INTO boosts (user_id, server_id, time_window, created_at)
+                VALUES (?, ?, ?, ?);
+                """,
+                (boost_user_id, server["id"], time_window, now_str)
+            )
+        except Exception as b_err:
+            logger.warning(f"Failed to record boost in /up: {b_err}")
+
+        # 累計ブースト数を取得
+        cursor = await db.execute("SELECT count(id) FROM boosts WHERE server_id = ?;", (server["id"],))
+        boost_count_row = await cursor.fetchone()
+        total_boosts = boost_count_row[0] if boost_count_row else 1
+
         # 2時間後のリマインダーを登録（古い未通知リマインダーは無効化）
         next_dt = now + datetime.timedelta(seconds=COOLDOWN_SECONDS)
         next_ts = int(next_dt.timestamp())
@@ -452,6 +479,7 @@ async def up_command(interaction: discord.Interaction):
             embed.set_thumbnail(url=icon_url)
 
         embed.add_field(name="👥 現在のメンバー数", value=f"**{member_count:,}** 名", inline=True)
+        embed.add_field(name="🚀 累計ブースト数", value=f"**{total_boosts:,}** 回", inline=True)
         embed.add_field(name="⏰ 次のUP可能時刻", value=f"<t:{next_ts}:R> (通知を設定しました)", inline=True)
         embed.add_field(
             name="🌐 Linkord 掲載ページ",
@@ -501,8 +529,13 @@ async def info_command(interaction: discord.Interaction):
         if interaction.guild.icon:
             embed.set_thumbnail(url=interaction.guild.icon.url)
 
+        cursor = await db.execute("SELECT count(id) FROM boosts WHERE server_id = ?;", (server["id"],))
+        boost_count_row = await cursor.fetchone()
+        info_total_boosts = boost_count_row[0] if boost_count_row else 0
+
         embed.add_field(name="識別URL (Slug)", value=f"`/server/{server['slug']}`", inline=True)
         embed.add_field(name="同期メンバー数", value=f"{server['member_count']} 名", inline=True)
+        embed.add_field(name="累計ブースト数", value=f"{info_total_boosts} 回", inline=True)
         if server["tags"]:
             embed.add_field(name="タグ", value=server["tags"], inline=False)
         embed.add_field(

@@ -32,6 +32,7 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
 
   // Form fields for step 3
   const [slug, setSlug] = useState('');
+  const [customInvite, setCustomInvite] = useState('');
   const [description, setDescription] = useState('');
   const [tags, setTags] = useState('');
   const [minecraftTags, setMinecraftTags] = useState<string[]>([]);
@@ -144,9 +145,13 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
       return;
     }
 
-    const finalInvite = botCheckData?.invite_url || selectedGuild.icon_url || '';
+    const finalInvite = (customInvite.trim() || botCheckData?.invite_url || '').trim();
+    if (finalInvite.match(/\.(png|jpg|jpeg|gif|webp)(\?.*)?$/i) || finalInvite.includes('cdn.discordapp.com')) {
+      setError('招待リンクに画像URLが指定されています。https://discord.gg/... 形式の招待リンクを入力してください。');
+      return;
+    }
     if (!finalInvite) {
-      setError('サーバーの招待リンクを取得できませんでした。Botに「招待リンク作成」権限があることを確認してください。');
+      setError('サーバーの招待リンクを取得できませんでした。招待URLを入力するか、Botに「招待リンク作成」権限があることを確認してください。');
       return;
     }
 
@@ -505,6 +510,25 @@ export const CreateServerModal: React.FC<CreateServerModalProps> = ({
                         className="w-full pl-[62px] pr-3 py-2.5 rounded-xl bg-black/40 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 text-xs font-mono"
                       />
                     </div>
+                  </div>
+
+                  {/* Invite URL Input */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold text-slate-300">
+                        招待リンク (Discord Invite)
+                      </label>
+                      <span className="text-[10px] text-slate-400">
+                        {botCheckData?.invite_url ? 'Botから自動取得済み（変更可）' : '未取得（手動入力推奨）'}
+                      </span>
+                    </div>
+                    <input
+                      type="text"
+                      placeholder={botCheckData?.invite_url || 'https://discord.gg/...'}
+                      value={customInvite}
+                      onChange={(e) => setCustomInvite(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-black/40 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 text-xs font-mono"
+                    />
                   </div>
 
                   {/* Server Description Input */}

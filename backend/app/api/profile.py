@@ -33,11 +33,14 @@ async def search_profiles(
         .where(Account.is_public == True, Account.deleted_at.is_(None))
     )
     if q and q.strip():
-        term = f"%{q.strip()}%"
+        raw_q = q.strip()
+        clean_q = raw_q.lstrip('@')
+        term = f"%{clean_q}%"
         stmt = stmt.where(
             or_(
                 Account.username.ilike(term),
                 Account.display_name.ilike(term),
+                Account.display_name.ilike(f"%{raw_q}%"),
                 Account.bio.ilike(term)
             )
         )
@@ -54,10 +57,10 @@ async def search_profiles(
     if game:
         stmt = stmt.where(Account.games.ilike(f"%{game.strip()}%"))
 
-    if sort == "new":
+    if sort in ("new", "recent"):
         stmt = stmt.order_by(Account.created_at.desc())
     else:
-        stmt = stmt.order_by(Account.views_count.desc())
+        stmt = stmt.order_by(Account.views_count.desc(), Account.created_at.desc())
 
     stmt = stmt.limit(min(limit, 50))
     result = await db.execute(stmt)
@@ -79,6 +82,10 @@ async def search_profiles(
             views_count=acc.views_count,
             followers_count=followers
         ))
+
+    if sort == "followers":
+        out.sort(key=lambda x: (x.followers_count, x.views_count), reverse=True)
+
     return out
 
 

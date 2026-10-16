@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.core.config import settings
-from app.core.database import engine, Base
+from app.core.database import engine, Base, AsyncSessionLocal
 import os
 import starlette.formparsers
 from starlette.requests import Request
@@ -34,6 +34,8 @@ async def ensure_schema_updated(conn):
     result = await conn.exec_driver_sql("PRAGMA table_info(accounts);")
     columns = [row[1] for row in result.fetchall()]
     if columns:
+        if "email" not in columns:
+            await conn.exec_driver_sql("ALTER TABLE accounts ADD COLUMN email VARCHAR(256);")
         if "music_url" not in columns:
             await conn.exec_driver_sql("ALTER TABLE accounts ADD COLUMN music_url VARCHAR(512);")
         if "video_url" not in columns:
@@ -143,6 +145,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Static file serving for uploads (safe, non-executable)
 app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
+app.mount("/api/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="api_uploads")
 
 # CORS configuration
 app.add_middleware(
@@ -215,10 +218,27 @@ app.include_router(alliances.router, prefix="/api")
 app.include_router(games.router, prefix="/api")
 
 
-@app.get("/api/health")
+@app.api_route("/api/health", methods=["GET", "HEAD"])
+@app.api_route("/health", methods=["GET", "HEAD"])
 def health_check():
     return {
         "status": "healthy",
         "service": "linkord-api",
         "env": settings.APP_ENV
     }
+
+
+@app.get("/api/stats/summary")
+@app.get("/stats")
+async def stats_summary():
+    async with AsyncSessionLocal() as db:
+        from sqlalchemy import func, select
+        from app.models.models import Account, Server
+        user_count = (await db.execute(select(func.count(Account.id)).where(Account.deleted_at.is_(None)))).scalar() or 0
+        server_count = (await db.execute(select(func.count(Server.id)).where(Server.is_public == True))).scalar() or 0
+        return {
+            "status": "ok",
+            "service": "linkord-api",
+            "users": user_count,
+            "servers": server_count,
+        }

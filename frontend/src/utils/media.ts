@@ -26,7 +26,7 @@ export function resolveMediaUrl(url?: string | null): string | undefined {
     
     // 1. Explicit environment variable
     if (API_BASE_URL) {
-      const baseClean = API_BASE_URL.replace(/\/+$/, '');
+      const baseClean = API_BASE_URL.replace(/\/+$/, '').replace(/\/api$/, '');
       return `${baseClean}${cleanPath}`;
     }
 

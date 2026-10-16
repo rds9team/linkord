@@ -2,20 +2,63 @@ import secrets
 import datetime
 import os
 from typing import Optional
-from sqlalchemy import select
-from app.core.config import settings
-from app.core.database import engine, Base, AsyncSessionLocal
-from app.models.models import Account, UserSession
-from app.main import ensure_schema_updated
 import pytest
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 
-settings.TESTING = True
+TEST_DB_FILE = "test_linkord.db"
+TEST_DATABASE_URL = f"sqlite+aiosqlite:///./{TEST_DB_FILE}"
+
 os.environ["TESTING"] = "1"
+os.environ["APP_ENV"] = "testing"
+os.environ["DATABASE_URL"] = TEST_DATABASE_URL
+
+from app.core.config import settings
+settings.TESTING = True
+settings.DATABASE_URL = TEST_DATABASE_URL
+
+from app.models.models import Account, UserSession
+from app.core.database import Base, get_db
+import app.core.database as core_db
+from app.main import ensure_schema_updated, app
+
+# Create isolated test engine and sessionmaker
+test_engine = create_async_engine(TEST_DATABASE_URL, echo=False, future=True)
+TestAsyncSessionLocal = async_sessionmaker(
+    bind=test_engine,
+    autocommit=False,
+    autoflush=False,
+    expire_on_commit=False,
+    class_=AsyncSession
+)
+
+# Override core_db engine and session
+core_db.engine = test_engine
+core_db.AsyncSessionLocal = TestAsyncSessionLocal
+
+async def override_get_db():
+    async with TestAsyncSessionLocal() as session:
+        try:
+            yield session
+        finally:
+            await session.close()
+
+app.dependency_overrides[get_db] = override_get_db
 
 async def init_test_db():
-    async with engine.begin() as conn:
+    async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         await ensure_schema_updated(conn)
+
+@pytest.fixture(scope="session", autouse=True)
+def cleanup_test_db():
+    yield
+    # Cleanup test db file after test suite finishes
+    if os.path.exists(TEST_DB_FILE):
+        try:
+            os.remove(TEST_DB_FILE)
+        except OSError:
+            pass
 
 async def create_test_account_and_session(
     username: str = "test_default_user",
@@ -28,7 +71,7 @@ async def create_test_account_and_session(
     eff_founder = is_privileged if has_founder is None else has_founder
     eff_team = is_privileged if has_team is None else has_team
 
-    async with AsyncSessionLocal() as db:
+    async with TestAsyncSessionLocal() as db:
         stmt = select(Account).where(Account.username == username)
         res = await db.execute(stmt)
         account = res.scalars().first()

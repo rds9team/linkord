@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Heart, CheckCircle2, AlertCircle, Loader2, Users, ShieldCheck, Sparkles, ExternalLink } from 'lucide-react';
+import { X, Heart, CheckCircle2, AlertCircle, Loader2, Users, ShieldCheck, ExternalLink, Smartphone } from 'lucide-react';
 import { submitDonation, fetchPublicSupporters, PublicSupporterItem } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { resolveMediaUrl } from '../utils/media';
 
 interface SupportModalProps {
   isOpen: boolean;
@@ -96,50 +97,46 @@ export const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose, def
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-      <div className={`relative w-full max-w-lg border rounded-2xl p-5 sm:p-6 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col ${
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
+      <div className={`relative w-full max-w-lg border rounded-3xl p-6 sm:p-7 shadow-2xl overflow-hidden max-h-[88vh] flex flex-col ${
         isLight
-          ? 'bg-slate-50 border-slate-200 text-slate-800'
-          : 'bg-[#0e1017] border-white/10 text-white'
+          ? 'bg-white border-slate-200 text-slate-800'
+          : 'bg-[#10121a] border-white/10 text-white'
       }`}>
-        {/* Background glow */}
-        <div className="absolute top-0 right-0 w-48 h-48 bg-rose-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col flex-1 overflow-hidden">
+        <div className="flex flex-col flex-1 overflow-hidden">
           {/* Header */}
-          <div className="flex items-center justify-between pb-3 mb-3 border-b border-white/10">
-            <div className="flex items-center gap-2.5">
-              <div className="p-2 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400">
-                <Heart className="w-5 h-5 fill-rose-500/30" />
+          <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-200 dark:border-white/10 shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-rose-400 shrink-0">
+                <Heart className="w-5 h-5 fill-rose-500/20" />
               </div>
               <div>
-                <h3 className="text-base font-bold flex items-center gap-2">
+                <h3 className="text-base font-bold flex items-center gap-2 tracking-tight">
                   Linkord 開発支援
-                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30 font-medium">
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-400 border border-rose-500/30 font-medium">
                     Supporter
                   </span>
                 </h3>
-                <p className="text-[11px] text-slate-400">PayPay送金リンクでLinkordの運営をサポート</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">PayPay送金リンクでLinkordの運営をサポート</p>
               </div>
             </div>
             <button
               onClick={handleReset}
-              className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors"
+              className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-white/5 transition-colors cursor-pointer"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
 
           {/* Tab Navigation */}
-          <div className="flex gap-2 mb-4 p-1 rounded-xl bg-white/5 border border-white/5 text-xs font-semibold">
+          <div className="flex gap-1.5 mb-5 p-1 rounded-2xl bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/5 text-xs font-semibold shrink-0">
             <button
               type="button"
               onClick={() => setActiveTab('form')}
-              className={`flex-1 py-1.5 px-3 rounded-lg flex items-center justify-center gap-1.5 transition ${
+              className={`flex-1 py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 transition cursor-pointer ${
                 activeTab === 'form'
-                  ? 'bg-rose-500 text-white shadow-md shadow-rose-500/20'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-rose-600 text-white shadow-sm'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
               }`}
             >
               <Heart className="w-3.5 h-3.5" />
@@ -151,10 +148,10 @@ export const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose, def
                 setActiveTab('supporters');
                 loadSupporters();
               }}
-              className={`flex-1 py-1.5 px-3 rounded-lg flex items-center justify-center gap-1.5 transition ${
+              className={`flex-1 py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 transition cursor-pointer ${
                 activeTab === 'supporters'
-                  ? 'bg-rose-500 text-white shadow-md shadow-rose-500/20'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-rose-600 text-white shadow-sm'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
               }`}
             >
               <Users className="w-3.5 h-3.5" />
@@ -163,63 +160,71 @@ export const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose, def
           </div>
 
           {/* Tab Content */}
-          <div className="overflow-y-auto pr-1 flex-1 scrollbar-thin">
+          <div className="overflow-y-auto pr-1 flex-1 overscroll-contain">
             {activeTab === 'supporters' ? (
               <div className="space-y-3 py-1">
                 {loadingSupporters ? (
-                  <div className="text-center py-10 text-slate-400 text-xs flex items-center justify-center gap-2">
+                  <div className="text-center py-14 text-slate-400 text-xs flex items-center justify-center gap-2">
                     <Loader2 className="w-4 h-4 animate-spin text-rose-500" />
                     <span>サポーター情報を読み込み中...</span>
                   </div>
                 ) : supporters.length === 0 ? (
-                  <div className="text-center py-12 text-slate-400 space-y-2">
-                    <Heart className="w-8 h-8 mx-auto text-slate-600" />
-                    <p className="text-xs">まだサポーターがいません。最初の支援者になりませんか？</p>
+                  <div className="text-center py-16 text-slate-400 space-y-3">
+                    <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center mx-auto text-slate-400">
+                      <Users className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">サポーターはまだ登録されていません</p>
+                      <p className="text-[11px] text-slate-500 mt-1">ご支援いただいた方のアカウントとメッセージがここに掲載されます</p>
+                    </div>
                   </div>
                 ) : (
-                  supporters.map((s) => (
-                    <div
-                      key={s.id}
-                      className={`p-3 rounded-xl border flex items-start gap-3 transition ${
-                        isLight ? 'bg-white border-slate-200' : 'bg-white/[0.03] border-white/5 hover:border-rose-500/20'
-                      }`}
-                    >
-                      {s.donor_avatar ? (
-                        <img
-                          src={s.donor_avatar}
-                          alt=""
-                          className="w-9 h-9 rounded-full object-cover border border-rose-500/30"
-                        />
-                      ) : (
-                        <div className="w-9 h-9 rounded-full bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400 font-bold text-xs shrink-0">
-                          {s.donor_name.slice(0, 1)}
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-1.5 truncate">
-                            <span className="font-bold text-xs truncate">{s.donor_name}</span>
-                            {s.donor_username && (
-                              <span className="text-[10px] text-slate-400 truncate">@{s.donor_username}</span>
+                  supporters.map((s) => {
+                    const resolvedAvatar = resolveMediaUrl(s.donor_avatar);
+                    return (
+                      <div
+                        key={s.id}
+                        className={`p-3.5 rounded-2xl border flex items-start gap-3.5 transition ${
+                          isLight ? 'bg-slate-50 border-slate-200' : 'bg-white/[0.03] border-white/5'
+                        }`}
+                      >
+                        {resolvedAvatar ? (
+                          <img
+                            src={resolvedAvatar}
+                            alt=""
+                            className="w-9 h-9 rounded-full object-cover border border-slate-200 dark:border-white/10 shrink-0"
+                          />
+                        ) : (
+                          <div className="w-9 h-9 rounded-full bg-slate-200 dark:bg-white/10 border border-slate-300 dark:border-white/10 flex items-center justify-center text-slate-600 dark:text-slate-300 font-bold text-xs shrink-0">
+                            {s.donor_name.slice(0, 1)}
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5 truncate">
+                              <span className="font-bold text-xs truncate">{s.donor_name}</span>
+                              {s.donor_username && (
+                                <span className="text-[10px] text-slate-400 truncate">@{s.donor_username}</span>
+                              )}
+                            </div>
+                            {s.amount && (
+                              <span className="text-[11px] font-mono font-bold text-rose-500 dark:text-rose-400 shrink-0">
+                                ¥{s.amount.toLocaleString()}
+                              </span>
                             )}
                           </div>
-                          {s.amount && (
-                            <span className="text-[11px] font-mono font-bold text-rose-400 shrink-0">
-                              ¥{s.amount.toLocaleString()}
-                            </span>
+                          {s.message && (
+                            <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-1.5 break-words bg-slate-100 dark:bg-black/30 p-2.5 rounded-xl border border-slate-200/60 dark:border-white/5 leading-relaxed">
+                              {s.message}
+                            </p>
                           )}
+                          <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-1.5 block">
+                            {new Date(s.created_at).toLocaleDateString('ja-JP')}
+                          </span>
                         </div>
-                        {s.message && (
-                          <p className="text-[11px] text-slate-300 mt-1 break-words bg-black/20 p-2 rounded-lg">
-                            {s.message}
-                          </p>
-                        )}
-                        <span className="text-[10px] text-slate-500 mt-1 block">
-                          {new Date(s.created_at).toLocaleDateString('ja-JP')}
-                        </span>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             ) : success ? (
@@ -261,11 +266,12 @@ export const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose, def
             ) : (
               <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
                 {/* How it works info */}
-                <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5 space-y-1">
-                  <div className="font-semibold text-slate-200 flex items-center gap-1.5">
-                    <span>📱 PayPay送金リンクの作成手順</span>
+                <div className="p-3.5 rounded-2xl bg-slate-100/70 dark:bg-white/[0.03] border border-slate-200 dark:border-white/5 space-y-1.5">
+                  <div className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <Smartphone className="w-3.5 h-3.5 text-slate-400" />
+                    <span>PayPay送金リンクの作成手順</span>
                   </div>
-                  <ol className="list-decimal list-inside space-y-0.5 text-slate-400 pl-0.5 text-[11px]">
+                  <ol className="list-decimal list-inside space-y-1 text-slate-500 dark:text-slate-400 pl-0.5 text-[11px] leading-relaxed">
                     <li>PayPayアプリで「送る」をタップ</li>
                     <li>「SNSやメールで送る」または「リンクを作成」を選択</li>
                     <li>任意の金額を設定してリンクを発行し、下記にURLを貼り付けてください</li>
@@ -273,16 +279,17 @@ export const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose, def
                 </div>
 
                 {user ? (
-                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/20">
-                    <span className="text-slate-300">支援者アカウント:</span>
-                    <span className="font-semibold text-purple-300 flex items-center gap-1">
+                  <div className="flex items-center justify-between p-3 rounded-2xl bg-purple-500/10 border border-purple-500/20">
+                    <span className="text-slate-600 dark:text-slate-300">支援者アカウント:</span>
+                    <span className="font-semibold text-purple-700 dark:text-purple-300 flex items-center gap-1">
                       <ShieldCheck className="w-3.5 h-3.5 text-rose-400" />
                       @{user.full_username || user.username}
                     </span>
                   </div>
                 ) : (
-                  <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-[11px]">
-                    ⚠️ ログインしていないため、Supporterバッジは付与されません（匿名支援となります）。バッジをご希望の場合はログイン後の送信をおすすめします。
+                  <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-300 text-[11px] flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <span>未ログイン状態での支援は匿名扱いとなり、Supporterバッジは付与されません。バッジ受取を希望される場合はログイン後の申請をおすすめします。</span>
                   </div>
                 )}
 

@@ -23,8 +23,11 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
     }
   }
 
+  const signal = options.signal || (typeof AbortSignal !== 'undefined' && 'timeout' in AbortSignal ? AbortSignal.timeout(8000) : undefined);
+
   const response = await fetch(url, {
     ...restOptions,
+    signal,
     credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
@@ -512,6 +515,12 @@ export const createGame = (name: string): Promise<{ id: number; name: string }> 
   return request<{ id: number; name: string }>('/api/games', {
     method: 'POST',
     body: JSON.stringify({ name }),
+  });
+};
+
+export const refreshAllServerInvites = (): Promise<{ total: number; updated: number; results: any[] }> => {
+  return request<{ total: number; updated: number; results: any[] }>('/api/servers/refresh-all-invites', {
+    method: 'POST',
   });
 };
 

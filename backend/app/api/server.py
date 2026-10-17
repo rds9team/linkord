@@ -1,6 +1,7 @@
 import re
 import datetime
 import asyncio
+import time
 from typing import Optional
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -16,6 +17,33 @@ from app.core.config import settings
 from app.core.security import generate_oauth_state, decrypt_token
 
 DISCORD_USER_AGENT = "DiscordBot (https://linkord.net, 1.0.0)"
+_USER_ADMIN_GUILDS_CACHE: dict[int, tuple[float, set[str]]] = {}
+
+def extract_discord_invite_code(invite_str: Optional[str]) -> Optional[str]:
+    """Discordの招待文字列またはURLから招待コード（例: AMKjxRYKGF, marukiti）を安全に抽出する"""
+    if not invite_str:
+        return None
+    clean = invite_str.strip().split("?")[0].split("#")[0].rstrip("/")
+    # 画像拡張子やDiscord CDN URLは招待コードではない
+    clean_lower = clean.lower()
+    if any(clean_lower.endswith(ext) for ext in [".png", ".jpg", ".jpeg", ".gif", ".webp"]):
+        return None
+    if "cdn.discordapp.com" in clean_lower or "media.discordapp.net" in clean_lower:
+        return None
+
+    # https://discord.gg/code または https://discord.com/invite/code の形式
+    m = re.search(r"(?:https?://)?(?:www\.)?(?:discord\.gg/|discord(?:app)?\.com/invite/)([a-zA-Z0-9_-]+)", clean, re.IGNORECASE)
+    if m:
+        code = m.group(1)
+        if code.lower() not in ("png", "jpg", "jpeg", "gif", "webp"):
+            return code
+
+    # スラッシュやコロンを含まない純粋な招待コード（2〜32文字の英数字・ハイフン・アンダースコア）
+    if "/" not in clean and ":" not in clean and re.match(r"^[a-zA-Z0-9_-]{2,32}$", clean):
+        if clean.lower() not in ("png", "jpg", "jpeg", "gif", "webp"):
+            return clean
+
+    return None
 
 def get_discord_headers(token: Optional[str] = None, is_bot: bool = True) -> dict:
     headers = {"User-Agent": DISCORD_USER_AGENT}
@@ -136,17 +164,9 @@ async def get_my_guilds(
 
 @router.get("/inspect-invite")
 async def inspect_discord_invite(invite: str = Query(..., max_length=256, description="Discord invite URL or code")):
-    raw_invite = invite.strip()
-    if len(raw_invite) > 256:
-        raise HTTPException(status_code=400, detail="招待URLが長すぎます")
-    clean = raw_invite.split("?")[0].split("#")[0].rstrip("/")
-    match = re.search(r"(?:discord\.gg/|discord\.com/invite/)?([a-zA-Z0-9_-]+)$", clean)
-    if not match:
+    code = extract_discord_invite_code(invite)
+    if not code or len(code) > 32:
         raise HTTPException(status_code=400, detail="無効なDiscord招待URLまたはコードです")
-    
-    code = match.group(1)
-    if len(code) > 32:
-        raise HTTPException(status_code=400, detail="無効な招待コードです")
     url = f"https://discord.com/api/v10/invites/{code}?with_counts=true"
     
     headers = get_discord_headers()
@@ -281,7 +301,7 @@ async def get_bot_invite_for_guild(guild_id: str) -> Optional[str]:
         return None
     headers = get_discord_headers()
     try:
-        async with httpx.AsyncClient(timeout=2.5) as client:
+        async with httpx.AsyncClient(timeout=3.0) as client:
             g_resp = await client.get(f"https://discord.com/api/v10/guilds/{clean_id}", headers=headers)
             if g_resp.status_code == 200:
                 g_data = g_resp.json()
@@ -299,22 +319,22 @@ async def get_bot_invite_for_guild(guild_id: str) -> Optional[str]:
                     if code:
                         return f"https://discord.gg/{code}"
             
-            # 新規招待を作成
+            # 新規招待を作成（テキスト・ボイス・アナウンスチャンネルを順に試行）
             ch_resp = await client.get(f"https://discord.com/api/v10/guilds/{clean_id}/channels", headers=headers)
             if ch_resp.status_code == 200:
                 channels = ch_resp.json()
-                text_channels = [c for c in channels if c.get("type") == 0]
-                target_ch = text_channels[0] if text_channels else (channels[0] if channels else None)
-                if target_ch and "id" in target_ch:
-                    create_inv = await client.post(
-                        f"https://discord.com/api/v10/channels/{target_ch['id']}/invites",
-                        headers=headers,
-                        json={"max_age": 0, "max_uses": 0, "unique": False}
-                    )
-                    if create_inv.status_code in (200, 201):
-                        code = create_inv.json().get("code")
-                        if code:
-                            return f"https://discord.gg/{code}"
+                valid_channels = [c for c in channels if c.get("type") in (0, 2, 5)]
+                for target_ch in valid_channels[:15]:
+                    if target_ch and "id" in target_ch:
+                        create_inv = await client.post(
+                            f"https://discord.com/api/v10/channels/{target_ch['id']}/invites",
+                            headers=headers,
+                            json={"max_age": 0, "max_uses": 0, "unique": False}
+                        )
+                        if create_inv.status_code in (200, 201):
+                            code = create_inv.json().get("code")
+                            if code:
+                                return f"https://discord.gg/{code}"
     except Exception:
         pass
     return None
@@ -330,6 +350,11 @@ async def check_server_manage_permission(server: Server, current_user: Optional[
     
     # Discordギルドの管理者/所有者権限をチェック
     if server.guild_id:
+        now = time.time()
+        cached = _USER_ADMIN_GUILDS_CACHE.get(current_user.id)
+        if cached and (now - cached[0] < 300):
+            return str(server.guild_id) in cached[1]
+
         stmt = select(AccountIdentity).where(
             AccountIdentity.account_id == current_user.id,
             AccountIdentity.provider == "discord"
@@ -341,20 +366,28 @@ async def check_server_manage_permission(server: Server, current_user: Optional[
             if raw_token:
                 try:
                     headers = get_discord_headers(raw_token, is_bot=False)
-                    async with httpx.AsyncClient(timeout=5.0) as client:
+                    async with httpx.AsyncClient(timeout=1.5) as client:
                         resp = await client.get("https://discord.com/api/v10/users/@me/guilds", headers=headers)
                         if resp.status_code == 200:
                             guilds = resp.json()
+                            admin_gids = set()
                             for g in guilds:
-                                if str(g.get("id")) == str(server.guild_id):
-                                    perms = int(g.get("permissions", 0))
-                                    is_owner = g.get("owner") is True
-                                    has_admin = (perms & 0x8) != 0
-                                    has_manage = (perms & 0x20) != 0
-                                    if is_owner or has_admin or has_manage:
-                                        return True
+                                perms = int(g.get("permissions", 0))
+                                is_owner = g.get("owner") is True
+                                has_admin = (perms & 0x8) != 0
+                                has_manage = (perms & 0x20) != 0
+                                if is_owner or has_admin or has_manage:
+                                    admin_gids.add(str(g.get("id")))
+                            _USER_ADMIN_GUILDS_CACHE[current_user.id] = (now, admin_gids)
+                            return str(server.guild_id) in admin_gids
+                        else:
+                            # 401 (トークン期限切れ) 等のエラー時もキャッシュして毎回の遅延を防止
+                            _USER_ADMIN_GUILDS_CACHE[current_user.id] = (now, set())
                 except Exception:
-                    pass
+                    _USER_ADMIN_GUILDS_CACHE[current_user.id] = (now, set())
+        else:
+            # トークンがない場合もキャッシュ
+            _USER_ADMIN_GUILDS_CACHE[current_user.id] = (now, set())
     return False
 
 async def get_server_boosts_count(db: AsyncSession, server_id: int) -> int:
@@ -407,8 +440,17 @@ async def list_servers(
 
     result = await db.execute(stmt)
     servers = list(result.scalars().all())
-    for s in servers:
-        s.boosts_count = await get_server_boosts_count(db, s.id)
+    if servers:
+        s_ids = [s.id for s in servers]
+        boost_stmt = (
+            select(Boost.server_id, func.count(Boost.id))
+            .where(Boost.server_id.in_(s_ids))
+            .group_by(Boost.server_id)
+        )
+        b_res = await db.execute(boost_stmt)
+        b_map = dict(b_res.all())
+        for s in servers:
+            s.boosts_count = b_map.get(s.id, 0)
 
     if sort in ("boost", "trending"):
         servers.sort(key=lambda s: (s.updated_at or s.created_at, s.boosts_count), reverse=True)
@@ -438,43 +480,38 @@ async def create_server(
     # Validate invite & fetch real Discord server info
     member_count = 0
     real_icon_url = data.icon_url
-    clean_invite = data.invite_url.strip()
+    clean_invite = ""
+    invite_code = extract_discord_invite_code(data.invite_url)
+    if invite_code:
+        clean_invite = f"https://discord.gg/{invite_code}"
 
-    # CDN画像URLや無効URLの混入を防止
-    is_image_url = bool(re.search(r"\.(png|jpg|jpeg|gif|webp)(\?.*)?$", clean_invite, re.IGNORECASE)) or "cdn.discordapp.com" in clean_invite
-    if is_image_url:
-        clean_invite = ""
-
-    # ユーザーが指定した招待URLがある場合はそれを最優先する（未指定時のみBotから自動取得）
+    # ユーザーが指定した招待URLがない場合はBotから自動取得
     target_guild_id = data.guild_id
     if not clean_invite and target_guild_id:
         bot_invite = await get_bot_invite_for_guild(target_guild_id)
         if bot_invite:
             clean_invite = bot_invite
+            invite_code = extract_discord_invite_code(bot_invite)
 
-    if clean_invite:
-        clean_code_src = clean_invite.split("?")[0].split("#")[0].rstrip("/")
-        match = re.search(r"(?:discord\.gg/|discord\.com/invite/)?([a-zA-Z0-9_-]+)$", clean_code_src)
-        if match:
-            code = match.group(1)
-            clean_invite = f"https://discord.gg/{code}"
-            try:
-                headers = get_discord_headers()
-                async with httpx.AsyncClient(timeout=4.0) as client:
-                    d_res = await client.get(f"https://discord.com/api/v10/invites/{code}?with_counts=true", headers=headers)
-                    if d_res.status_code == 200:
-                        d_data = d_res.json()
-                        member_count = d_data.get("approximate_member_count") or member_count
-                        guild = d_data.get("guild", {})
-                        fetched_guild_id = guild.get("id")
-                        if fetched_guild_id and not target_guild_id:
-                            target_guild_id = fetched_guild_id
-                        icon_hash = guild.get("icon")
-                        if fetched_guild_id and icon_hash and not real_icon_url:
-                            ext = "gif" if str(icon_hash).startswith("a_") else "png"
-                            real_icon_url = f"https://cdn.discordapp.com/icons/{fetched_guild_id}/{icon_hash}.{ext}?size=256"
-            except Exception:
-                pass
+    if invite_code:
+        clean_invite = f"https://discord.gg/{invite_code}"
+        try:
+            headers = get_discord_headers()
+            async with httpx.AsyncClient(timeout=4.0) as client:
+                d_res = await client.get(f"https://discord.com/api/v10/invites/{invite_code}?with_counts=true", headers=headers)
+                if d_res.status_code == 200:
+                    d_data = d_res.json()
+                    member_count = d_data.get("approximate_member_count") or member_count
+                    guild = d_data.get("guild", {})
+                    fetched_guild_id = guild.get("id")
+                    if fetched_guild_id and not target_guild_id:
+                        target_guild_id = fetched_guild_id
+                    icon_hash = guild.get("icon")
+                    if fetched_guild_id and icon_hash and not real_icon_url:
+                        ext = "gif" if str(icon_hash).startswith("a_") else "png"
+                        real_icon_url = f"https://cdn.discordapp.com/icons/{fetched_guild_id}/{icon_hash}.{ext}?size=256"
+        except Exception:
+            pass
 
     # target_guild_id が判明していてアイコンやメンバー数が未取得ならBot経由で補完
     if target_guild_id and (member_count == 0 or not real_icon_url):
@@ -590,23 +627,24 @@ async def join_server_via_bot(slug: str, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Server not found")
 
     target_invite = (server.invite_url or "").strip()
-    # 招待URLが未設定の場合のみBot経由で取得を試みる
-    if not target_invite and server.guild_id:
+    invite_code = extract_discord_invite_code(target_invite)
+
+    # 招待URLが無効または未設定の場合、Bot経由で取得を試みる
+    if not invite_code and server.guild_id:
         try:
             bot_invite = await asyncio.wait_for(get_bot_invite_for_guild(server.guild_id), timeout=2.5)
             if bot_invite:
                 target_invite = bot_invite
+                invite_code = extract_discord_invite_code(bot_invite)
                 server.invite_url = bot_invite
                 await db.commit()
         except Exception:
             pass
 
-    if not target_invite:
-        raise HTTPException(status_code=404, detail="Invite URL not available")
+    if not invite_code:
+        raise HTTPException(status_code=404, detail="有効な招待URLが設定されていません")
 
-    if not (target_invite.startswith("http://") or target_invite.startswith("https://")):
-        target_invite = f"https://discord.gg/{target_invite}"
-
+    target_invite = f"https://discord.gg/{invite_code}"
     return RedirectResponse(url=target_invite, status_code=307)
 
 @router.get("/{slug}", response_model=ServerOut)
@@ -649,12 +687,10 @@ async def update_server(
         if not any(t.lower() == "minecraft" for t in current_tags):
             current_tags.append("Minecraft")
     # invite_url が更新された場合、正規化してDiscord情報を更新
-    if "invite_url" in update_dict and update_dict["invite_url"]:
-        clean_inv = update_dict["invite_url"].strip()
-        clean_code_src = clean_inv.split("?")[0].split("#")[0].rstrip("/")
-        match = re.search(r"(?:discord\.gg/|discord\.com/invite/)?([a-zA-Z0-9_-]+)$", clean_code_src)
-        if match:
-            code = match.group(1)
+    if "invite_url" in update_dict:
+        raw_inv = update_dict.get("invite_url")
+        code = extract_discord_invite_code(raw_inv) if raw_inv else None
+        if code:
             update_dict["invite_url"] = f"https://discord.gg/{code}"
             try:
                 headers = get_discord_headers()
@@ -672,6 +708,9 @@ async def update_server(
                             server.icon_url = f"https://cdn.discordapp.com/icons/{guild_id}/{icon_hash}.{ext}?size=256"
             except Exception:
                 pass
+        elif raw_inv and not code:
+            # 無効な形式の場合は変更を取り消す
+            update_dict.pop("invite_url", None)
 
     for field, val in update_dict.items():
         setattr(server, field, val)
@@ -751,9 +790,8 @@ async def sync_server_discord_stats(
 
     # 2. Bot経由で同期できなかった場合は招待リンクから最新情報を取得
     if not synced and server.invite_url:
-        match = re.search(r"(?:discord\.gg/|discord\.com/invite/)?([a-zA-Z0-9_-]+)$", server.invite_url.strip())
-        if match:
-            code = match.group(1)
+        code = extract_discord_invite_code(server.invite_url)
+        if code:
             url = f"https://discord.com/api/v10/invites/{code}?with_counts=true"
             try:
                 async with httpx.AsyncClient(timeout=5.0) as client:
@@ -768,6 +806,7 @@ async def sync_server_discord_stats(
                             server.icon_url = f"https://cdn.discordapp.com/icons/{guild_id}/{icon_hash}.{ext}?size=256"
                         if "approximate_member_count" in data:
                             server.member_count = data["approximate_member_count"]
+                        server.invite_url = f"https://discord.gg/{code}"
                         synced = True
             except Exception:
                 pass
@@ -827,4 +866,55 @@ async def boost_server(
     await db.commit()
 
     return {"status": "ok", "message": f"{server.name} をブーストしました！"}
+
+async def refresh_all_server_invites(db: AsyncSession) -> dict:
+    """全掲載サーバーの招待リンクをチェックし、無効またはバグのある招待リンクをBot経由等で再取得・修復する"""
+    stmt = select(Server)
+    res = await db.execute(stmt)
+    servers = list(res.scalars().all())
+    updated_count = 0
+    results = []
+    
+    headers = get_discord_headers()
+    async with httpx.AsyncClient(timeout=4.0) as client:
+        for s in servers:
+            code = extract_discord_invite_code(s.invite_url)
+            is_valid = False
+            if code:
+                try:
+                    d_res = await client.get(f"https://discord.com/api/v10/invites/{code}?with_counts=true", headers=headers)
+                    if d_res.status_code == 200:
+                        is_valid = True
+                        s.invite_url = f"https://discord.gg/{code}"
+                        d_data = d_res.json()
+                        if "approximate_member_count" in d_data:
+                            s.member_count = d_data["approximate_member_count"]
+                except Exception:
+                    pass
+            
+            # 無効または不正なURL/コードの場合、Bot経由で再取得
+            if not is_valid and s.guild_id:
+                bot_invite = await get_bot_invite_for_guild(s.guild_id)
+                if bot_invite:
+                    new_code = extract_discord_invite_code(bot_invite)
+                    if new_code:
+                        s.invite_url = f"https://discord.gg/{new_code}"
+                        is_valid = True
+                        updated_count += 1
+                        results.append({"slug": s.slug, "status": "updated", "invite_url": s.invite_url})
+                        continue
+            
+            results.append({"slug": s.slug, "status": "ok" if is_valid else "invalid", "invite_url": s.invite_url})
+
+    await db.commit()
+    return {"total": len(servers), "updated": updated_count, "results": results}
+
+@router.post("/refresh-all-invites")
+async def refresh_all_invites_endpoint(
+    current_user: Account = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    if not (current_user.has_founder or current_user.has_team or current_user.username in settings.get_admin_usernames()):
+        raise HTTPException(status_code=403, detail="管理者権限が必要です")
+    return await refresh_all_server_invites(db)
 

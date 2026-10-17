@@ -106,10 +106,10 @@ export const Profile: React.FC = () => {
 
   const handleGoBack = () => {
     const prevPath = sessionStorage.getItem('linkord_prev_internal_path');
-    if (prevPath && prevPath !== window.location.pathname + window.location.search) {
+    if (prevPath && prevPath !== window.location.pathname + window.location.search && window.history.length > 1) {
       navigate(-1);
     } else {
-      navigate('/discover');
+      navigate('/discover?type=users');
     }
   };
 

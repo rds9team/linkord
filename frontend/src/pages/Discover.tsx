@@ -30,9 +30,9 @@ export const Discover: React.FC = () => {
 
   // Sync state when URL search params change (e.g. clicking navbar or browser back/forward)
   useEffect(() => {
-    if (urlType && urlType !== mainCategory) {
-      setMainCategoryState(urlType);
-      sessionStorage.setItem('linkord_discover_type', urlType);
+    const nextType = urlType || (sessionStorage.getItem('linkord_discover_type') as any) || 'servers';
+    if (nextType !== mainCategory) {
+      setMainCategoryState(nextType);
     }
   }, [urlType]);
 
@@ -131,14 +131,10 @@ export const Discover: React.FC = () => {
             setServers(data || []);
           }
         } catch {
-          if (isMounted) {
-            setServers([]);
-          }
+          setServers([]);
         } finally {
-          if (isMounted) {
-            setIsSearching(false);
-            setInitialLoading(false);
-          }
+          setIsSearching(false);
+          setInitialLoading(false);
         }
       };
 
@@ -156,14 +152,10 @@ export const Discover: React.FC = () => {
             setRecruitments(data || []);
           }
         } catch {
-          if (isMounted) {
-            setRecruitments([]);
-          }
+          setRecruitments([]);
         } finally {
-          if (isMounted) {
-            setIsSearching(false);
-            setInitialLoading(false);
-          }
+          setIsSearching(false);
+          setInitialLoading(false);
         }
       };
 
@@ -186,14 +178,10 @@ export const Discover: React.FC = () => {
             setUsers(data || []);
           }
         } catch {
-          if (isMounted) {
-            setUsers([]);
-          }
+          setUsers([]);
         } finally {
-          if (isMounted) {
-            setIsSearching(false);
-            setInitialLoading(false);
-          }
+          setIsSearching(false);
+          setInitialLoading(false);
         }
       };
 

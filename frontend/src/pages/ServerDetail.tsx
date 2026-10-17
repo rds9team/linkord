@@ -49,28 +49,33 @@ export const ServerDetail: React.FC = () => {
       if (!slug) return;
       try {
         setLoading(true);
-        const data = await fetchServer(slug);
-        if (isMounted) {
-          setServer(data);
-          setBoosts(data.boosts_count !== undefined ? data.boosts_count : 0);
-        }
-        // Load alliances
-        try {
-          const alData = await fetchServerAlliances(slug);
+        const [serverRes, allianceRes] = await Promise.allSettled([
+          fetchServer(slug),
+          fetchServerAlliances(slug),
+        ]);
+
+        if (serverRes.status === 'fulfilled' && serverRes.value) {
           if (isMounted) {
-            setAlliances(alData || []);
+            setServer(serverRes.value);
+            setBoosts(serverRes.value.boosts_count !== undefined ? serverRes.value.boosts_count : 0);
           }
-        } catch {
-          // ignore alliance fetch errors
+        } else {
+          if (isMounted) {
+            setServer(null);
+          }
+        }
+
+        if (allianceRes.status === 'fulfilled' && allianceRes.value) {
+          if (isMounted) {
+            setAlliances(allianceRes.value);
+          }
         }
       } catch {
         if (isMounted) {
           setServer(null);
         }
       } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        setLoading(false);
       }
     };
 

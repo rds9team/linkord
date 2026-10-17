@@ -16,6 +16,7 @@ from app.schemas.schemas import (
     AdminStatsOut,
     DonationOut,
     DonationResolve,
+    ManualSupporterCreate,
     AuditLogOut,
     BatchBadgesUpdate,
     BatchBadgesResult,
@@ -375,6 +376,60 @@ async def delete_donation(
     )
     await db.commit()
     return {"status": "ok", "message": f"支援申請 #{donation_id} を削除しました"}
+
+@router.post("/supporters", response_model=DonationOut)
+async def create_manual_supporter(
+    data: ManualSupporterCreate,
+    admin: Account = Depends(require_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    account = None
+    donor_name = data.donor_name or "サポーター"
+    donor_username = None
+    donor_avatar = None
+    account_id = None
+
+    if data.username:
+        clean_uname = data.username.strip().lstrip("@")
+        stmt = select(Account).where(Account.username == clean_uname)
+        res = await db.execute(stmt)
+        account = res.scalars().first()
+        if account:
+            account_id = account.id
+            donor_username = account.username
+            donor_avatar = account.avatar_url
+            if not data.donor_name:
+                donor_name = account.display_name or account.username
+            account.has_supporter = True
+
+    if data.is_anonymous:
+        donor_name = "匿名サポーター"
+
+    donation = Donation(
+        account_id=account_id,
+        donor_name=donor_name,
+        paypay_url="https://linkord.net",
+        passcode=None,
+        amount=data.amount,
+        message=data.message,
+        is_anonymous=data.is_anonymous,
+        status="approved",
+        created_at=datetime.datetime.utcnow(),
+        resolved_at=datetime.datetime.utcnow(),
+        admin_note=f"管理画面から手動追加 (by {admin.username})"
+    )
+    db.add(donation)
+    await log_audit_action(
+        db, admin.id, "create_manual_supporter", "donation", donor_name,
+        f"username={donor_username}, amount={data.amount}"
+    )
+    await db.commit()
+    await db.refresh(donation)
+
+    d_out = DonationOut.model_validate(donation)
+    d_out.donor_username = donor_username
+    d_out.donor_avatar = donor_avatar
+    return d_out
 
 
 @router.get("/audit-logs", response_model=List[AuditLogOut])

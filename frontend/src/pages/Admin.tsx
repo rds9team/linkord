@@ -11,6 +11,7 @@ import {
   fetchAdminDonations,
   resolveAdminDonation,
   deleteAdminDonation,
+  createManualSupporter,
   updateProfileBadges,
   batchUpdateBadges,
   fetchAdminAuditLogs,
@@ -33,7 +34,13 @@ export const Admin: React.FC = () => {
   const [reports, setReports] = useState<ReportItem[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('pending');
   const [donations, setDonations] = useState<DonationItem[]>([]);
-  const [donationFilter, setDonationFilter] = useState<string>('pending');
+  const [donationFilter, setDonationFilter] = useState<string>('');
+  const [supporterUsername, setSupporterUsername] = useState('');
+  const [supporterDonorName, setSupporterDonorName] = useState('');
+  const [supporterAmount, setSupporterAmount] = useState('');
+  const [supporterMessage, setSupporterMessage] = useState('');
+  const [supporterIsAnonymous, setSupporterIsAnonymous] = useState(false);
+  const [addingSupporter, setAddingSupporter] = useState(false);
   const [auditLogs, setAuditLogs] = useState<AdminAuditLogItem[]>([]);
   const [loadingAudit, setLoadingAudit] = useState(false);
   const [actionLoading, setActionLoading] = useState<Record<number, boolean>>({});
@@ -175,6 +182,40 @@ export const Admin: React.FC = () => {
       setMessage({ text: err.message || '更新に失敗しました', type: 'error' });
     } finally {
       setActionLoading((prev) => ({ ...prev, [reportId]: false }));
+    }
+  };
+
+  const handleAddSupporter = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!supporterUsername.trim() && !supporterDonorName.trim()) {
+      setMessage({ text: 'ユーザー名または表示名を入力してください', type: 'error' });
+      return;
+    }
+    try {
+      setAddingSupporter(true);
+      const created = await createManualSupporter({
+        username: supporterUsername.trim() || undefined,
+        donor_name: supporterDonorName.trim() || undefined,
+        amount: supporterAmount ? parseInt(supporterAmount, 10) : undefined,
+        message: supporterMessage.trim() || undefined,
+        is_anonymous: supporterIsAnonymous,
+      });
+      setDonations((prev) => [created, ...prev]);
+      setSupporterUsername('');
+      setSupporterDonorName('');
+      setSupporterAmount('');
+      setSupporterMessage('');
+      setSupporterIsAnonymous(false);
+      setMessage({
+        text: `サポーター「${created.donor_name}」を追加しました！${created.donor_username ? '（Supporterバッジを付与しました）' : ''}`,
+        type: 'success',
+      });
+      const statsData = await fetchAdminStats();
+      setStats(statsData);
+    } catch (err: any) {
+      setMessage({ text: err.message || 'サポーターの追加に失敗しました', type: 'error' });
+    } finally {
+      setAddingSupporter(false);
     }
   };
 
@@ -512,10 +553,10 @@ export const Admin: React.FC = () => {
           }`}
         >
           <Heart className="w-4 h-4 fill-current" />
-          <span>PayPay支援管理</span>
-          {(stats?.pending_donations ?? 0) > 0 && (
+          <span>サポーター管理</span>
+          {donations.length > 0 && (
             <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-rose-400 text-rose-950 font-black">
-              {stats?.pending_donations}
+              {donations.length}
             </span>
           )}
         </button>
@@ -573,157 +614,180 @@ export const Admin: React.FC = () => {
         </button>
       </div>
 
-      {/* Donations Section */}
+      {/* Supporters Management Section */}
       {activeTab === 'donations' && (
-        <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/10 mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-            <div>
-              <h2 className="text-base font-bold text-white mb-1 flex items-center gap-2">
-                <Heart className="w-4 h-4 text-rose-400 fill-rose-500/20" />
-                <span>PayPay支援申請一覧</span>
-              </h2>
-              <p className="text-xs text-slate-400">
-                送金リンクを確認・受取後、「承認 & Supporterバッジ付与」を実行してください。
-              </p>
-            </div>
+        <div className="space-y-6 mb-8">
+          {/* Manual Supporter Add Form */}
+          <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/10">
+            <h2 className="text-base font-bold text-white mb-1 flex items-center gap-2">
+              <Heart className="w-4 h-4 text-rose-400 fill-rose-500/20" />
+              <span>サポーターの追加</span>
+            </h2>
+            <p className="text-xs text-slate-400 mb-5">
+              支援者（サポーター）を手動で追加します。Linkordのユーザー名を指定すると、アカウントに自動でSupporterバッジが付与されます。
+            </p>
 
-            <div className="flex items-center gap-2">
-              {['pending', 'approved', 'rejected', ''].map((st) => (
+            <form onSubmit={handleAddSupporter} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    Linkord ユーザー名 <span className="text-slate-500">（任意）</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={supporterUsername}
+                    onChange={(e) => setSupporterUsername(e.target.value)}
+                    placeholder="例: yuto0926"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-black/40 border border-white/10 text-xs text-white focus:outline-none focus:border-rose-500"
+                  />
+                  <span className="text-[10px] text-slate-500 mt-0.5 block">バッジ付与対象のアカウント</span>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    表示名 <span className="text-slate-500">（未入力時はユーザー名）</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={supporterDonorName}
+                    onChange={(e) => setSupporterDonorName(e.target.value)}
+                    placeholder="例: たろう"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-black/40 border border-white/10 text-xs text-white focus:outline-none focus:border-rose-500"
+                  />
+                  <span className="text-[10px] text-slate-500 mt-0.5 block">サポーター一覧に表示する名前</span>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    支援金額（円） <span className="text-slate-500">（任意）</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={supporterAmount}
+                    onChange={(e) => setSupporterAmount(e.target.value)}
+                    placeholder="1000"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-black/40 border border-white/10 text-xs text-white font-mono focus:outline-none focus:border-rose-500"
+                  />
+                  <span className="text-[10px] text-slate-500 mt-0.5 block">支援金額の記録</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  応援メッセージ <span className="text-slate-500">（任意）</span>
+                </label>
+                <input
+                  type="text"
+                  maxLength={500}
+                  value={supporterMessage}
+                  onChange={(e) => setSupporterMessage(e.target.value)}
+                  placeholder="例: Linkord応援しています！"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-black/40 border border-white/10 text-xs text-white focus:outline-none focus:border-rose-500"
+                />
+              </div>
+
+              <div className="flex items-center justify-between pt-1">
+                <label className="flex items-center gap-2 cursor-pointer select-none text-xs text-slate-400">
+                  <input
+                    type="checkbox"
+                    checked={supporterIsAnonymous}
+                    onChange={(e) => setSupporterIsAnonymous(e.target.checked)}
+                    className="w-4 h-4 rounded text-rose-600 focus:ring-0 focus:outline-none"
+                  />
+                  <span>サポーター一覧に匿名で表示する</span>
+                </label>
+
                 <button
-                  key={st}
-                  onClick={() => setDonationFilter(st)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
-                    donationFilter === st
-                      ? 'bg-rose-600 text-white'
-                      : 'bg-white/5 text-slate-400 hover:text-white'
-                  }`}
+                  type="submit"
+                  disabled={addingSupporter}
+                  className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white font-bold text-xs transition shadow-sm flex items-center gap-2 cursor-pointer"
                 >
-                  {st === 'pending'
-                    ? '未対応'
-                    : st === 'approved'
-                    ? '承認済み'
-                    : st === 'rejected'
-                    ? '却下'
-                    : 'すべて'}
+                  {addingSupporter ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>追加中...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Heart className="w-3.5 h-3.5 fill-current" />
+                      <span>サポーターを追加</span>
+                    </>
+                  )}
                 </button>
-              ))}
-            </div>
+              </div>
+            </form>
           </div>
 
-          {donations.length === 0 ? (
-            <div className="text-center py-12 text-slate-500 text-xs">
-              該当する支援申請はありません。
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {donations.map((d) => (
-                <div
-                  key={d.id}
-                  className="p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:border-white/10 transition flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-2 flex-wrap">
-                      <span className="font-mono text-xs text-slate-400">#{d.id}</span>
-                      <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${
-                          d.status === 'pending'
-                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                            : d.status === 'approved'
-                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                            : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                        }`}
+          {/* Supporters List */}
+          <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/10">
+            <h2 className="text-base font-bold text-white mb-4 flex items-center gap-2">
+              <Users className="w-4 h-4 text-purple-400" />
+              <span>登録済みサポーター一覧 ({donations.length})</span>
+            </h2>
+
+            {donations.length === 0 ? (
+              <div className="text-center py-12 text-slate-500 text-xs">
+                登録されているサポーターはありません。
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {donations.map((d) => (
+                  <div
+                    key={d.id}
+                    className="p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:border-white/10 transition flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                        <span className="font-bold text-xs text-white">{d.donor_name}</span>
+                        {d.donor_username && (
+                          <Link
+                            to={`/@${d.donor_username}`}
+                            target="_blank"
+                            className="text-xs font-semibold text-rose-400 hover:underline"
+                          >
+                            @{d.donor_username}
+                          </Link>
+                        )}
+                        {d.is_anonymous && (
+                          <span className="text-[10px] bg-slate-500/20 text-slate-400 px-2 py-0.5 rounded">
+                            匿名
+                          </span>
+                        )}
+                        {d.amount && (
+                          <span className="text-xs font-bold text-white px-2 py-0.5 rounded bg-white/10 font-mono">
+                            ¥{d.amount.toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+
+                      {d.message && (
+                        <p className="text-xs text-slate-300 bg-black/30 p-2.5 rounded-lg mb-2">
+                          💬 {d.message}
+                        </p>
+                      )}
+
+                      <div className="text-[11px] text-slate-500">
+                        登録日時: {new Date(d.created_at).toLocaleString('ja-JP')}
+                      </div>
+                    </div>
+
+                    <div className="shrink-0">
+                      <button
+                        onClick={() => handleDeleteDonation(d.id)}
+                        disabled={actionLoading[d.id]}
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/5 hover:bg-rose-500/20 hover:text-rose-300 text-slate-400 transition flex items-center gap-1 cursor-pointer"
+                        title="サポーターを削除"
                       >
-                        {d.status === 'pending' ? '未対応' : d.status === 'approved' ? '承認済' : '却下'}
-                      </span>
-                      {d.donor_username ? (
-                        <Link
-                          to={`/@${d.donor_username}`}
-                          target="_blank"
-                          className="text-xs font-bold text-rose-400 hover:underline flex items-center gap-1"
-                        >
-                          <span>@{d.donor_username}</span>
-                        </Link>
-                      ) : (
-                        <span className="text-xs font-semibold text-slate-300">{d.donor_name} (匿名)</span>
-                      )}
-                      {d.amount && (
-                        <span className="text-xs font-bold text-white px-2 py-0.5 rounded bg-white/10 font-mono">
-                          ¥{d.amount.toLocaleString()}
-                        </span>
-                      )}
-                      {d.passcode && (
-                        <span className="text-[11px] text-slate-400 bg-white/5 px-2 py-0.5 rounded font-mono">
-                          🔑 パスコード: <span className="text-white font-bold">{d.passcode}</span>
-                        </span>
-                      )}
-                    </div>
-
-                    {d.message && (
-                      <p className="text-xs text-slate-300 bg-black/30 p-2.5 rounded-lg mb-2">
-                        💬 {d.message}
-                      </p>
-                    )}
-
-                    <div className="flex items-center gap-3 text-[11px] text-slate-500">
-                      <span>申請日時: {new Date(d.created_at).toLocaleString('ja-JP')}</span>
-                      {d.resolved_at && (
-                        <span>対応日時: {new Date(d.resolved_at).toLocaleString('ja-JP')}</span>
-                      )}
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>削除</span>
+                      </button>
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-2 w-full md:w-auto shrink-0 flex-wrap">
-                    <a
-                      href={d.paypay_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1 md:flex-initial px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white transition flex items-center justify-center gap-1.5 shadow-md shadow-rose-600/20"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      <span>PayPayで開く</span>
-                    </a>
-
-                    {d.status === 'pending' && (
-                      <>
-                        <button
-                          onClick={() => handleResolveDonation(d.id, 'approve')}
-                          disabled={actionLoading[d.id]}
-                          className="px-3 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white transition flex items-center gap-1 shadow-md shadow-emerald-600/20"
-                          title="受取完了とし、Supporterバッジを付与"
-                        >
-                          <BadgeCheck className="w-3.5 h-3.5" />
-                          <span>承認 & バッジ付与</span>
-                        </button>
-                        <button
-                          onClick={() => handleResolveDonation(d.id, 'reject')}
-                          disabled={actionLoading[d.id]}
-                          className="px-3 py-2 rounded-xl text-xs font-bold bg-white/5 hover:bg-rose-500/20 hover:text-rose-300 disabled:opacity-50 text-slate-400 transition flex items-center gap-1"
-                          title="申請を却下"
-                        >
-                          <XCircle className="w-3.5 h-3.5" />
-                          <span>却下</span>
-                        </button>
-                      </>
-                    )}
-
-                    <button
-                      onClick={() => handleDeleteDonation(d.id)}
-                      disabled={actionLoading[d.id]}
-                      className={`px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1 ${
-                        d.status === 'rejected'
-                          ? 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30'
-                          : 'bg-white/5 hover:bg-rose-500/20 hover:text-rose-300 text-slate-400'
-                      }`}
-                      title="申請を完全に削除"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>{d.status === 'rejected' ? '却下を削除' : '削除'}</span>
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 

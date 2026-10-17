@@ -106,6 +106,69 @@ async def ensure_defaults(conn):
             WHERE slug = 'rds9-community';
         """)
 
+import asyncio
+from sqlalchemy import select, or_
+
+async def auto_cache_existing_discord_images():
+    """
+    既存の掲載サーバーアイコンやユーザーアバター・バナーのうち、
+    Discord CDNのままになっているものを順次VPS内に圧縮保存し、DBを更新する（i-FILTER対策）
+    """
+    await asyncio.sleep(3)
+    try:
+        from app.services.image_cache import cache_and_compress_image
+        async with AsyncSessionLocal() as session:
+            # 1. サーバーアイコン
+            srv_res = await session.execute(
+                select(app.models.Server).where(
+                    or_(
+                        app.models.Server.icon_url.like("%cdn.discordapp.com%"),
+                        app.models.Server.icon_url.like("%media.discordapp.net%")
+                    )
+                )
+            )
+            servers = srv_res.scalars().all()
+            for srv in servers:
+                if srv.icon_url:
+                    try:
+                        cached = await cache_and_compress_image(srv.icon_url)
+                        if cached and cached != srv.icon_url:
+                            srv.icon_url = cached
+                    except Exception:
+                        pass
+            await session.commit()
+
+            # 2. アカウントアバター & バナー
+            acc_res = await session.execute(
+                select(app.models.Account).where(
+                    or_(
+                        app.models.Account.avatar_url.like("%cdn.discordapp.com%"),
+                        app.models.Account.avatar_url.like("%media.discordapp.net%"),
+                        app.models.Account.banner_url.like("%cdn.discordapp.com%"),
+                        app.models.Account.banner_url.like("%media.discordapp.net%")
+                    )
+                )
+            )
+            accounts = acc_res.scalars().all()
+            for acc in accounts:
+                if acc.avatar_url and ("cdn.discordapp.com" in acc.avatar_url or "media.discordapp.net" in acc.avatar_url):
+                    try:
+                        cached_av = await cache_and_compress_image(acc.avatar_url, max_width=256, max_height=256)
+                        if cached_av:
+                            acc.avatar_url = cached_av
+                    except Exception:
+                        pass
+                if acc.banner_url and ("cdn.discordapp.com" in acc.banner_url or "media.discordapp.net" in acc.banner_url):
+                    try:
+                        cached_bn = await cache_and_compress_image(acc.banner_url, max_width=1024, max_height=576)
+                        if cached_bn:
+                            acc.banner_url = cached_bn
+                    except Exception:
+                        pass
+            await session.commit()
+    except Exception:
+        pass
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Auto-create tables on startup for rapid development
@@ -119,6 +182,8 @@ async def lifespan(app: FastAPI):
             await ensure_defaults(conn)
         except Exception:
             pass
+    # 既存のDiscord CDN画像をVPS内に圧縮・移行するタスクをバックグラウンド実行
+    asyncio.create_task(auto_cache_existing_discord_images())
     yield
 
 from slowapi import Limiter, _rate_limit_exceeded_handler

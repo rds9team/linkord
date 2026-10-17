@@ -28,6 +28,7 @@ from app.core.auth import (
 )
 from app.models.models import Account, AccountIdentity
 from app.schemas.schemas import AccountMeOut, UserRegister, UserLogin
+from app.services.image_cache import cache_and_compress_image
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -313,11 +314,15 @@ async def discord_callback(
         f"https://cdn.discordapp.com/avatars/{discord_user_id}/{avatar_hash}.png"
         if avatar_hash else None
     )
+    if avatar_url:
+        avatar_url = await cache_and_compress_image(avatar_url, max_width=256, max_height=256, quality=82)
+
     banner_hash = user_data.get("banner")
     banner_url = None
     if banner_hash:
         b_ext = "gif" if banner_hash.startswith("a_") else "png"
-        banner_url = f"https://cdn.discordapp.com/banners/{discord_user_id}/{banner_hash}.{b_ext}?size=1024"
+        raw_banner = f"https://cdn.discordapp.com/banners/{discord_user_id}/{banner_hash}.{b_ext}?size=1024"
+        banner_url = await cache_and_compress_image(raw_banner, max_width=1024, max_height=576, quality=80)
 
     # すでにログイン中のユーザーがいる場合（誘導からの再連携・新規連携）
     current_logged_in_user = await get_optional_current_user(request, db)

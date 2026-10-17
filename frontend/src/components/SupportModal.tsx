@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Heart, CheckCircle2, AlertCircle, Loader2, Users, ShieldCheck, ExternalLink, Smartphone } from 'lucide-react';
-import { submitDonation, fetchPublicSupporters, PublicSupporterItem } from '../api/client';
+import { X, Heart, Mail, Copy, Check, Users, ShieldCheck, Loader2 } from 'lucide-react';
+import { fetchPublicSupporters, PublicSupporterItem } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { resolveMediaUrl } from '../utils/media';
@@ -13,19 +13,11 @@ interface SupportModalProps {
 }
 
 export const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose, defaultTab = 'form' }) => {
-  const { user } = useAuth();
   const { theme } = useTheme();
   const isLight = theme === 'light';
 
   const [activeTab, setActiveTab] = useState<'form' | 'supporters'>(defaultTab);
-  const [paypayUrl, setPaypayUrl] = useState('');
-  const [passcode, setPasscode] = useState('');
-  const [amount, setAmount] = useState('');
-  const [message, setMessage] = useState('');
-  const [isAnonymous, setIsAnonymous] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // Supporters list state
   const [supporters, setSupporters] = useState<PublicSupporterItem[]>([]);
@@ -52,48 +44,10 @@ export const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose, def
 
   if (!isOpen) return null;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-
-    const trimmedUrl = paypayUrl.trim();
-    if (!trimmedUrl) {
-      setError('PayPay送金リンクを入力してください');
-      return;
-    }
-
-    if (!trimmedUrl.startsWith('https://pay.paypay.ne.jp/')) {
-      setError('有効なPayPay送金リンク（https://pay.paypay.ne.jp/...）を入力してください');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      await submitDonation({
-        paypay_url: trimmedUrl,
-        passcode: passcode.trim() || undefined,
-        amount: amount ? parseInt(amount, 10) : undefined,
-        message: message.trim() || undefined,
-        is_anonymous: isAnonymous,
-      });
-      setSuccess(true);
-      loadSupporters();
-    } catch (err: any) {
-      setError(err.message || '送信に失敗しました');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleReset = () => {
-    setPaypayUrl('');
-    setPasscode('');
-    setAmount('');
-    setMessage('');
-    setIsAnonymous(false);
-    setError(null);
-    setSuccess(false);
-    onClose();
+  const handleCopyEmail = () => {
+    navigator.clipboard.writeText('support@linkord.net');
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return createPortal(
@@ -117,11 +71,10 @@ export const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose, def
                     Supporter
                   </span>
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">PayPay送金リンクでLinkordの運営をサポート</p>
               </div>
             </div>
             <button
-              onClick={handleReset}
+              onClick={onClose}
               className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-white/5 transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
@@ -140,7 +93,7 @@ export const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose, def
               }`}
             >
               <Heart className="w-3.5 h-3.5" />
-              <span>支援する</span>
+              <span>支援案内</span>
             </button>
             <button
               type="button"
@@ -227,179 +180,72 @@ export const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose, def
                   })
                 )}
               </div>
-            ) : success ? (
-              <div className="py-8 text-center space-y-4">
-                <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
-                  <CheckCircle2 className="w-8 h-8" />
-                </div>
-                <div>
-                  <h4 className="text-base font-bold">支援申請を受け付けました！</h4>
-                  <p className="text-xs text-slate-400 mt-1.5 max-w-sm mx-auto leading-relaxed">
-                    温かいご支援ありがとうございます！管理者がPayPayの受け取りを確認後、
-                    {user ? (
-                      <>
-                        アカウントに<span className="text-rose-400 font-bold">【Supporter】バッジ</span>が付与されます。
-                      </>
-                    ) : (
-                      '運営資金として大切に活用させていただきます。'
-                    )}
+            ) : (
+              <div className="space-y-4 text-xs py-1">
+                <div className={`p-4 rounded-2xl border space-y-3 ${
+                  isLight ? 'bg-slate-50 border-slate-200' : 'bg-white/[0.03] border-white/5'
+                }`}>
+                  <h4 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                    <Heart className="w-4 h-4 text-rose-500" />
+                    <span>Linkordの運営支援について</span>
+                  </h4>
+                  <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-xs">
+                    Linkordのサーバー費用やドメイン代などの運営資金をご支援いただける場合は、下記メールアドレス宛にご連絡をお願いいたします。
                   </p>
+
+                  <div className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 ${
+                    isLight ? 'bg-white border-slate-200' : 'bg-black/40 border-white/10'
+                  }`}>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Mail className="w-4 h-4 text-purple-400 shrink-0" />
+                      <span className="font-mono font-bold text-xs sm:text-sm text-purple-600 dark:text-purple-300 select-all truncate">
+                        support@linkord.net
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleCopyEmail}
+                      className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white text-[11px] font-semibold transition flex items-center gap-1 shrink-0 cursor-pointer"
+                    >
+                      {copied ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                          <span className="text-emerald-400">コピー完了</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5" />
+                          <span>コピー</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  <a
+                    href="mailto:support@linkord.net?subject=Linkord開発支援について"
+                    className="w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs transition shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <Mail className="w-3.5 h-3.5" />
+                    <span>メールアプリを開いて連絡する</span>
+                  </a>
                 </div>
-                <div className="pt-2 flex gap-2 justify-center">
-                  <button
-                    onClick={() => {
-                      setSuccess(false);
-                      setActiveTab('supporters');
-                    }}
-                    className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-medium text-xs transition"
-                  >
-                    サポーター一覧を見る
-                  </button>
-                  <button
-                    onClick={handleReset}
-                    className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white font-medium text-xs transition"
-                  >
-                    閉じる
-                  </button>
+
+                <div className={`p-4 rounded-2xl border space-y-2.5 ${
+                  isLight ? 'bg-slate-50 border-slate-200' : 'bg-white/[0.03] border-white/5'
+                }`}>
+                  <div className="flex items-start gap-2.5">
+                    <ShieldCheck className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
+                    <div className="space-y-1.5 leading-relaxed text-slate-600 dark:text-slate-300 text-xs">
+                      <p className="font-semibold text-slate-800 dark:text-slate-200">
+                        支援者一覧に名前を表示しないかどうかメールに記入して送ってください。
+                      </p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                        ※ アカウントへのSupporterバッジは通常通り付与されます（バッジ付与を希望される場合はLinkordアカウントのユーザー名もご記載ください）。
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
-                {/* How it works info */}
-                <div className="p-3.5 rounded-2xl bg-slate-100/70 dark:bg-white/[0.03] border border-slate-200 dark:border-white/5 space-y-1.5">
-                  <div className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                    <Smartphone className="w-3.5 h-3.5 text-slate-400" />
-                    <span>PayPay送金リンクの作成手順</span>
-                  </div>
-                  <ol className="list-decimal list-inside space-y-1 text-slate-500 dark:text-slate-400 pl-0.5 text-[11px] leading-relaxed">
-                    <li>PayPayアプリで「送る」をタップ</li>
-                    <li>「SNSやメールで送る」または「リンクを作成」を選択</li>
-                    <li>任意の金額を設定してリンクを発行し、下記にURLを貼り付けてください</li>
-                  </ol>
-                </div>
-
-                {user ? (
-                  <div className="flex items-center justify-between p-3 rounded-2xl bg-purple-500/10 border border-purple-500/20">
-                    <span className="text-slate-600 dark:text-slate-300">支援者アカウント:</span>
-                    <span className="font-semibold text-purple-700 dark:text-purple-300 flex items-center gap-1">
-                      <ShieldCheck className="w-3.5 h-3.5 text-rose-400" />
-                      @{user.full_username || user.username}
-                    </span>
-                  </div>
-                ) : (
-                  <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-300 text-[11px] flex items-start gap-2">
-                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                    <span>未ログイン状態での支援は匿名扱いとなり、Supporterバッジは付与されません。バッジ受取を希望される場合はログイン後の申請をおすすめします。</span>
-                  </div>
-                )}
-
-                {error && (
-                  <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4 shrink-0" />
-                    <span>{error}</span>
-                  </div>
-                )}
-
-                <div>
-                  <label className="block font-semibold mb-1">
-                    PayPay 送金リンク <span className="text-rose-400">*</span>
-                  </label>
-                  <input
-                    type="url"
-                    required
-                    placeholder="https://pay.paypay.ne.jp/xxxxxx"
-                    value={paypayUrl}
-                    onChange={(e) => setPaypayUrl(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white placeholder:text-slate-500 focus:outline-none focus:border-rose-500 transition-colors font-mono"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-2.5">
-                  <div>
-                    <label className="block font-semibold mb-1">
-                      パスコード (任意)
-                    </label>
-                    <input
-                      type="text"
-                      maxLength={16}
-                      placeholder="設定した場合のみ"
-                      value={passcode}
-                      onChange={(e) => setPasscode(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white placeholder:text-slate-500 focus:outline-none focus:border-rose-500 transition-colors"
-                    />
-                  </div>
-                  <div>
-                    <label className="block font-semibold mb-1">
-                      金額目安 (円・任意)
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      placeholder="例: 500"
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white placeholder:text-slate-500 focus:outline-none focus:border-rose-500 transition-colors"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block font-semibold mb-1">
-                    メッセージ (任意)
-                  </label>
-                  <textarea
-                    rows={2}
-                    maxLength={500}
-                    placeholder="開発者への応援メッセージなど"
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white placeholder:text-slate-500 focus:outline-none focus:border-rose-500 transition-colors resize-none"
-                  />
-                </div>
-
-                {/* Anonymous Option */}
-                {user && (
-                  <label className="flex items-center gap-2 p-2.5 rounded-xl bg-white/[0.02] border border-white/5 cursor-pointer hover:bg-white/[0.04] transition">
-                    <input
-                      type="checkbox"
-                      checked={isAnonymous}
-                      onChange={(e) => setIsAnonymous(e.target.checked)}
-                      className="rounded border-white/20 text-rose-500 focus:ring-rose-500"
-                    />
-                    <div className="text-[11px]">
-                      <span className="font-semibold text-slate-300">支援者一覧に名前を表示しない（匿名希望）</span>
-                      <p className="text-slate-500 text-[10px]">※ アカウントへのSupporterバッジは通常通り付与されます</p>
-                    </div>
-                  </label>
-                )}
-
-                <div className="flex items-center justify-end gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={handleReset}
-                    className="px-3.5 py-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-colors"
-                  >
-                    キャンセル
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="flex items-center justify-center gap-1.5 px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 active:scale-[0.98] text-white font-semibold transition-all shadow-lg shadow-rose-600/25 disabled:opacity-50"
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        <span>送信中...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Heart className="w-3.5 h-3.5 fill-white/20" />
-                        <span>支援を送信する</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </form>
             )}
           </div>
         </div>

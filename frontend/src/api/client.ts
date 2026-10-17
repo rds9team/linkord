@@ -377,6 +377,19 @@ export const resolveAdminDonation = (
   });
 };
 
+export const createManualSupporter = (data: {
+  username?: string;
+  donor_name?: string;
+  amount?: number;
+  message?: string;
+  is_anonymous?: boolean;
+}): Promise<DonationItem> => {
+  return request<DonationItem>('/api/admin/supporters', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+};
+
 export interface PublicSupporterItem {
   id: number;
   donor_name: string;

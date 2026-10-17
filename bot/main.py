@@ -10,7 +10,9 @@ import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 from dotenv import load_dotenv
+import re
 import aiosqlite
+import aiohttp
 from aiohttp import web
 
 # ログ設定
@@ -26,6 +28,14 @@ root_dir = current_dir.parent
 for env_path in [current_dir / ".env", root_dir / ".env", root_dir / "backend" / ".env"]:
     if env_path.exists():
         load_dotenv(env_path)
+
+if str(root_dir / "backend") not in sys.path:
+    sys.path.append(str(root_dir / "backend"))
+try:
+    from app.services.image_cache import cache_and_compress_image
+except Exception as e:
+    logger.warning(f"Failed to import cache_and_compress_image: {e}")
+    cache_and_compress_image = None
 
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 LINKORD_WEB_URL = os.getenv("LINKORD_WEB_URL", "https://linkord.net").rstrip("/")
@@ -166,50 +176,104 @@ async def init_db():
     except Exception as e:
         logger.warning(f"DB schema check warning: {e}")
 
+def extract_invite_code(invite_str: Optional[str]) -> Optional[str]:
+    if not invite_str:
+        return None
+    clean = invite_str.strip().split("?")[0].split("#")[0].rstrip("/")
+    m = re.search(r"(?:https?://)?(?:www\.)?(?:discord\.gg/|discord(?:app)?\.com/invite/)([a-zA-Z0-9_-]+)", clean, re.IGNORECASE)
+    if m:
+        return m.group(1)
+    if "/" not in clean and ":" not in clean and re.match(r"^[a-zA-Z0-9_-]{2,32}$", clean):
+        return clean
+    return None
+
 async def sync_guild_stats():
-    """導入されているサーバーの人数、名前、アイコンをDBに自動同期"""
-    if not bot.guilds:
-        return
+    """全掲載サーバーおよびBot導入サーバーの人数、名前、アイコンをDBに自動同期"""
     try:
+        updated_server_ids = set()
         async with aiosqlite.connect(DB_PATH) as db:
             db.row_factory = aiosqlite.Row
-            for guild in bot.guilds:
-                guild_id = str(guild.id)
-                guild_name = guild.name
-                member_count = guild.member_count or len(guild.members)
-                icon_url = str(guild.icon.url) if guild.icon else None
 
-                # 1. guild_idで紐付けられているか検索
-                cursor = await db.execute(
-                    "SELECT id, member_count FROM servers WHERE guild_id = ? LIMIT 1;",
-                    (guild_id,)
-                )
-                server = await cursor.fetchone()
+            # 1. Botが参加しているギルドを同期
+            if bot.guilds:
+                for guild in bot.guilds:
+                    guild_id = str(guild.id)
+                    guild_name = guild.name
+                    member_count = guild.member_count or len(guild.members)
+                    raw_icon_url = str(guild.icon.url) if guild.icon else None
+                    icon_url = raw_icon_url
+                    if cache_and_compress_image and raw_icon_url:
+                        try:
+                            icon_url = await cache_and_compress_image(raw_icon_url)
+                        except Exception:
+                            pass
 
-                # 2. 未紐付けの場合はサーバー名でフォールバック紐付け
-                if not server:
                     cursor = await db.execute(
-                        "SELECT id, member_count FROM servers WHERE name = ? LIMIT 1;",
-                        (guild_name,)
+                        "SELECT id, member_count FROM servers WHERE guild_id = ? LIMIT 1;",
+                        (guild_id,)
                     )
                     server = await cursor.fetchone()
+
+                    if not server:
+                        cursor = await db.execute(
+                            "SELECT id, member_count FROM servers WHERE name = ? LIMIT 1;",
+                            (guild_name,)
+                        )
+                        server = await cursor.fetchone()
+                        if server:
+                            await db.execute(
+                                "UPDATE servers SET guild_id = ?, member_count = ?, icon_url = COALESCE(?, icon_url) WHERE id = ?;",
+                                (guild_id, member_count, icon_url, server["id"])
+                            )
+                            await db.commit()
+                            updated_server_ids.add(server["id"])
+                            logger.info(f"[Sync] Auto-bound & updated server '{guild_name}' (ID: {server['id']}) to {member_count} members.")
+                            continue
+
                     if server:
                         await db.execute(
-                            "UPDATE servers SET guild_id = ?, member_count = ?, icon_url = COALESCE(?, icon_url) WHERE id = ?;",
-                            (guild_id, member_count, icon_url, server["id"])
+                            "UPDATE servers SET member_count = ?, name = ?, icon_url = COALESCE(?, icon_url) WHERE id = ?;",
+                            (member_count, guild_name, icon_url, server["id"])
                         )
                         await db.commit()
-                        logger.info(f"[Sync] Auto-bound & updated server '{guild_name}' (ID: {server['id']}) to {member_count} members.")
-                        continue
+                        updated_server_ids.add(server["id"])
+                        logger.info(f"[Sync] Updated stats for '{guild_name}' ({guild_id}): {member_count} members.")
 
-                # 3. 紐付け済みの場合は人数やアイコンのみを更新（updated_atは更新せずバンプ順位を維持）
-                if server:
-                    await db.execute(
-                        "UPDATE servers SET member_count = ?, name = ?, icon_url = COALESCE(?, icon_url) WHERE id = ?;",
-                        (member_count, guild_name, icon_url, server["id"])
-                    )
-                    await db.commit()
-                    logger.info(f"[Sync] Updated stats for '{guild_name}' ({guild_id}): {member_count} members.")
+            # 2. Bot未参加のサーバーは招待URLから人数・アイコンを同期
+            cursor = await db.execute("SELECT id, name, invite_url FROM servers WHERE is_public = 1;")
+            all_servers = await cursor.fetchall()
+            headers = {"User-Agent": "DiscordBot (https://linkord.net, 1.0.0)"}
+            async with aiohttp.ClientSession(headers=headers, timeout=aiohttp.ClientTimeout(total=4.0)) as session:
+                for s in all_servers:
+                    if s["id"] in updated_server_ids:
+                        continue
+                    code = extract_invite_code(s["invite_url"])
+                    if not code:
+                        continue
+                    try:
+                        async with session.get(f"https://discord.com/api/v10/invites/{code}?with_counts=true") as resp:
+                            if resp.status == 200:
+                                data = await resp.json()
+                                count = data.get("approximate_member_count")
+                                guild_data = data.get("guild", {})
+                                icon_hash = guild_data.get("icon")
+                                gid = guild_data.get("id")
+                                raw_icon = f"https://cdn.discordapp.com/icons/{gid}/{icon_hash}.png?size=256" if gid and icon_hash else None
+                                new_icon = raw_icon
+                                if cache_and_compress_image and raw_icon:
+                                    try:
+                                        new_icon = await cache_and_compress_image(raw_icon)
+                                    except Exception:
+                                        pass
+                                if count:
+                                    if new_icon:
+                                        await db.execute("UPDATE servers SET member_count = ?, icon_url = COALESCE(?, icon_url) WHERE id = ?;", (count, new_icon, s["id"]))
+                                    else:
+                                        await db.execute("UPDATE servers SET member_count = ? WHERE id = ?;", (count, s["id"]))
+                                    await db.commit()
+                                    logger.info(f"[Sync Invite] Updated stats for '{s['name']}' from invite: {count} members.")
+                    except Exception:
+                        pass
     except Exception as e:
         logger.error(f"[Sync Error] Failed to sync guild stats: {e}")
 

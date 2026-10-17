@@ -15,6 +15,7 @@ from app.schemas.schemas import ServerOut, ServerCreate, ServerUpdate
 
 from app.core.config import settings
 from app.core.security import generate_oauth_state, decrypt_token
+from app.services.image_cache import cache_and_compress_image
 
 DISCORD_USER_AGENT = "DiscordBot (https://linkord.net, 1.0.0)"
 _USER_ADMIN_GUILDS_CACHE: dict[int, tuple[float, set[str]]] = {}
@@ -169,7 +170,7 @@ async def inspect_discord_invite(invite: str = Query(..., max_length=256, descri
         raise HTTPException(status_code=400, detail="無効なDiscord招待URLまたはコードです")
     url = f"https://discord.com/api/v10/invites/{code}?with_counts=true"
     
-    headers = get_discord_headers()
+    headers = {"User-Agent": DISCORD_USER_AGENT}
     try:
         async with httpx.AsyncClient(timeout=6.0) as client:
             resp = await client.get(url, headers=headers)
@@ -181,7 +182,8 @@ async def inspect_discord_invite(invite: str = Query(..., max_length=256, descri
                 icon_url = None
                 if guild_id and icon_hash:
                     ext = "gif" if str(icon_hash).startswith("a_") else "png"
-                    icon_url = f"https://cdn.discordapp.com/icons/{guild_id}/{icon_hash}.{ext}?size=256"
+                    raw_icon_url = f"https://cdn.discordapp.com/icons/{guild_id}/{icon_hash}.{ext}?size=256"
+                    icon_url = await cache_and_compress_image(raw_icon_url)
                 
                 return {
                     "code": code,
@@ -240,7 +242,8 @@ async def check_bot_installed(guild_id: str):
             icon_url = None
             if icon_hash:
                 ext = "gif" if str(icon_hash).startswith("a_") else "png"
-                icon_url = f"https://cdn.discordapp.com/icons/{clean_guild_id}/{icon_hash}.{ext}?size=256"
+                raw_icon = f"https://cdn.discordapp.com/icons/{clean_guild_id}/{icon_hash}.{ext}?size=256"
+                icon_url = await cache_and_compress_image(raw_icon)
             member_count = g_data.get("approximate_member_count") or 0
             vanity_code = g_data.get("vanity_url_code")
 
@@ -340,12 +343,10 @@ async def get_bot_invite_for_guild(guild_id: str) -> Optional[str]:
     return None
 
 async def check_server_manage_permission(server: Server, current_user: Optional[Account], db: AsyncSession) -> bool:
-    """サーバーの所有者、またはDiscordギルドの管理者/所有者、またはLinkord運営ならTrueを返す"""
+    """サーバーの所有者、またはDiscordギルドの管理者/所有者ならTrueを返す"""
     if not current_user:
         return False
     if server.owner_id == current_user.id:
-        return True
-    if current_user.has_founder or current_user.has_team:
         return True
     
     # Discordギルドの管理者/所有者権限をチェック
@@ -391,9 +392,7 @@ async def check_server_manage_permission(server: Server, current_user: Optional[
     return False
 
 async def get_server_boosts_count(db: AsyncSession, server_id: int) -> int:
-    stmt = select(func.count(Boost.id)).where(Boost.server_id == server_id)
-    res = await db.execute(stmt)
-    return res.scalar() or 0
+    return 0
 
 @router.get("", response_model=list[ServerOut])
 async def list_servers(
@@ -440,20 +439,8 @@ async def list_servers(
 
     result = await db.execute(stmt)
     servers = list(result.scalars().all())
-    if servers:
-        s_ids = [s.id for s in servers]
-        boost_stmt = (
-            select(Boost.server_id, func.count(Boost.id))
-            .where(Boost.server_id.in_(s_ids))
-            .group_by(Boost.server_id)
-        )
-        b_res = await db.execute(boost_stmt)
-        b_map = dict(b_res.all())
-        for s in servers:
-            s.boosts_count = b_map.get(s.id, 0)
-
-    if sort in ("boost", "trending"):
-        servers.sort(key=lambda s: (s.updated_at or s.created_at, s.boosts_count), reverse=True)
+    for s in servers:
+        s.boosts_count = 0
 
     return servers
 
@@ -496,12 +483,14 @@ async def create_server(
     if invite_code:
         clean_invite = f"https://discord.gg/{invite_code}"
         try:
-            headers = get_discord_headers()
+            pub_headers = {"User-Agent": DISCORD_USER_AGENT}
             async with httpx.AsyncClient(timeout=4.0) as client:
-                d_res = await client.get(f"https://discord.com/api/v10/invites/{invite_code}?with_counts=true", headers=headers)
+                d_res = await client.get(f"https://discord.com/api/v10/invites/{invite_code}?with_counts=true", headers=pub_headers)
                 if d_res.status_code == 200:
                     d_data = d_res.json()
-                    member_count = d_data.get("approximate_member_count") or member_count
+                    approx_count = d_data.get("approximate_member_count")
+                    if approx_count:
+                        member_count = approx_count
                     guild = d_data.get("guild", {})
                     fetched_guild_id = guild.get("id")
                     if fetched_guild_id and not target_guild_id:
@@ -529,6 +518,9 @@ async def create_server(
                         real_icon_url = f"https://cdn.discordapp.com/icons/{target_guild_id}/{icon_hash}.{ext}?size=256"
         except Exception:
             pass
+
+    if real_icon_url:
+        real_icon_url = await cache_and_compress_image(real_icon_url)
 
     if not clean_invite:
         raise HTTPException(
@@ -693,19 +685,21 @@ async def update_server(
         if code:
             update_dict["invite_url"] = f"https://discord.gg/{code}"
             try:
-                headers = get_discord_headers()
+                pub_headers = {"User-Agent": DISCORD_USER_AGENT}
                 async with httpx.AsyncClient(timeout=4.0) as client:
-                    d_res = await client.get(f"https://discord.com/api/v10/invites/{code}?with_counts=true", headers=headers)
+                    d_res = await client.get(f"https://discord.com/api/v10/invites/{code}?with_counts=true", headers=pub_headers)
                     if d_res.status_code == 200:
                         d_data = d_res.json()
-                        if "approximate_member_count" in d_data:
-                            server.member_count = d_data["approximate_member_count"]
+                        approx = d_data.get("approximate_member_count")
+                        if approx:
+                            server.member_count = approx
                         guild = d_data.get("guild", {})
                         icon_hash = guild.get("icon")
                         guild_id = guild.get("id") or server.guild_id
                         if guild_id and icon_hash:
                             ext = "gif" if str(icon_hash).startswith("a_") else "png"
-                            server.icon_url = f"https://cdn.discordapp.com/icons/{guild_id}/{icon_hash}.{ext}?size=256"
+                            raw_icon = f"https://cdn.discordapp.com/icons/{guild_id}/{icon_hash}.{ext}?size=256"
+                            server.icon_url = await cache_and_compress_image(raw_icon)
             except Exception:
                 pass
         elif raw_inv and not code:
@@ -713,6 +707,8 @@ async def update_server(
             update_dict.pop("invite_url", None)
 
     for field, val in update_dict.items():
+        if field == "icon_url" and val:
+            val = await cache_and_compress_image(val)
         setattr(server, field, val)
 
     server.updated_at = datetime.datetime.utcnow()
@@ -783,7 +779,8 @@ async def sync_server_discord_stats(
                     icon_hash = g_data.get("icon")
                     if icon_hash:
                         ext = "gif" if str(icon_hash).startswith("a_") else "png"
-                        server.icon_url = f"https://cdn.discordapp.com/icons/{server.guild_id}/{icon_hash}.{ext}?size=256"
+                        raw_icon = f"https://cdn.discordapp.com/icons/{server.guild_id}/{icon_hash}.{ext}?size=256"
+                        server.icon_url = await cache_and_compress_image(raw_icon)
                     synced = True
         except Exception:
             pass
@@ -794,8 +791,9 @@ async def sync_server_discord_stats(
         if code:
             url = f"https://discord.com/api/v10/invites/{code}?with_counts=true"
             try:
+                pub_headers = {"User-Agent": DISCORD_USER_AGENT}
                 async with httpx.AsyncClient(timeout=5.0) as client:
-                    resp = await client.get(url, headers=headers)
+                    resp = await client.get(url, headers=pub_headers)
                     if resp.status_code == 200:
                         data = resp.json()
                         guild = data.get("guild", {})
@@ -803,9 +801,11 @@ async def sync_server_discord_stats(
                         icon_hash = guild.get("icon")
                         if guild_id and icon_hash:
                             ext = "gif" if str(icon_hash).startswith("a_") else "png"
-                            server.icon_url = f"https://cdn.discordapp.com/icons/{guild_id}/{icon_hash}.{ext}?size=256"
-                        if "approximate_member_count" in data:
-                            server.member_count = data["approximate_member_count"]
+                            raw_icon = f"https://cdn.discordapp.com/icons/{guild_id}/{icon_hash}.{ext}?size=256"
+                            server.icon_url = await cache_and_compress_image(raw_icon)
+                        approx = data.get("approximate_member_count")
+                        if approx:
+                            server.member_count = approx
                         server.invite_url = f"https://discord.gg/{code}"
                         synced = True
             except Exception:
@@ -875,20 +875,35 @@ async def refresh_all_server_invites(db: AsyncSession) -> dict:
     updated_count = 0
     results = []
     
-    headers = get_discord_headers()
+    pub_headers = {"User-Agent": DISCORD_USER_AGENT}
     async with httpx.AsyncClient(timeout=4.0) as client:
         for s in servers:
             code = extract_discord_invite_code(s.invite_url)
             is_valid = False
             if code:
                 try:
-                    d_res = await client.get(f"https://discord.com/api/v10/invites/{code}?with_counts=true", headers=headers)
+                    d_res = await client.get(f"https://discord.com/api/v10/invites/{code}?with_counts=true", headers=pub_headers)
                     if d_res.status_code == 200:
                         is_valid = True
                         s.invite_url = f"https://discord.gg/{code}"
                         d_data = d_res.json()
-                        if "approximate_member_count" in d_data:
-                            s.member_count = d_data["approximate_member_count"]
+                        approx = d_data.get("approximate_member_count")
+                        if approx:
+                            s.member_count = approx
+                        guild = d_data.get("guild", {})
+                        icon_hash = guild.get("icon")
+                        guild_id = guild.get("id") or s.guild_id
+                        if guild_id and icon_hash:
+                            ext = "gif" if str(icon_hash).startswith("a_") else "png"
+                            raw_icon = f"https://cdn.discordapp.com/icons/{guild_id}/{icon_hash}.{ext}?size=256"
+                            s.icon_url = await cache_and_compress_image(raw_icon)
+                except Exception:
+                    pass
+
+            # 既存のアイコンがDiscord CDNのままならローカルに圧縮保存
+            if s.icon_url and ("cdn.discordapp.com" in s.icon_url or "media.discordapp.net" in s.icon_url):
+                try:
+                    s.icon_url = await cache_and_compress_image(s.icon_url)
                 except Exception:
                     pass
             

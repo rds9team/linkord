@@ -215,6 +215,7 @@ export interface DonationItem {
   resolved_at?: string | null;
   donor_username?: string | null;
   donor_avatar?: string | null;
+  is_anonymous?: boolean | null;
 }
 
 export interface AnnouncementItem {

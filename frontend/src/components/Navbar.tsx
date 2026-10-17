@@ -112,17 +112,6 @@ export const Navbar: React.FC = () => {
             <span className="px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-400 text-[10px] font-bold">LIVE</span>
           </Link>
 
-          <button
-            onClick={() => setIsSupportOpen(true)}
-            className={`hidden sm:flex px-3 py-1.5 rounded-xl text-xs font-medium border items-center gap-1.5 transition cursor-pointer ${
-              isLight
-                ? 'bg-rose-50/80 border-rose-200 text-rose-600 hover:bg-rose-100'
-                : 'bg-white/[0.04] hover:bg-white/[0.08] border-white/10 text-slate-300 hover:text-white'
-            }`}
-          >
-            <Heart className="w-3.5 h-3.5 text-rose-400" />
-            <span>応援する</span>
-          </button>
 
           {/* Global Dark / White Theme Toggle */}
           <button

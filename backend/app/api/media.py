@@ -73,3 +73,33 @@ async def delete_media(
     if not success:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ファイルが見つかりません")
     return {"status": "ok"}
+
+
+from fastapi.responses import RedirectResponse
+from app.services.image_cache import cache_and_compress_image
+
+@router.get("/proxy")
+async def proxy_image(url: str):
+    """
+    Discord CDNなどの画像をVPS内に圧縮・キャッシュし、ローカルURLへリダイレクト（i-FILTER対策）
+    """
+    if not url:
+        raise HTTPException(status_code=400, detail="URLが指定されていません")
+
+    # SSRF防止: Discord CDN または信頼できる画像URLのみ許可
+    clean_url = url.strip()
+    clean_lower = clean_url.lower()
+    allowed = (
+        "cdn.discordapp.com" in clean_lower
+        or "media.discordapp.net" in clean_lower
+    )
+    if not allowed:
+        raise HTTPException(status_code=400, detail="許可されていない画像ソースです")
+
+    cached_url = await cache_and_compress_image(clean_url)
+    if not cached_url:
+        raise HTTPException(status_code=502, detail="画像の取得または圧縮に失敗しました")
+
+    # ローカルURLへリダイレクト（ブラウザに長期間キャッシュさせる）
+    return RedirectResponse(url=cached_url, status_code=307)
+

@@ -326,6 +326,13 @@ class DonationResolve(BaseModel):
     action: str = Field(..., pattern="^(approve|reject)$")
     admin_note: Optional[str] = None
 
+class ManualSupporterCreate(BaseModel):
+    username: Optional[str] = None
+    donor_name: Optional[str] = None
+    amount: Optional[int] = Field(None, ge=1)
+    message: Optional[str] = Field(None, max_length=500)
+    is_anonymous: bool = False
+
 class AuditLogOut(BaseModel):
     id: int
     admin_id: Optional[int] = None

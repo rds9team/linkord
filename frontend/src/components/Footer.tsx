@@ -18,9 +18,9 @@ export const Footer: React.FC = () => {
           <Link to="/" className={`flex items-center gap-2 font-bold text-sm tracking-tight hover:opacity-90 transition ${
             isLight ? 'text-slate-900' : 'text-white'
           }`}>
-            <span className="w-6 h-6 rounded-lg bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center font-extrabold text-white text-[11px] shadow-sm">
-              L
-            </span>
+            <div className="w-6 h-6 rounded-lg bg-[#5865F2] flex items-center justify-center shadow-sm">
+              <img src="/logo.svg" alt="Linkord" className="w-4 h-4" />
+            </div>
             <span>Linkord</span>
           </Link>
           <p className="text-[11px] text-slate-400">

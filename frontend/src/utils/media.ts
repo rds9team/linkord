@@ -10,6 +10,12 @@ export function resolveMediaUrl(url?: string | null): string | undefined {
   const trimmed = url.trim();
   if (!trimmed) return undefined;
 
+  // Discord CDN: Route through local API proxy to prevent i-FILTER blocks & optimize bandwidth
+  if (trimmed.includes('cdn.discordapp.com') || trimmed.includes('media.discordapp.net')) {
+    const baseClean = (API_BASE_URL || '').replace(/\/+$/, '');
+    return `${baseClean}/api/media/proxy?url=${encodeURIComponent(trimmed)}`;
+  }
+
   // Fully qualified URL or data/blob URI
   if (
     trimmed.startsWith('http://') ||
@@ -44,7 +50,8 @@ export function getDiscordBannerUrl(userId?: string | null, bannerHash?: string 
   if (!userId || !bannerHash) return undefined;
   const isAnimated = bannerHash.startsWith('a_');
   const ext = isAnimated ? 'gif' : 'png';
-  return `https://cdn.discordapp.com/banners/${userId}/${bannerHash}.${ext}?size=1024`;
+  const rawUrl = `https://cdn.discordapp.com/banners/${userId}/${bannerHash}.${ext}?size=1024`;
+  return resolveMediaUrl(rawUrl);
 }
 
 /**

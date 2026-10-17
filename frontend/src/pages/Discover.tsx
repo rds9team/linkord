@@ -380,30 +380,30 @@ export const Discover: React.FC = () => {
 
             {/* Member count & Language filters */}
             <div className="grid grid-cols-2 sm:flex items-center gap-2 text-xs">
-              <div className="flex items-center gap-1 bg-white/5 border border-white/10 rounded-xl px-2.5 py-1.5 text-slate-300">
+              <div className="flex items-center gap-1 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-2.5 py-1.5 text-slate-700 dark:text-slate-300">
                 <Users className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                 <select
                   value={serverMemberFilter || 0}
                   onChange={(e) => setServerMemberFilter(Number(e.target.value) || undefined)}
-                  className="bg-transparent text-white text-xs focus:outline-none cursor-pointer w-full"
+                  className="bg-transparent text-slate-800 dark:text-white text-xs focus:outline-none cursor-pointer w-full"
                 >
-                  <option value={0} className="bg-slate-900 text-white">人数: 指定なし</option>
-                  <option value={50} className="bg-slate-900 text-white">50人以上</option>
-                  <option value={100} className="bg-slate-900 text-white">100人以上</option>
-                  <option value={500} className="bg-slate-900 text-white">500人以上</option>
-                  <option value={1000} className="bg-slate-900 text-white">1,000人以上</option>
+                  <option value={0} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">人数: 指定なし</option>
+                  <option value={50} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">50人以上</option>
+                  <option value={100} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">100人以上</option>
+                  <option value={500} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">500人以上</option>
+                  <option value={1000} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">1,000人以上</option>
                 </select>
               </div>
 
-              <div className="flex items-center gap-1 bg-white/5 border border-white/10 rounded-xl px-2.5 py-1.5 text-slate-300">
+              <div className="flex items-center gap-1 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-2.5 py-1.5 text-slate-700 dark:text-slate-300">
                 <select
                   value={serverLangFilter}
                   onChange={(e) => setServerLangFilter(e.target.value)}
-                  className="bg-transparent text-white text-xs focus:outline-none cursor-pointer w-full"
+                  className="bg-transparent text-slate-800 dark:text-white text-xs focus:outline-none cursor-pointer w-full"
                 >
-                  <option value="all" className="bg-slate-900 text-white">言語: すべて</option>
-                  <option value="ja" className="bg-slate-900 text-white">日本語</option>
-                  <option value="en" className="bg-slate-900 text-white">English</option>
+                  <option value="all" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">言語: すべて</option>
+                  <option value="ja" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">日本語</option>
+                  <option value="en" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">English</option>
                 </select>
               </div>
             </div>
@@ -412,7 +412,7 @@ export const Discover: React.FC = () => {
           {/* Minecraft Sub-tags quick filter */}
           {activeTab === 'minecraft' && (
             <div className="p-2.5 sm:p-3 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-none max-w-full animate-fadeIn">
-              <span className="text-[11px] font-bold text-emerald-300 flex items-center gap-1 mr-1 shrink-0">
+              <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-300 flex items-center gap-1 mr-1 shrink-0">
                 <Sparkles className="w-3 h-3" />
                 <span>MCタグ:</span>
               </span>
@@ -436,8 +436,8 @@ export const Discover: React.FC = () => {
                     onClick={() => setServerMcTagFilter(mcTag)}
                     className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition cursor-pointer whitespace-nowrap shrink-0 ${
                       isSelected
-                        ? 'bg-emerald-500 text-white font-bold shadow-sm'
-                        : 'bg-white/5 text-slate-300 hover:bg-white/10'
+                        ? 'bg-emerald-600 text-white font-bold shadow-sm'
+                        : 'bg-emerald-500/10 text-emerald-800 hover:bg-emerald-500/20 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10'
                     }`}
                   >
                     {mcTag}
@@ -459,14 +459,14 @@ export const Discover: React.FC = () => {
       {/* Main Content */}
       {!initialLoading && mainCategory === 'servers' && (
         !isSearching && servers.length === 0 ? (
-          <div className="text-center py-16 px-4 rounded-3xl bg-white/[0.02] border border-white/5 max-w-md mx-auto">
-            <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mx-auto mb-3 text-purple-400">
+          <div className="text-center py-16 px-4 rounded-3xl bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 shadow-sm max-w-md mx-auto">
+            <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mx-auto mb-3 text-purple-600 dark:text-purple-400">
               <Users className="w-6 h-6" />
             </div>
-            <h3 className="text-sm font-bold text-white mb-1">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-1">
               {searchTerm ? '一致するサーバーが見つかりませんでした' : '掲載中のサーバーはまだありません'}
             </h3>
-            <p className="text-xs text-slate-400 mb-5 leading-relaxed">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-5 leading-relaxed">
               あなたのコミュニティやMinecraftサーバーをLinkordに掲載して、新しいメンバーを募集しましょう！
             </p>
             <button
@@ -581,14 +581,14 @@ export const Discover: React.FC = () => {
       {/* Recruitments Grid */}
       {!initialLoading && mainCategory === 'recruitments' && (
         !isSearching && recruitments.length === 0 ? (
-          <div className="text-center py-16 px-4 rounded-3xl bg-white/[0.02] border border-white/5 max-w-md mx-auto">
-            <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mx-auto mb-3 text-rose-400">
+          <div className="text-center py-16 px-4 rounded-3xl bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 shadow-sm max-w-md mx-auto">
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mx-auto mb-3 text-rose-500 dark:text-rose-400">
               <Radio className="w-6 h-6 animate-pulse" />
             </div>
-            <h3 className="text-sm font-bold text-white mb-1">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-1">
               現在進行中の通話募集はありません
             </h3>
-            <p className="text-xs text-slate-400 mb-5 leading-relaxed">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-5 leading-relaxed">
               あなたのDiscordサーバーでVC通話やゲーム仲間を募集してみましょう！参加者は直接Discordに流入します。
             </p>
             <button
@@ -689,10 +689,10 @@ export const Discover: React.FC = () => {
                           customTitle: '通話募集を共有',
                         });
                       }}
-                      className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white transition flex items-center justify-center cursor-pointer"
+                      className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 hover:text-slate-900 dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 dark:text-slate-300 dark:hover:text-white transition flex items-center justify-center cursor-pointer"
                       title="この通話募集をシェア"
                     >
-                      <Share2 className="w-4 h-4 text-sky-400" />
+                      <Share2 className="w-4 h-4 text-sky-500 dark:text-sky-400" />
                     </button>
                   </div>
                 </div>
@@ -704,12 +704,12 @@ export const Discover: React.FC = () => {
 
       {/* User Filters (Users only) */}
       {!initialLoading && mainCategory === 'users' && (
-        <div className="mb-6 p-3 sm:p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3">
+        <div className="mb-6 p-3 sm:p-4 rounded-2xl bg-white/80 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/10 space-y-3 shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
             {/* Badge Filter */}
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none max-w-full">
-              <span className="text-[11px] sm:text-xs font-semibold text-slate-400 flex items-center gap-1 mr-1 shrink-0">
-                <Award className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <span className="text-[11px] sm:text-xs font-semibold text-slate-600 dark:text-slate-400 flex items-center gap-1 mr-1 shrink-0">
+                <Award className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 shrink-0" />
                 <span>バッジ:</span>
               </span>
               {[
@@ -728,7 +728,7 @@ export const Discover: React.FC = () => {
                     className={`px-2 py-1 rounded-lg text-[11px] sm:text-xs font-medium transition cursor-pointer whitespace-nowrap shrink-0 ${
                       isSelected
                         ? 'bg-purple-600 text-white font-bold shadow-sm'
-                        : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900 dark:bg-white/5 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white'
                     }`}
                   >
                     {b.label}
@@ -743,18 +743,18 @@ export const Discover: React.FC = () => {
               <select
                 value={userSortFilter}
                 onChange={(e) => setUserSortFilter(e.target.value)}
-                className="bg-slate-900 border border-white/10 rounded-xl px-2.5 py-1 text-white text-xs focus:outline-none cursor-pointer"
+                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl px-2.5 py-1 text-slate-800 dark:text-white text-xs focus:outline-none cursor-pointer"
               >
-                <option value="recent">新着登録順</option>
-                <option value="followers">フォロワー数順</option>
+                <option value="recent" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">新着登録順</option>
+                <option value="followers" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">フォロワー数順</option>
               </select>
             </div>
           </div>
 
           {/* Game Filter */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none max-w-full pt-2 border-t border-white/5">
-            <span className="text-[11px] sm:text-xs font-semibold text-slate-400 flex items-center gap-1 mr-1 shrink-0">
-              <Gamepad2 className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none max-w-full pt-2 border-t border-slate-200/80 dark:border-white/5">
+            <span className="text-[11px] sm:text-xs font-semibold text-slate-600 dark:text-slate-400 flex items-center gap-1 mr-1 shrink-0">
+              <Gamepad2 className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400 shrink-0" />
               <span>ゲーム:</span>
             </span>
             {[
@@ -774,7 +774,7 @@ export const Discover: React.FC = () => {
                   className={`px-2 py-1 rounded-lg text-[11px] sm:text-xs font-medium transition cursor-pointer whitespace-nowrap shrink-0 ${
                     isSelected
                       ? 'bg-indigo-600 text-white font-bold shadow-sm'
-                      : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900 dark:bg-white/5 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white'
                   }`}
                 >
                   {g.label}
@@ -788,7 +788,7 @@ export const Discover: React.FC = () => {
       {/* Users Grid */}
       {!initialLoading && mainCategory === 'users' && (
         !isSearching && users.length === 0 ? (
-          <div className="text-center py-12 text-slate-400 text-xs">
+          <div className="text-center py-12 text-slate-500 dark:text-slate-400 text-xs">
             該当するユーザーが見つかりませんでした。
           </div>
         ) : (
@@ -847,7 +847,7 @@ export const Discover: React.FC = () => {
                   )}
                 </div>
 
-                <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-white/5 text-[11px] text-slate-400 font-mono">
+                <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-white/5 text-[11px] text-slate-500 dark:text-slate-400 font-mono">
                   <div className="flex items-center gap-3">
                     <span className="flex items-center gap-1">
                       <Users className="w-3 h-3 text-slate-400" />

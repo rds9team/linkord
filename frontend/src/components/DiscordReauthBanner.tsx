@@ -41,14 +41,14 @@ export const DiscordReauthBanner: React.FC = () => {
   if (successMsg) {
     return (
       <div className="w-full max-w-5xl mx-auto px-4 mb-4 z-30 relative animate-fadeIn">
-        <div className="p-3 sm:p-3.5 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 backdrop-blur-xl flex items-center justify-between gap-3 text-emerald-300 shadow-lg shadow-emerald-500/10">
+        <div className="p-3 sm:p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/30 backdrop-blur-xl flex items-center justify-between gap-3 text-emerald-800 dark:text-emerald-300 shadow-lg shadow-emerald-500/10">
           <div className="flex items-center gap-2.5 min-w-0">
-            <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
             <span className="text-xs sm:text-sm font-semibold truncate">{successMsg}</span>
           </div>
           <button
             onClick={() => setSuccessMsg(null)}
-            className="p-1 rounded-lg hover:bg-emerald-500/20 text-emerald-400 transition flex-shrink-0 cursor-pointer"
+            className="p-1 rounded-lg hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 transition flex-shrink-0 cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>

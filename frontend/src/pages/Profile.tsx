@@ -260,24 +260,28 @@ export const Profile: React.FC = () => {
   if (isDeleted) {
     return (
       <div className="min-h-[80vh] flex items-center justify-center px-4 relative z-10">
-        <div className="w-full max-w-md p-8 rounded-3xl bg-white/[0.03] border border-white/10 backdrop-blur-xl text-center">
+        <div className={`w-full max-w-md p-8 rounded-3xl border backdrop-blur-xl text-center ${
+          isLight ? 'bg-white border-slate-200 shadow-xl' : 'bg-white/[0.03] border-white/10'
+        }`}>
           <UserX className="w-12 h-12 text-rose-500 mx-auto mb-4" />
-          <h1 className="text-xl font-extrabold text-white tracking-tight mb-2">
+          <h1 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-2">
             退会済みのアカウントです
           </h1>
-          <p className="text-xs text-slate-400 mb-6">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-6">
             「@{username}」のプロフィールはユーザーによって削除されました。
           </p>
           <div className="flex items-center justify-center gap-3">
             <Link
               to="/discover"
-              className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition"
+              className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition shadow-sm"
             >
               他のユーザーを探す
             </Link>
             <Link
               to="/"
-              className="px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 font-semibold text-xs transition"
+              className={`px-5 py-2.5 rounded-xl font-semibold text-xs transition border ${
+                isLight ? 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700' : 'bg-white/5 hover:bg-white/10 border-white/10 text-slate-300'
+              }`}
             >
               トップへ戻る
             </Link>
@@ -290,24 +294,28 @@ export const Profile: React.FC = () => {
   if (notFound || !profile) {
     return (
       <div className="min-h-[80vh] flex items-center justify-center px-4 relative z-10">
-        <div className="w-full max-w-md p-8 rounded-3xl bg-white/[0.03] border border-white/10 backdrop-blur-xl text-center">
-          <UserX className="w-12 h-12 text-slate-500 mx-auto mb-4" />
-          <h1 className="text-xl font-extrabold text-white tracking-tight mb-2">
+        <div className={`w-full max-w-md p-8 rounded-3xl border backdrop-blur-xl text-center ${
+          isLight ? 'bg-white border-slate-200 shadow-xl' : 'bg-white/[0.03] border-white/10'
+        }`}>
+          <UserX className="w-12 h-12 text-slate-400 dark:text-slate-500 mx-auto mb-4" />
+          <h1 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-2">
             ユーザーが見つかりません
           </h1>
-          <p className="text-xs text-slate-400 mb-6">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-6">
             「@{username}」のプロフィールは存在しないか、非公開に設定されています。
           </p>
           <div className="flex items-center justify-center gap-3">
             <Link
               to="/discover"
-              className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition"
+              className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition shadow-sm"
             >
               他のユーザーを探す
             </Link>
             <Link
               to="/"
-              className="px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 font-semibold text-xs transition"
+              className={`px-5 py-2.5 rounded-xl font-semibold text-xs transition border ${
+                isLight ? 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700' : 'bg-white/5 hover:bg-white/10 border-white/10 text-slate-300'
+              }`}
             >
               トップへ戻る
             </Link>
@@ -406,7 +414,9 @@ export const Profile: React.FC = () => {
               {/* Top: Avatar & User Info */}
               <div className="flex flex-col sm:flex-row items-center sm:items-end gap-3 sm:gap-4 mb-4 sm:mb-5">
                 <div className={`relative group flex-shrink-0 z-10 ${hasBanner ? '-mt-12 sm:-mt-16' : ''}`}>
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-2 border-slate-300 dark:border-white/20 shadow-xl bg-slate-800 flex items-center justify-center ring-4 ring-[#0b0c10]">
+                  <div className={`w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-2 border-slate-300 dark:border-white/20 shadow-xl bg-slate-800 flex items-center justify-center ring-4 ${
+                    isLight ? 'ring-white' : 'ring-[#0b0c10]'
+                  }`}>
                     {profile.avatar_url ? (
                       <img
                         src={resolveMediaUrl(profile.avatar_url)}
@@ -439,7 +449,7 @@ export const Profile: React.FC = () => {
                 <div className="flex-1 text-center sm:text-left min-w-0 pt-1 sm:pt-0">
                   {/* Display Name & Badges */}
                   <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1">
-                    <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight truncate text-white">{profile.display_name}</h1>
+                    <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight truncate text-slate-900 dark:text-white">{profile.display_name}</h1>
                     {!profile.hide_badges && (
                       <div className="inline-flex items-center">
                         <Badges
@@ -454,41 +464,47 @@ export const Profile: React.FC = () => {
 
                   {/* Username & Tag */}
                   <div className="flex items-center justify-center sm:justify-start gap-1.5 mb-2.5">
-                    <p className="font-mono text-xs text-slate-400 flex items-center">
+                    <p className="font-mono text-xs text-slate-500 dark:text-slate-400 flex items-center">
                       <span>@{profile.username}</span>
-                      {profile.tag && <span className="text-purple-400 font-semibold opacity-90">#{profile.tag}</span>}
+                      {profile.tag && <span className="text-purple-600 dark:text-purple-400 font-semibold opacity-90">#{profile.tag}</span>}
                     </p>
                   </div>
 
                   {/* Followers & Action Buttons Row */}
                   <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-3">
                     {!profile.hide_followers && (
-                      <div className="inline-flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full px-2.5 py-1 text-[11px] text-slate-300">
+                      <div className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] ${
+                        isLight ? 'bg-slate-100 border border-slate-200 text-slate-600' : 'bg-white/5 border border-white/10 text-slate-300'
+                      }`}>
                         <button
                           type="button"
                           onClick={() => {
                             setFollowModalType('followers');
                             setIsFollowModalOpen(true);
                           }}
-                          className="hover:text-white transition cursor-pointer font-medium flex items-center gap-1"
+                          className={`transition cursor-pointer font-medium flex items-center gap-1 ${
+                            isLight ? 'hover:text-slate-900' : 'hover:text-white'
+                          }`}
                           title="フォロワー一覧を表示"
                         >
-                          <Users className="w-3 h-3 text-slate-400" />
-                          <span className="font-bold text-white">{followersCount}</span>
-                          <span className="text-slate-400">フォロワー</span>
+                          <Users className={`w-3 h-3 ${isLight ? 'text-slate-500' : 'text-slate-400'}`} />
+                          <span className={`font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>{followersCount}</span>
+                          <span className={isLight ? 'text-slate-500' : 'text-slate-400'}>フォロワー</span>
                         </button>
-                        <span className="text-slate-600">·</span>
+                        <span className={isLight ? 'text-slate-300' : 'text-slate-600'}>·</span>
                         <button
                           type="button"
                           onClick={() => {
                             setFollowModalType('following');
                             setIsFollowModalOpen(true);
                           }}
-                          className="hover:text-white transition cursor-pointer font-medium flex items-center gap-1"
+                          className={`transition cursor-pointer font-medium flex items-center gap-1 ${
+                            isLight ? 'hover:text-slate-900' : 'hover:text-white'
+                          }`}
                           title="フォロー中一覧を表示"
                         >
-                          <span className="font-bold text-white">{profile.following_count || 0}</span>
-                          <span className="text-slate-400">フォロー中</span>
+                          <span className={`font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>{profile.following_count || 0}</span>
+                          <span className={isLight ? 'text-slate-500' : 'text-slate-400'}>フォロー中</span>
                         </button>
                       </div>
                     )}
@@ -500,7 +516,9 @@ export const Profile: React.FC = () => {
                         disabled={followLoading}
                         className={`px-3 py-1 rounded-full text-[11px] font-semibold transition flex items-center gap-1 shadow-sm cursor-pointer ${
                           isFollowing
-                            ? 'bg-white/10 hover:bg-rose-500/20 text-slate-200 hover:text-rose-300 border border-white/10 hover:border-rose-500/30'
+                            ? isLight
+                              ? 'bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-600 border border-slate-200 hover:border-rose-300'
+                              : 'bg-white/10 hover:bg-rose-500/20 text-slate-200 hover:text-rose-300 border border-white/10 hover:border-rose-500/30'
                             : 'bg-purple-600 hover:bg-purple-500 text-white shadow-purple-600/30'
                         }`}
                       >
@@ -508,7 +526,7 @@ export const Profile: React.FC = () => {
                           <Loader2 className="w-3 h-3 animate-spin" />
                         ) : isFollowing ? (
                           <>
-                            <UserCheck className="w-3 h-3 text-emerald-400" />
+                            <UserCheck className="w-3 h-3 text-emerald-500 dark:text-emerald-400" />
                             <span>フォロー中</span>
                           </>
                         ) : (
@@ -524,10 +542,14 @@ export const Profile: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setIsShareModalOpen(true)}
-                      className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white transition flex items-center gap-1 cursor-pointer"
+                      className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border transition flex items-center gap-1 cursor-pointer ${
+                        isLight
+                          ? 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700 hover:text-slate-900'
+                          : 'bg-white/5 hover:bg-white/10 border-white/10 text-slate-300 hover:text-white'
+                      }`}
                       title="このプロフィールをシェア・埋め込み"
                     >
-                      <Share2 className="w-3 h-3 text-sky-400" />
+                      <Share2 className="w-3 h-3 text-sky-500 dark:text-sky-400" />
                       <span>シェア</span>
                     </button>
                   </div>
@@ -551,20 +573,32 @@ export const Profile: React.FC = () => {
                   const clean = g.trim();
                   if (!clean) return null;
                   return (
-                    <span key={clean} className="px-2 py-0.5 rounded-lg bg-white/5 border border-white/10 text-[10px] font-semibold text-sky-300 flex items-center gap-1">
+                    <span key={clean} className={`px-2 py-0.5 rounded-lg border text-[10px] font-semibold flex items-center gap-1 ${
+                      isLight
+                        ? 'bg-sky-50 border-sky-200 text-sky-700'
+                        : 'bg-white/5 border-white/10 text-sky-300'
+                    }`}>
                       <span>🎮</span>
                       <span>{clean}</span>
                     </span>
                   );
                 })}
                 {profile.active_hours && (
-                  <span className="px-2 py-0.5 rounded-lg bg-white/5 border border-white/10 text-[10px] font-semibold text-amber-300 flex items-center gap-1">
+                  <span className={`px-2 py-0.5 rounded-lg border text-[10px] font-semibold flex items-center gap-1 ${
+                    isLight
+                      ? 'bg-amber-50 border-amber-200 text-amber-700'
+                      : 'bg-white/5 border-white/10 text-amber-300'
+                  }`}>
                     <span>⏰</span>
                     <span>{profile.active_hours}</span>
                   </span>
                 )}
                 {profile.play_style && (
-                  <span className="px-2 py-0.5 rounded-lg bg-white/5 border border-white/10 text-[10px] font-semibold text-purple-300 flex items-center gap-1">
+                  <span className={`px-2 py-0.5 rounded-lg border text-[10px] font-semibold flex items-center gap-1 ${
+                    isLight
+                      ? 'bg-purple-50 border-purple-200 text-purple-700'
+                      : 'bg-white/5 border-white/10 text-purple-300'
+                  }`}>
                     <span>🎧</span>
                     <span>{profile.play_style}</span>
                   </span>
@@ -671,10 +705,10 @@ export const Profile: React.FC = () => {
                   />
                   <span className="text-[10px] font-bold text-emerald-400 hidden">MC</span>
                 </div>
-                <span className="text-xs font-bold">
+                <span className="text-xs font-bold text-slate-800 dark:text-white">
                   PlayHive ({mcData?.gamemode_name || PLAYHIVE_MODES.find(m => m.id === mcGamemode)?.name || 'Stats'})
                 </span>
-                <span className="text-[10px] font-mono text-slate-400 truncate max-w-[120px]">({profile.minecraft_uuid})</span>
+                <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 truncate max-w-[120px]">({profile.minecraft_uuid})</span>
               </div>
               {mcData?.prestige !== undefined && mcData?.prestige > 0 && (
                 <span className="text-[10px] font-mono text-amber-500 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded font-bold">
@@ -708,12 +742,14 @@ export const Profile: React.FC = () => {
             {mcLoading ? (
               <div className="py-6 flex flex-col items-center justify-center gap-2">
                 <Loader2 className="w-5 h-5 text-emerald-500 animate-spin" />
-                <span className="text-[10px] text-slate-400">戦績を読み込み中...</span>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400">戦績を読み込み中...</span>
               </div>
             ) : (!mcData?.has_stats && Number(mcData?.played || 0) === 0 && Number(mcData?.xp || 0) === 0) ? (
-              <div className="py-4 px-3 rounded-xl bg-black/20 border border-white/5 text-center space-y-1">
-                <p className="text-xs font-semibold text-slate-300">戦績データを取得できませんでした</p>
-                <p className="text-[11px] text-slate-500 leading-relaxed">
+              <div className={`py-4 px-3 rounded-xl border text-center space-y-1 ${
+                isLight ? 'bg-slate-100/80 border-slate-200' : 'bg-black/20 border-white/5'
+              }`}>
+                <p className={`text-xs font-semibold ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>戦績データを取得できませんでした</p>
+                <p className={`text-[11px] leading-relaxed ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
                   PlayHiveでのプレイ履歴がないか、または現在PlayHive APIが保護・メンテナンス中です。
                 </p>
               </div>
@@ -737,7 +773,7 @@ export const Profile: React.FC = () => {
                             {winRate.toFixed(1)}%
                           </span>
                         </span>
-                        <span className="text-[10px] font-mono text-slate-400">
+                        <span className={`text-[10px] font-mono ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
                           {victories.toLocaleString()}勝 / {losses.toLocaleString()}敗 ({played.toLocaleString()}戦)
                         </span>
                       </div>
@@ -761,8 +797,8 @@ export const Profile: React.FC = () => {
                   </div>
                   <div className="bg-slate-200/60 dark:bg-white/5 rounded-xl py-2 px-1">
                     <span className="block text-[9px] text-slate-500 dark:text-slate-400">Kills / Deaths</span>
-                    <span className="font-mono text-xs font-bold">
-                      {(mcData?.kills ?? 0).toLocaleString()} <span className="text-[9px] text-slate-400 font-normal">/ {(mcData?.deaths ?? 0).toLocaleString()}</span>
+                    <span className={`font-mono text-xs font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>
+                      {(mcData?.kills ?? 0).toLocaleString()} <span className="text-[9px] text-slate-500 dark:text-slate-400 font-normal">/ {(mcData?.deaths ?? 0).toLocaleString()}</span>
                     </span>
                   </div>
                   <div className="bg-slate-200/60 dark:bg-white/5 rounded-xl py-2 px-1">

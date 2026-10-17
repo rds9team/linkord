@@ -360,12 +360,12 @@ export const Admin: React.FC = () => {
       <div className="flex items-center justify-between mb-8">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="p-1 rounded bg-purple-500/20 text-purple-400">
+            <span className="p-1 rounded bg-purple-500/20 text-purple-600 dark:text-purple-400">
               <Shield className="w-5 h-5" />
             </span>
-            <h1 className="text-2xl font-black text-white tracking-tight">管理画面 (Admin Dashboard)</h1>
+            <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">管理画面 (Admin Dashboard)</h1>
           </div>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             コミュニティの安全性維持、通報処理、コンテンツのモデレーションを行います。
           </p>
         </div>
@@ -376,8 +376,8 @@ export const Admin: React.FC = () => {
         <div
           className={`mb-6 p-4 rounded-xl border text-xs flex items-center justify-between ${
             message.type === 'success'
-              ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
-              : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+              ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20 text-emerald-800 dark:text-emerald-300'
+              : 'bg-rose-50 dark:bg-rose-500/10 border-rose-200 dark:border-rose-500/20 text-rose-800 dark:text-rose-300'
           }`}
         >
           <span>{message.text}</span>
@@ -390,40 +390,40 @@ export const Admin: React.FC = () => {
       {/* Stats Cards */}
       {stats && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-8">
-          <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10">
-            <div className="flex items-center justify-between text-slate-400 mb-2">
+          <div className="p-4 rounded-2xl bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 shadow-sm">
+            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
               <span className="text-xs font-semibold">ユーザー数</span>
-              <Users className="w-4 h-4 text-purple-400" />
+              <Users className="w-4 h-4 text-purple-600 dark:text-purple-400" />
             </div>
-            <p className="text-2xl font-black text-white font-mono">{stats.total_users}</p>
+            <p className="text-2xl font-black text-slate-900 dark:text-white font-mono">{stats.total_users}</p>
           </div>
-          <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10">
-            <div className="flex items-center justify-between text-slate-400 mb-2">
+          <div className="p-4 rounded-2xl bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 shadow-sm">
+            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
               <span className="text-xs font-semibold">サーバー数</span>
-              <Server className="w-4 h-4 text-sky-400" />
+              <Server className="w-4 h-4 text-sky-600 dark:text-sky-400" />
             </div>
-            <p className="text-2xl font-black text-white font-mono">{stats.total_servers}</p>
+            <p className="text-2xl font-black text-slate-900 dark:text-white font-mono">{stats.total_servers}</p>
           </div>
-          <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10">
-            <div className="flex items-center justify-between text-slate-400 mb-2">
+          <div className="p-4 rounded-2xl bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 shadow-sm">
+            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
               <span className="text-xs font-semibold">未対応支援</span>
-              <Heart className="w-4 h-4 text-rose-400 fill-rose-500/20" />
+              <Heart className="w-4 h-4 text-rose-500 dark:text-rose-400 fill-rose-500/20" />
             </div>
-            <p className="text-2xl font-black text-rose-400 font-mono">{stats.pending_donations ?? 0}</p>
+            <p className="text-2xl font-black text-rose-600 dark:text-rose-400 font-mono">{stats.pending_donations ?? 0}</p>
           </div>
-          <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10">
-            <div className="flex items-center justify-between text-slate-400 mb-2">
+          <div className="p-4 rounded-2xl bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 shadow-sm">
+            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
               <span className="text-xs font-semibold">総通報件数</span>
-              <AlertTriangle className="w-4 h-4 text-amber-400" />
+              <AlertTriangle className="w-4 h-4 text-amber-500 dark:text-amber-400" />
             </div>
-            <p className="text-2xl font-black text-white font-mono">{stats.total_reports}</p>
+            <p className="text-2xl font-black text-slate-900 dark:text-white font-mono">{stats.total_reports}</p>
           </div>
-          <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10">
-            <div className="flex items-center justify-between text-slate-400 mb-2">
+          <div className="p-4 rounded-2xl bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 shadow-sm">
+            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
               <span className="text-xs font-semibold">未対応通報</span>
-              <Clock className="w-4 h-4 text-amber-400" />
+              <Clock className="w-4 h-4 text-amber-500 dark:text-amber-400" />
             </div>
-            <p className="text-2xl font-black text-amber-400 font-mono">{stats.pending_reports}</p>
+            <p className="text-2xl font-black text-amber-600 dark:text-amber-400 font-mono">{stats.pending_reports}</p>
           </div>
         </div>
       )}

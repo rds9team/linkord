@@ -73,7 +73,7 @@ export const SpotifyWidget: React.FC<{
                 href={`https://open.spotify.com/track/${spotify.track_id}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[10px] text-slate-400 hover:text-emerald-400 flex items-center gap-0.5 font-medium transition"
+                className="text-[10px] text-slate-500 dark:text-slate-400 hover:text-emerald-500 dark:hover:text-emerald-400 flex items-center gap-0.5 font-medium transition"
                 title="Spotifyで開く"
               >
                 <span>開く</span>
@@ -85,7 +85,7 @@ export const SpotifyWidget: React.FC<{
           <p className="text-xs font-extrabold truncate" title={spotify.song}>
             {spotify.song}
           </p>
-          <p className="text-[11px] text-slate-400 dark:text-slate-400 truncate" title={spotify.artist}>
+          <p className="text-[11px] text-slate-600 dark:text-slate-400 truncate" title={spotify.artist}>
             {spotify.artist}
           </p>
         </div>
@@ -99,7 +99,7 @@ export const SpotifyWidget: React.FC<{
             style={{ width: `${progressPercent}%` }}
           ></div>
         </div>
-        <div className="flex justify-between items-center text-[10px] font-mono text-slate-400">
+        <div className="flex justify-between items-center text-[10px] font-mono text-slate-500 dark:text-slate-400">
           <span>{formatDuration(progressMs)}</span>
           <span>{formatDuration(totalMs)}</span>
         </div>
@@ -170,19 +170,19 @@ export const ActivityWidget: React.FC<{
       {/* Details */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-1 mb-0.5">
-          <div className="flex items-center gap-1.5 text-[10px] text-purple-400 font-bold tracking-wider uppercase">
+          <div className="flex items-center gap-1.5 text-[10px] text-purple-600 dark:text-purple-400 font-bold tracking-wider uppercase">
             <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse"></span>
             <span>{isCoding ? 'DEVELOPMENT' : 'ACTIVITY'}</span>
           </div>
-          {elapsed && <span className="text-[10px] font-mono text-slate-400">{elapsed}</span>}
+          {elapsed && <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400">{elapsed}</span>}
         </div>
 
-        <p className="text-xs font-bold truncate">{activity.name}</p>
+        <p className="text-xs font-bold truncate text-slate-900 dark:text-white">{activity.name}</p>
         {activity.details && (
-          <p className="text-[11px] text-slate-300 dark:text-slate-400 truncate">{activity.details}</p>
+          <p className="text-[11px] text-slate-600 dark:text-slate-300 truncate">{activity.details}</p>
         )}
         {activity.state && (
-          <p className="text-[10px] text-slate-400 truncate">{activity.state}</p>
+          <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">{activity.state}</p>
         )}
       </div>
     </div>
@@ -199,7 +199,7 @@ export const CustomStatusBubble: React.FC<{
     : null;
 
   return (
-    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 border border-white/10 backdrop-blur-md text-xs text-slate-200 shadow-sm animate-fade-in max-w-full">
+    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100/90 dark:bg-white/5 border border-slate-200 dark:border-white/10 backdrop-blur-md text-xs text-slate-700 dark:text-slate-200 shadow-sm animate-fade-in max-w-full">
       {customEmojiUrl ? (
         <img src={customEmojiUrl} alt={activity.emoji?.name || ''} className="w-4 h-4 object-contain" />
       ) : activity.emoji?.name ? (

@@ -494,10 +494,10 @@ export const Settings: React.FC = () => {
   if (notLoggedIn) {
     return (
       <div className="max-w-md mx-auto px-4 py-16 text-center">
-        <div className="p-8 rounded-3xl bg-white/[0.03] border border-white/10 backdrop-blur-xl">
-          <LogIn className="w-10 h-10 text-purple-400 mx-auto mb-4" />
-          <h2 className="text-lg font-bold text-white mb-2">ログインが必要です</h2>
-          <p className="text-xs text-slate-400 mb-6">
+        <div className="p-8 rounded-3xl bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 shadow-xl backdrop-blur-xl">
+          <LogIn className="w-10 h-10 text-purple-600 dark:text-purple-400 mx-auto mb-4" />
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-2">ログインが必要です</h2>
+          <p className="text-xs text-slate-600 dark:text-slate-400 mb-6">
             プロフィール設定を編集するには、アカウントにログインしてください。
           </p>
           <Link
@@ -589,8 +589,8 @@ export const Settings: React.FC = () => {
           {user && (
             <div className={`p-3.5 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
               user.needs_discord_reauth || !user.discord_id || !user.has_discord_authed || user.has_discord_token === false
-                ? 'bg-amber-500/5 border-amber-500/20 text-amber-200'
-                : 'bg-slate-50 dark:bg-white/[0.02] border-slate-200 dark:border-white/10 text-slate-300'
+                ? 'bg-amber-50 dark:bg-amber-500/5 border-amber-200 dark:border-amber-500/20 text-amber-800 dark:text-amber-200'
+                : 'bg-slate-50 dark:bg-white/[0.02] border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300'
             }`}>
               <div className="min-w-0 flex items-center gap-2.5">
                 <div className="w-7 h-7 rounded-lg bg-[#5865F2] flex items-center justify-center flex-shrink-0 shadow-sm">
@@ -968,7 +968,7 @@ export const Settings: React.FC = () => {
                     key={preset.id}
                     type="button"
                     onClick={() => setThemeId(preset.id)}
-                    className={`py-2 px-2.5 rounded-xl border text-[11px] font-medium transition flex items-center justify-between gap-1.5 ${isSelected ? 'bg-purple-600 border-purple-400 text-white shadow-md' : 'bg-slate-900 border-white/10 text-slate-400 hover:text-white'}`}
+                    className={`py-2 px-2.5 rounded-xl border text-[11px] font-medium transition flex items-center justify-between gap-1.5 ${isSelected ? 'bg-purple-600 border-purple-400 text-white shadow-md' : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
                   >
                     <span className="truncate">{preset.name}</span>
                     <span
@@ -1035,24 +1035,24 @@ export const Settings: React.FC = () => {
           })()}
 
           {/* Badge Display Option */}
-          <div className="pt-2 border-t border-white/5 flex items-center justify-between">
-            <span className="text-xs text-slate-300">バッジを非表示にする</span>
+          <div className="pt-2 border-t border-slate-200 dark:border-white/5 flex items-center justify-between">
+            <span className="text-xs text-slate-700 dark:text-slate-300">バッジを非表示にする</span>
             <input
               type="checkbox"
               checked={hideBadges}
               onChange={(e) => setHideBadges(e.target.checked)}
-              className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 bg-slate-900 border-white/10"
+              className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 bg-white dark:bg-slate-900 border-slate-300 dark:border-white/10"
             />
           </div>
 
           {/* Followers Display Option */}
-          <div className="pt-2 border-t border-white/5 flex items-center justify-between">
-            <span className="text-xs text-slate-300">フォロワー数を非表示にする</span>
+          <div className="pt-2 border-t border-slate-200 dark:border-white/5 flex items-center justify-between">
+            <span className="text-xs text-slate-700 dark:text-slate-300">フォロワー数を非表示にする</span>
             <input
               type="checkbox"
               checked={hideFollowers}
               onChange={(e) => setHideFollowers(e.target.checked)}
-              className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 bg-slate-900 border-white/10"
+              className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 bg-white dark:bg-slate-900 border-slate-300 dark:border-white/10"
             />
           </div>
         </div>
@@ -1131,9 +1131,9 @@ export const Settings: React.FC = () => {
                       type="button"
                       disabled={links.length >= 8}
                       onClick={() => addPresetLink(preset.title, preset.icon, preset.defaultUrl)}
-                      className="px-2.5 py-1.5 rounded-xl text-xs font-medium border border-white/10 bg-slate-900 text-slate-300 hover:text-white hover:border-white/20 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+                      className="px-2.5 py-1.5 rounded-xl text-xs font-medium border border-slate-200 dark:border-white/10 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:border-slate-300 dark:hover:border-white/20 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
                     >
-                      <Plus className="w-3 h-3 text-slate-400" />
+                      <Plus className="w-3 h-3 text-slate-500 dark:text-slate-400" />
                       <span>{preset.title}</span>
                     </button>
                   );

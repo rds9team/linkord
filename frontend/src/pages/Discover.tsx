@@ -86,6 +86,8 @@ export const Discover: React.FC = () => {
 
   const [servers, setServers] = useState<ServerData[]>([]);
   const [users, setUsers] = useState<ProfileSearchResult[]>([]);
+  const [usersHasMore, setUsersHasMore] = useState(true);
+  const [isLoadingMoreUsers, setIsLoadingMoreUsers] = useState(false);
   const [recruitments, setRecruitments] = useState<VoiceRecruitmentItem[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
@@ -173,12 +175,19 @@ export const Discover: React.FC = () => {
             badge: userBadgeFilter || undefined,
             game: userGameFilter || undefined,
             sort: userSortFilter,
+            limit: 20,
+            offset: 0,
           });
           if (isMounted) {
-            setUsers(data || []);
+            const list = data || [];
+            setUsers(list);
+            setUsersHasMore(list.length >= 20);
           }
         } catch {
-          setUsers([]);
+          if (isMounted) {
+            setUsers([]);
+            setUsersHasMore(false);
+          }
         } finally {
           setIsSearching(false);
           setInitialLoading(false);
@@ -204,6 +213,28 @@ export const Discover: React.FC = () => {
     userGameFilter,
     userSortFilter,
   ]);
+
+  const handleLoadMoreUsers = async () => {
+    if (isLoadingMoreUsers || !usersHasMore) return;
+    setIsLoadingMoreUsers(true);
+    try {
+      const data = await searchProfiles({
+        q: searchTerm || undefined,
+        badge: userBadgeFilter || undefined,
+        game: userGameFilter || undefined,
+        sort: userSortFilter,
+        limit: 20,
+        offset: users.length,
+      });
+      const list = data || [];
+      setUsers((prev) => [...prev, ...list]);
+      setUsersHasMore(list.length >= 20);
+    } catch {
+      setUsersHasMore(false);
+    } finally {
+      setIsLoadingMoreUsers(false);
+    }
+  };
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8 relative z-10">
@@ -761,8 +792,9 @@ export const Discover: React.FC = () => {
             該当するユーザーが見つかりませんでした。
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {users.map(u => (
+          <div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {users.map(u => (
               <Link
                 key={u.username}
                 to={`/@${u.username}`}
@@ -833,6 +865,31 @@ export const Discover: React.FC = () => {
               </Link>
             ))}
           </div>
+
+          {/* Load More Button */}
+          {usersHasMore && (
+            <div className="mt-8 flex justify-center">
+              <button
+                type="button"
+                onClick={handleLoadMoreUsers}
+                disabled={isLoadingMoreUsers}
+                className="px-6 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-purple-500/30 text-xs font-bold text-slate-300 hover:text-white transition flex items-center gap-2 cursor-pointer shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoadingMoreUsers ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-purple-400" />
+                    <span>読み込み中...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>もっと読み込む</span>
+                    <ArrowRight className="w-3.5 h-3.5 text-purple-400" />
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+        </div>
         )
       )}
 

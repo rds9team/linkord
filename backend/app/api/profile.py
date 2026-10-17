@@ -26,6 +26,7 @@ async def search_profiles(
     game: Optional[str] = None,
     sort: Optional[str] = "views",
     limit: int = 20,
+    offset: int = 0,
     db: AsyncSession = Depends(get_db)
 ):
     stmt = (
@@ -62,7 +63,7 @@ async def search_profiles(
     else:
         stmt = stmt.order_by(Account.views_count.desc(), Account.created_at.desc())
 
-    stmt = stmt.limit(min(limit, 50))
+    stmt = stmt.offset(max(0, offset)).limit(min(limit, 50))
     result = await db.execute(stmt)
     accounts = result.scalars().all()
     

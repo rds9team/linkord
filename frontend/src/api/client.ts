@@ -3,7 +3,7 @@ import { ProfileData, ProfileUpdateData, ServerData, ServerCreateData, ServerUpd
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 interface RequestOptions extends RequestInit {
-  params?: Record<string, string | undefined>;
+  params?: Record<string, string | number | undefined>;
 }
 
 async function request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
@@ -14,7 +14,7 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
     const searchParams = new URLSearchParams();
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined && value !== '') {
-        searchParams.append(key, value);
+        searchParams.append(key, String(value));
       }
     });
     const queryString = searchParams.toString();
@@ -268,30 +268,34 @@ export const fetchFollowers = (username: string): Promise<FollowUser[]> => {
 export const fetchFollowing = (username: string): Promise<FollowUser[]> => {
   return request<FollowUser[]>(`/api/profile/${encodeURIComponent(username)}/following`);
 };
-
-export interface SearchProfilesOptions {
-  q?: string;
-  badge?: string;
-  game?: string;
-  sort?: string;
-}
-
-export const searchProfiles = (
-  queryOrOptions?: string | SearchProfilesOptions
-): Promise<ProfileSearchResult[]> => {
-  let params: Record<string, string | undefined> = {};
-  if (typeof queryOrOptions === 'object' && queryOrOptions !== null) {
-    params = {
-      q: queryOrOptions.q,
-      badge: queryOrOptions.badge,
-      game: queryOrOptions.game,
-      sort: queryOrOptions.sort,
-    };
-  } else {
-    params = { q: typeof queryOrOptions === 'string' ? queryOrOptions : undefined };
-  }
-  return request<ProfileSearchResult[]>('/api/profile/search', { params });
-};
+ 
+ export interface SearchProfilesOptions {
+   q?: string;
+   badge?: string;
+   game?: string;
+   sort?: string;
+   limit?: number;
+   offset?: number;
+ }
+ 
+ export const searchProfiles = (
+   queryOrOptions?: string | SearchProfilesOptions
+ ): Promise<ProfileSearchResult[]> => {
+   let params: Record<string, string | number | undefined> = {};
+   if (typeof queryOrOptions === 'object' && queryOrOptions !== null) {
+     params = {
+       q: queryOrOptions.q,
+       badge: queryOrOptions.badge,
+       game: queryOrOptions.game,
+       sort: queryOrOptions.sort,
+       limit: queryOrOptions.limit,
+       offset: queryOrOptions.offset,
+     };
+   } else {
+     params = { q: typeof queryOrOptions === 'string' ? queryOrOptions : undefined };
+   }
+   return request<ProfileSearchResult[]>('/api/profile/search', { params });
+ };
 
 export const checkAdminAccess = (): Promise<{ status: string; is_admin: boolean; username: string }> => {
   return request<{ status: string; is_admin: boolean; username: string }>('/api/admin/check');

@@ -25,14 +25,36 @@ class Settings(BaseSettings):
     STORAGE_PROVIDER: str = "local"
     UPLOAD_DIR: str = "./uploads"
 
-    ADMIN_USERNAMES: str = "admin,rds9,yuto,yuto0926space"
+    # 管理者はアカウントID（数値）で指定する。ユーザー名は登録・変更で誰でも名乗れるため権限判定に使わない
+    ADMIN_ACCOUNT_IDS: str = ""
 
-    def get_admin_usernames(self) -> list[str]:
-        return [u.strip() for u in self.ADMIN_USERNAMES.split(",") if u.strip()]
+    # 信頼できるリバースプロキシのIP（カンマ区切り）。ここからの接続の場合のみ転送ヘッダーのクライアントIPを採用する
+    TRUSTED_PROXY_IPS: str = "127.0.0.1,::1"
+
+    # Pages Functions のAPIプロキシと共有するシークレット。設定時のみ X-Linkord-Client-IP を信頼する
+    PROXY_SHARED_SECRET: Optional[str] = None
+
+    def get_admin_account_ids(self) -> set[int]:
+        ids = set()
+        for raw in self.ADMIN_ACCOUNT_IDS.split(","):
+            raw = raw.strip()
+            if raw.isdigit():
+                ids.add(int(raw))
+        return ids
+
+    def get_trusted_proxy_ips(self) -> set[str]:
+        return {ip.strip() for ip in self.TRUSTED_PROXY_IPS.split(",") if ip.strip()}
 
     model_config = SettingsConfigDict(
         env_file=(".env", "../.env", "backend/.env"),
         extra="ignore"
     )
 
+DEFAULT_DEV_SECRET_KEY = "linkord_dev_secret_key_32_characters_minimum"
+
 settings = Settings()
+
+if settings.APP_ENV == "production" and (
+    settings.SECRET_KEY == DEFAULT_DEV_SECRET_KEY or len(settings.SECRET_KEY) < 32
+):
+    raise RuntimeError("本番環境では32文字以上のランダムな SECRET_KEY を設定してください")

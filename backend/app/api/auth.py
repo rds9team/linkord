@@ -18,6 +18,7 @@ from app.core.security import (
     verify_password,
     encrypt_token,
     decrypt_token,
+    is_reserved_username,
 )
 from app.core.auth import (
     get_current_user,
@@ -26,6 +27,7 @@ from app.core.auth import (
     delete_user_session,
     SESSION_COOKIE_NAME,
 )
+from app.core.rate_limit import limiter
 from app.models.models import Account, AccountIdentity
 from app.schemas.schemas import AccountMeOut, UserRegister, UserLogin
 from app.services.image_cache import cache_and_compress_image
@@ -70,11 +72,22 @@ async def generate_unique_tag(db: AsyncSession, username: str) -> str:
 
 async def generate_unique_username(db: AsyncSession, base_name: str) -> str:
     cleaned = re.sub(r"[^a-zA-Z0-9_]", "", base_name.lower())
-    if not cleaned:
+    if len(cleaned) < 2:
         cleaned = "user"
-    return cleaned[:24]
+    cleaned = cleaned[:24]
+
+    candidate = cleaned
+    suffix = 1
+    while True:
+        if not is_reserved_username(candidate):
+            exist_res = await db.execute(select(Account.id).where(Account.username == candidate))
+            if not exist_res.scalars().first():
+                return candidate
+        candidate = f"{cleaned[:24]}_{suffix}"
+        suffix += 1
 
 @router.post("/register")
+@limiter.limit("5/hour")
 async def register_account(
     req_data: UserRegister,
     request: Request,
@@ -112,6 +125,7 @@ async def register_account(
     }
 
 @router.post("/login")
+@limiter.limit("10/minute;50/hour")
 async def login_account(
     login_data: UserLogin,
     request: Request,
@@ -432,10 +446,11 @@ async def discord_callback(
             target_username = clean_username
             suffix = 1
             while True:
-                exist_stmt = select(Account).where(Account.username == target_username)
-                exist_res = await db.execute(exist_stmt)
-                if not exist_res.scalars().first():
-                    break
+                if not is_reserved_username(target_username):
+                    exist_stmt = select(Account).where(Account.username == target_username)
+                    exist_res = await db.execute(exist_stmt)
+                    if not exist_res.scalars().first():
+                        break
                 target_username = f"{clean_username[:26]}_{suffix}"
                 suffix += 1
 

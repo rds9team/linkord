@@ -8,7 +8,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
 from app.core.auth import get_current_user, get_optional_current_user, get_client_ip
-from app.core.security import hash_ip
+from app.core.security import hash_ip, is_reserved_username
 from app.models.models import Account, ProfileBoost, Follow, SocialLink
 from app.schemas.schemas import ProfileOut, ProfileUpdate, FollowUserOut, ProfileSearchResult
 
@@ -176,6 +176,11 @@ async def update_my_profile(
     if new_username is not None:
         clean_user = new_username.strip().lower()
         if clean_user != current_user.username:
+            if is_reserved_username(clean_user):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"ユーザー名「@{clean_user}」は使用できません。"
+                )
             # 1週間（7日間）のレートリミット判定
             if current_user.username_changed_at:
                 cooldown_delta = datetime.timedelta(days=7)

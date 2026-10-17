@@ -88,8 +88,8 @@ async def test_follow_list_and_search_and_admin():
         test_admin_acc, test_admin_token = await create_test_account_and_session("test_admin")
         admin_client = AsyncClient(transport=transport, base_url="http://test", headers={"Authorization": f"Bearer {test_admin_token}"})
         from app.core.config import settings
-        original_admins = settings.ADMIN_USERNAMES
-        settings.ADMIN_USERNAMES = f"{original_admins},test_admin"
+        original_admins = settings.ADMIN_ACCOUNT_IDS
+        settings.ADMIN_ACCOUNT_IDS = f"{original_admins},{test_admin_acc.id}"
 
         try:
             # 5. Admin stats
@@ -131,7 +131,7 @@ async def test_follow_list_and_search_and_admin():
             assert user2_uname in batch_data["updated_users"]
             assert "non_existent_xyz" in batch_data["not_found_users"]
         finally:
-            settings.ADMIN_USERNAMES = original_admins
+            settings.ADMIN_ACCOUNT_IDS = original_admins
 
         # 9. Test delete account & 410 Gone with dedicated user
         del_user_uname = f"del_{ts}"
@@ -150,11 +150,12 @@ async def test_follow_list_and_search_and_admin():
             del_user_id = del_user.id
 
             from app.models.models import UserSession
+            from app.core.security import hash_session_token
             import secrets, datetime
             token = secrets.token_urlsafe(32)
             sess = UserSession(
                 account_id=del_user_id,
-                session_token=token,
+                session_token=hash_session_token(token),
                 expires_at=datetime.datetime.utcnow() + datetime.timedelta(days=1)
             )
             db.add(sess)

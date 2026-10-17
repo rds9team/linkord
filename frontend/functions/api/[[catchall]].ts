@@ -11,6 +11,16 @@ export async function onRequest(context: any): Promise<Response> {
   forwardHeaders.set('X-Forwarded-Host', url.host);
   forwardHeaders.set('X-Forwarded-Proto', url.protocol.replace(':', ''));
 
+  // Pass the real client IP to the API. Headers sent by the client itself are dropped
+  // so they cannot spoof it; the API only trusts these when the shared secret matches.
+  forwardHeaders.delete('X-Linkord-Client-IP');
+  forwardHeaders.delete('X-Linkord-Proxy-Secret');
+  const clientIp = request.headers.get('CF-Connecting-IP');
+  if (env?.PROXY_SHARED_SECRET && clientIp) {
+    forwardHeaders.set('X-Linkord-Client-IP', clientIp);
+    forwardHeaders.set('X-Linkord-Proxy-Secret', env.PROXY_SHARED_SECRET);
+  }
+
   const fetchInit: RequestInit = {
     method: request.method,
     headers: forwardHeaders,

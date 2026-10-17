@@ -18,6 +18,7 @@ settings.TESTING = True
 settings.DATABASE_URL = TEST_DATABASE_URL
 
 from app.models.models import Account, UserSession
+from app.core.security import hash_session_token
 from app.core.database import Base, get_db
 import app.core.database as core_db
 from app.main import ensure_schema_updated, app
@@ -100,7 +101,7 @@ async def create_test_account_and_session(
         token = secrets.token_urlsafe(32)
         sess = UserSession(
             account_id=account.id,
-            session_token=token,
+            session_token=hash_session_token(token),
             expires_at=datetime.datetime.utcnow() + datetime.timedelta(days=30),
         )
         db.add(sess)

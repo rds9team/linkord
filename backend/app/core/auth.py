@@ -1,25 +1,53 @@
 import datetime
+import hmac
 from typing import Optional
 from fastapi import Request, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.security import generate_session_token, hash_session_token, hash_ip
 from app.models.models import Account, UserSession
-from sqlalchemy import or_
 
 SESSION_COOKIE_NAME = "linkord_session"
 SESSION_EXPIRE_DAYS = 30
 
 def get_client_ip(request: Request) -> Optional[str]:
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    if request.client:
-        return request.client.host
-    return None
+    peer = request.client.host if request.client else None
+
+    # Cloudflare Pages Functions のプロキシ経由: 共有シークレットが一致した場合のみ転送元IPを採用
+    if settings.PROXY_SHARED_SECRET:
+        proxy_secret = request.headers.get("x-linkord-proxy-secret") or ""
+        proxied_ip = request.headers.get("x-linkord-client-ip")
+        if proxied_ip and hmac.compare_digest(proxy_secret, settings.PROXY_SHARED_SECRET):
+            return proxied_ip.strip()
+
+    # 直接の接続元が信頼済みプロキシ（Cloudflare Tunnel 等）の場合のみ転送ヘッダーを見る。
+    # X-Forwarded-For の先頭はクライアントが自由に書けるため使わない
+    if peer and peer in settings.get_trusted_proxy_ips():
+        cf_ip = request.headers.get("cf-connecting-ip")
+        if cf_ip:
+            return cf_ip.strip()
+        forwarded = request.headers.get("x-forwarded-for")
+        if forwarded:
+            return forwarded.split(",")[-1].strip()
+
+    return peer
+
+
+def is_admin(account: Account) -> bool:
+    return (
+        account.id in settings.get_admin_account_ids()
+        or bool(account.has_founder)
+        or bool(account.has_team)
+    )
+
+
+def is_super_admin(account: Account) -> bool:
+    """Founderバッジの付与など、最上位の権限が必要な操作用"""
+    return account.id in settings.get_admin_account_ids() or bool(account.has_founder)
 
 async def create_user_session(
     db: AsyncSession,
@@ -57,12 +85,7 @@ async def delete_user_session(
     session_token: str
 ) -> bool:
     hashed_token = hash_session_token(session_token)
-    stmt = select(UserSession).where(
-        or_(
-            UserSession.session_token == hashed_token,
-            UserSession.session_token == session_token
-        )
-    )
+    stmt = select(UserSession).where(UserSession.session_token == hashed_token)
     result = await db.execute(stmt)
     session = result.scalars().first()
     if session:
@@ -90,10 +113,7 @@ async def get_optional_current_user(
         select(UserSession)
         .options(selectinload(UserSession.account).selectinload(Account.links))
         .where(
-            or_(
-                UserSession.session_token == hashed_token,
-                UserSession.session_token == session_token
-            ),
+            UserSession.session_token == hashed_token,
             UserSession.expires_at > now
         )
     )

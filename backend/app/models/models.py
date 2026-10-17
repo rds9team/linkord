@@ -269,3 +269,12 @@ class Game(Base):
 
 
 
+
+class MediaUpload(Base):
+    """アップロードされたファイルの所有者。削除権限の判定に使う"""
+    __tablename__ = "media_uploads"
+
+    id = Column(Integer, primary_key=True, index=True)
+    filename = Column(String(128), unique=True, index=True, nullable=False)
+    account_id = Column(Integer, ForeignKey("accounts.id", ondelete="CASCADE"), index=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)

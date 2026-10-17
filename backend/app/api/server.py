@@ -9,7 +9,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_
 from app.core.database import get_db
-from app.core.auth import get_current_user, get_optional_current_user, get_client_ip
+from app.core.auth import get_current_user, get_optional_current_user, get_client_ip, is_admin
 from app.models.models import Server, Boost, Account, AccountIdentity
 from app.schemas.schemas import ServerOut, ServerCreate, ServerUpdate
 
@@ -929,7 +929,7 @@ async def refresh_all_invites_endpoint(
     current_user: Account = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    if not (current_user.has_founder or current_user.has_team or current_user.username in settings.get_admin_usernames()):
+    if not is_admin(current_user):
         raise HTTPException(status_code=403, detail="管理者権限が必要です")
     return await refresh_all_server_invites(db)
 

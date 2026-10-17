@@ -3,6 +3,8 @@ from typing import Optional, List
 import datetime
 import re
 
+from app.core.security import is_reserved_username
+
 def validate_safe_http_url(v: Optional[str]) -> Optional[str]:
     if v is None:
         return None
@@ -101,6 +103,8 @@ class UserRegister(BaseModel):
         v = v.strip().lower()
         if not re.match(r"^[a-zA-Z0-9_\.]+$", v):
             raise ValueError("ユーザー名は半角英数字、アンダースコア（_）、ドット（.）のみ使用できます")
+        if is_reserved_username(v):
+            raise ValueError("このユーザー名は使用できません")
         return v
 
 class UserLogin(BaseModel):

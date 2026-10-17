@@ -54,8 +54,8 @@ async def test_paypay_donation_and_admin_flow():
         admin_ac = AsyncClient(transport=transport, base_url="http://test", headers={"Authorization": f"Bearer {admin_token}"})
 
         from app.core.config import settings
-        orig_admins = settings.ADMIN_USERNAMES
-        settings.ADMIN_USERNAMES = f"{orig_admins},admin_user"
+        orig_admins = settings.ADMIN_ACCOUNT_IDS
+        settings.ADMIN_ACCOUNT_IDS = f"{orig_admins},{admin_acc.id}"
 
         try:
             # List donations
@@ -108,5 +108,5 @@ async def test_paypay_donation_and_admin_flow():
             assert check_del.status_code == 404
 
         finally:
-            settings.ADMIN_USERNAMES = orig_admins
+            settings.ADMIN_ACCOUNT_IDS = orig_admins
 

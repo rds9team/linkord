@@ -109,7 +109,6 @@ export const Navbar: React.FC = () => {
           >
             <Radio className="w-3.5 h-3.5 text-rose-400" />
             <span>通話募集</span>
-            <span className="px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-400 text-[10px] font-bold">LIVE</span>
           </Link>
 
 
@@ -119,18 +118,18 @@ export const Navbar: React.FC = () => {
             title={isLight ? 'ダークモードに切り替え' : 'ライトモードに切り替え'}
             className={`p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer ${
               isLight
-                ? 'bg-amber-100/80 hover:bg-amber-200/80 text-amber-900 border border-amber-300/60 shadow-sm'
-                : 'bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10'
+                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/70'
+                : 'text-slate-300 hover:text-white hover:bg-white/5'
             }`}
           >
             {isLight ? (
               <>
-                <Sun className="w-3.5 h-3.5 text-amber-500 fill-amber-400" />
+                <Sun className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline text-[11px] font-bold">White</span>
               </>
             ) : (
               <>
-                <Moon className="w-3.5 h-3.5 text-purple-400" />
+                <Moon className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline text-[11px] font-bold">Dark</span>
               </>
             )}
@@ -232,7 +231,7 @@ export const Navbar: React.FC = () => {
           ) : (
             <Link
               to="/login"
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
+              className={`hidden sm:flex px-3.5 py-1.5 rounded-xl text-xs font-semibold transition items-center gap-1.5 ${
                 isLight
                   ? 'bg-slate-900 text-white hover:bg-slate-800 shadow-sm'
                   : 'bg-white text-black hover:bg-slate-200'

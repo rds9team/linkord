@@ -75,18 +75,17 @@ async def ensure_schema_updated(conn):
             await conn.exec_driver_sql("ALTER TABLE servers ADD COLUMN minecraft_tags VARCHAR(256) DEFAULT '';")
 
 async def ensure_defaults(conn):
-    # Ensure rds9 admin account exists with founder badge
-    res = await conn.exec_driver_sql("SELECT id FROM accounts WHERE username = 'rds9';")
+    # 初回起動時のみ rds9 公式アカウントを作成する。
+    # username は重複可能（#tag で区別）なので、既存アカウントへのバッジ再付与は username で行わない
+    res = await conn.exec_driver_sql("SELECT id FROM accounts WHERE username = 'rds9' ORDER BY id LIMIT 1;")
     rds9_row = res.fetchone()
     if not rds9_row:
         await conn.exec_driver_sql("""
             INSERT INTO accounts (username, tag, display_name, has_founder, has_team, has_supporter, has_discord_authed, created_at, updated_at, last_login_at)
             VALUES ('rds9', '0001', 'rds9', 1, 1, 1, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
         """)
-        res = await conn.exec_driver_sql("SELECT id FROM accounts WHERE username = 'rds9';")
+        res = await conn.exec_driver_sql("SELECT id FROM accounts WHERE username = 'rds9' ORDER BY id LIMIT 1;")
         rds9_row = res.fetchone()
-    else:
-        await conn.exec_driver_sql("UPDATE accounts SET has_founder = 1, has_team = 1, has_supporter = 1, has_discord_authed = 1 WHERE username = 'rds9';")
 
     rds9_id = rds9_row[0] if rds9_row else 1
 
@@ -186,17 +185,10 @@ async def lifespan(app: FastAPI):
     asyncio.create_task(auto_cache_existing_discord_images())
     yield
 
-from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from fastapi.responses import JSONResponse
-from app.core.auth import get_client_ip
-from app.core.security import hash_ip
-
-def rate_limit_key_func(request) -> str:
-    ip = get_client_ip(request)
-    return hash_ip(ip) if ip else "unknown_client"
-
-limiter = Limiter(key_func=rate_limit_key_func, default_limits=["120/minute"])
+from app.core.rate_limit import limiter
 
 app = FastAPI(
     title="Linkord API",

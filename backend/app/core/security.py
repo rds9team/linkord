@@ -6,6 +6,17 @@ from urllib.parse import urlparse
 from typing import Optional
 from app.core.config import settings
 
+# 運営・公式アカウントのなりすましや、フロントエンドのルート（/settings 等）と衝突するユーザー名
+RESERVED_USERNAMES = frozenset({
+    "admin", "administrator", "root", "system", "staff", "moderator", "mod",
+    "official", "support", "help", "linkord", "rds9", "rds9team",
+    "discover", "settings", "login", "logout", "terms", "privacy", "server",
+    "servers", "api", "uploads", "static", "assets", "me", "null", "undefined",
+})
+
+def is_reserved_username(username: str) -> bool:
+    return username.strip().lower() in RESERVED_USERNAMES
+
 def generate_session_token() -> str:
     return secrets.token_urlsafe(32)
 
@@ -96,11 +107,9 @@ def encrypt_token(plain_text: Optional[str]) -> Optional[str]:
     """機密トークンやパスコードをAES対称暗号化してDBに保存"""
     if not plain_text:
         return None
-    try:
-        cipher = _get_cipher()
-        return cipher.encrypt(plain_text.encode("utf-8")).decode("utf-8")
-    except Exception:
-        return plain_text
+    # 失敗時に平文のまま保存しないよう、例外はそのまま呼び出し元へ伝える
+    cipher = _get_cipher()
+    return cipher.encrypt(plain_text.encode("utf-8")).decode("utf-8")
 
 def decrypt_token(cipher_text: Optional[str]) -> Optional[str]:
     """暗号化された機密トークンを復号（既存の平文データがある場合はフォールバック）"""

@@ -1,143 +1,171 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Zap, Server, Gamepad2, Heart, Users, Megaphone, Mail } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { useTitle } from '../hooks/useTitle';
 import { SupportModal } from '../components/SupportModal';
+import { fetchServers } from '../api/client';
+import { resolveMediaUrl } from '../utils/media';
+import { ServerData } from '../types';
+
+const FEATURES = [
+  {
+    title: 'ステータスとBGM',
+    body: 'Lanyard連携で、Discordのステータスや Spotify の再生中の曲がそのまま表示されます。BGMや背景動画も設定できます。',
+  },
+  {
+    title: 'PlayHive の戦績',
+    body: 'BedWars・SkyWars などのキル数や勝率を公式APIから取得して、プロフィールに載せられます。',
+  },
+  {
+    title: 'サーバー掲載',
+    body: '招待リンクを貼るだけで掲載できます。メンバー数やアイコンは自動で更新されます。',
+  },
+];
 
 export const Home: React.FC = () => {
   useTitle();
   const [isSupportOpen, setIsSupportOpen] = useState(false);
   const [supportTab, setSupportTab] = useState<'form' | 'supporters'>('form');
+  const [servers, setServers] = useState<ServerData[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchServers({ sort: 'popular' })
+      .then((res) => {
+        if (!cancelled) setServers(res.slice(0, 6));
+      })
+      .catch(() => {
+        if (!cancelled) setServers([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const openSupport = (tab: 'form' | 'supporters') => {
+    setSupportTab(tab);
+    setIsSupportOpen(true);
+  };
 
   return (
-    <div className="flex flex-col items-center justify-center pt-8 sm:pt-16 pb-20 px-4 max-w-4xl mx-auto text-center relative z-10">
-      
-      {/* Main Catchphrase */}
-      <h1 className="text-4xl sm:text-6xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight sm:leading-tight mb-6">
-        Discordの活動を、<br />
-        <span className="text-[#5865F2] dark:text-[#7983f5]">
-          ひとつのプロフィールに。
-        </span>
-      </h1>
+    <div className="w-full max-w-5xl mx-auto px-4 pt-10 sm:pt-20 pb-20 relative z-10">
 
-      <div className="text-sm sm:text-base text-slate-600 dark:text-slate-300 max-w-xl mx-auto mb-8 leading-relaxed space-y-1">
-        <p>Discordステータス、Spotify再生、Minecraft戦績、所属コミュニティ、SNSリンクをおしゃれにまとめて簡単プロフィール共有。</p>
-        <p>完全無料で誰でも作成できます。</p>
-      </div>
+      {/* Hero */}
+      <section className="max-w-2xl">
+        <h1 className="text-[2rem] leading-[1.25] sm:text-5xl sm:leading-[1.2] font-extrabold tracking-tight text-slate-900 dark:text-white mb-5">
+          Discordの自分を、<br />
+          1ページで見せる。
+        </h1>
+        <p className="text-[15px] sm:text-base text-slate-600 dark:text-slate-400 leading-relaxed mb-8">
+          ステータス、聴いている曲、マイクラの戦績、SNSのリンク、入っているサーバー。
+          Linkord なら <span className="font-mono text-slate-800 dark:text-slate-200">linkord.net/@あなた</span> にまとめておけます。
+        </p>
 
-      {/* CTA Buttons */}
-      <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full max-w-md mb-14">
-        <Link
-          to="/login"
-          className="w-full sm:w-auto px-6 py-3 rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white font-bold text-sm shadow-sm flex items-center justify-center gap-2 transition"
-        >
-          <span>プロフィールを作成して共有</span>
-          <ArrowRight className="w-4 h-4" />
-        </Link>
-        <Link
-          to="/discover"
-          className="w-full sm:w-auto px-6 py-3 rounded-xl bg-slate-200/80 hover:bg-slate-300/80 text-slate-800 border border-slate-300 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] dark:border-white/10 dark:text-white font-bold text-sm transition"
-        >
-          サーバーを探す
-        </Link>
-      </div>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Link
+            to="/login"
+            className="px-5 py-3 rounded-lg bg-[#5865F2] hover:bg-[#4752c4] text-white font-bold text-sm flex items-center justify-center gap-2 transition"
+          >
+            <span>Discordではじめる</span>
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+          <Link
+            to="/discover"
+            className="px-5 py-3 rounded-lg text-slate-700 hover:text-slate-900 hover:bg-slate-200/70 dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5 font-semibold text-sm flex items-center justify-center transition"
+          >
+            サーバーを探す
+          </Link>
+        </div>
+      </section>
 
-      {/* Features Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full text-left mb-12">
-        <div className="p-5 rounded-xl bg-white dark:bg-[#13141c] border border-slate-200/90 dark:border-white/[0.07] hover:border-slate-300 dark:hover:border-white/20 transition shadow-sm">
-          <div className="w-9 h-9 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mb-3">
-            <Zap className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-          </div>
-          <h3 className="text-sm font-bold text-slate-800 dark:text-white mb-1">リアルタイムプレゼンス & BGM</h3>
-          <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-            Lanyard連携でSpotifyの再生状況やDiscordステータスを即時反映。カスタムBGMや背景動画ループも設定可能。
-          </p>
+      {/* Listed servers (real content instead of a feature grid) */}
+      <section className="mt-16 sm:mt-24">
+        <div className="flex items-baseline justify-between mb-4">
+          <h2 className="text-sm font-bold text-slate-900 dark:text-white">掲載中のサーバー</h2>
+          <Link to="/discover" className="text-xs font-semibold text-slate-500 hover:text-slate-900 dark:hover:text-white transition">
+            すべて見る
+          </Link>
         </div>
 
-        <div className="p-5 rounded-xl bg-white dark:bg-[#13141c] border border-slate-200/90 dark:border-white/[0.07] hover:border-slate-300 dark:hover:border-white/20 transition shadow-sm">
-          <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-3">
-            <Gamepad2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+        {servers === null ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-[68px] rounded-lg bg-slate-200/60 dark:bg-white/[0.03] animate-pulse" />
+            ))}
           </div>
-          <h3 className="text-sm font-bold text-slate-800 dark:text-white mb-1">Minecraft PlayHive戦績</h3>
-          <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-            BedWarsやSkyWarsなどの戦績・キルレ・勝利数を公式APIから安全に取得してプロフィールに美しくカード表示。
-          </p>
-        </div>
+        ) : servers.length === 0 ? (
+          <p className="text-sm text-slate-500">まだ掲載されているサーバーはありません。</p>
+        ) : (
+          <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {servers.map((srv) => (
+              <li key={srv.id}>
+                <Link
+                  to={`/server/${srv.slug}`}
+                  className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 bg-white hover:border-slate-300 dark:border-white/[0.06] dark:bg-white/[0.02] dark:hover:border-white/15 transition"
+                >
+                  {srv.icon_url ? (
+                    <img
+                      src={resolveMediaUrl(srv.icon_url)}
+                      alt=""
+                      loading="lazy"
+                      className="w-11 h-11 rounded-lg object-cover shrink-0 bg-slate-100 dark:bg-white/5"
+                    />
+                  ) : (
+                    <div className="w-11 h-11 rounded-lg shrink-0 bg-slate-200 dark:bg-white/10 flex items-center justify-center text-sm font-bold text-slate-600 dark:text-slate-300">
+                      {srv.name.charAt(0)}
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <div className="text-sm font-bold text-slate-900 dark:text-white truncate">{srv.name}</div>
+                    <div className="text-xs text-slate-500 truncate">
+                      {srv.member_count.toLocaleString()} メンバー
+                      {srv.description ? ` · ${srv.description}` : ''}
+                    </div>
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
-        <div className="p-5 rounded-xl bg-white dark:bg-[#13141c] border border-slate-200/90 dark:border-white/[0.07] hover:border-slate-300 dark:hover:border-white/20 transition shadow-sm">
-          <div className="w-9 h-9 rounded-lg bg-sky-500/10 border border-sky-500/20 flex items-center justify-center mb-3">
-            <Server className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+      {/* What you can do */}
+      <section className="mt-16 sm:mt-24 grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-10">
+        {FEATURES.map((f) => (
+          <div key={f.title} className="border-t border-slate-200 dark:border-white/10 pt-4">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-2">{f.title}</h3>
+            <p className="text-[13px] text-slate-600 dark:text-slate-400 leading-relaxed">{f.body}</p>
           </div>
-          <h3 className="text-sm font-bold text-slate-800 dark:text-white mb-1">サーバー掲示板・コミュニティ</h3>
-          <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-            Discord招待リンクを入力するだけで簡単掲載。メンバー数の自動同期で新しいコミュニティの発見を促進。
-          </p>
-        </div>
-      </div>
+        ))}
+      </section>
 
-      {/* Support & Advertisement Section */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl mx-auto">
-        {/* Support Box */}
-        <div className="p-6 rounded-2xl bg-white dark:bg-[#11131c] border border-slate-200/90 dark:border-white/[0.08] shadow-sm text-center flex flex-col justify-between">
-          <div>
-            <div className="w-10 h-10 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mx-auto mb-3 text-rose-500">
-              <Heart className="w-5 h-5 fill-rose-500/20" />
-            </div>
-            <h3 className="text-sm font-bold text-slate-800 dark:text-white mb-1.5">開発・運営の支援</h3>
-            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-4">
-              支援については <span className="font-mono text-purple-600 dark:text-purple-400 font-semibold select-all">support@linkord.net</span> にご連絡ください。
-            </p>
-          </div>
-          <div className="flex items-center justify-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setSupportTab('form');
-                setIsSupportOpen(true);
-              }}
-              className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs transition shadow-sm flex items-center gap-1.5 cursor-pointer"
-            >
-              <Heart className="w-3.5 h-3.5 fill-current" />
-              <span>支援案内</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setSupportTab('supporters');
-                setIsSupportOpen(true);
-              }}
-              className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.05] dark:hover:bg-white/[0.08] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 font-semibold text-xs transition flex items-center gap-1.5 cursor-pointer"
-            >
-              <Users className="w-3.5 h-3.5 text-slate-400" />
-              <span>サポーター一覧</span>
-            </button>
-          </div>
+      {/* Support / ads: one quiet line instead of two hero-sized cards */}
+      <section className="mt-16 sm:mt-24 pt-6 border-t border-slate-200 dark:border-white/10 text-[13px] text-slate-600 dark:text-slate-400 flex flex-col sm:flex-row sm:items-center gap-x-6 gap-y-2">
+        <span>Linkord は無料で使えます。運営を応援していただける方はこちらから。</span>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <button
+            type="button"
+            onClick={() => openSupport('form')}
+            className="font-semibold text-rose-600 dark:text-rose-400 hover:underline cursor-pointer"
+          >
+            支援する
+          </button>
+          <button
+            type="button"
+            onClick={() => openSupport('supporters')}
+            className="font-semibold text-slate-700 dark:text-slate-300 hover:underline cursor-pointer"
+          >
+            サポーター一覧
+          </button>
+          <a
+            href="mailto:ad@linkord.net?subject=Linkord広告掲載について"
+            className="font-semibold text-slate-700 dark:text-slate-300 hover:underline"
+          >
+            広告掲載のお問い合わせ
+          </a>
         </div>
+      </section>
 
-        {/* Ad Box */}
-        <div className="p-6 rounded-2xl bg-white dark:bg-[#11131c] border border-slate-200/90 dark:border-white/[0.08] shadow-sm text-center flex flex-col justify-between">
-          <div>
-            <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mx-auto mb-3 text-indigo-500">
-              <Megaphone className="w-5 h-5" />
-            </div>
-            <h3 className="text-sm font-bold text-slate-800 dark:text-white mb-1.5">広告掲載のご案内</h3>
-            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-4">
-              広告を掲載したい場合は <span className="font-mono text-indigo-600 dark:text-indigo-400 font-semibold select-all">ad@linkord.net</span> にご連絡ください。
-            </p>
-          </div>
-          <div>
-            <a
-              href="mailto:ad@linkord.net?subject=Linkord広告掲載について"
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition shadow-sm cursor-pointer"
-            >
-              <Mail className="w-3.5 h-3.5" />
-              <span>ad@linkord.net に連絡</span>
-            </a>
-          </div>
-        </div>
-      </div>
-
-      {/* Support Modal */}
       <SupportModal
         isOpen={isSupportOpen}
         onClose={() => setIsSupportOpen(false)}

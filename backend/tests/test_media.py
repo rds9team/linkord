@@ -109,4 +109,13 @@ async def test_media_upload_flow():
     async with AsyncClient(transport=transport, base_url="http://test", headers={"Authorization": f"Bearer {token}"}) as client_attacker:
         del_attempt = await client_attacker.delete(f"/api/media/{victim_fn}")
         assert del_attempt.status_code == 403
-        assert "他のユーザーが使用中のメディアは削除できません" in del_attempt.json()["detail"]
+        assert "権限がありません" in del_attempt.json()["detail"]
+
+    # 10. Files that are not referenced anywhere (e.g. banners, recruitment media) are protected too
+    async with AsyncClient(transport=transport, base_url="http://test", headers={"Authorization": f"Bearer {token_b}"}) as client_b:
+        files = {"file": ("unused.png", io.BytesIO(dummy_png), "image/png")}
+        unused_fn = (await client_b.post("/api/media/upload", files=files)).json()["filename"]
+
+    async with AsyncClient(transport=transport, base_url="http://test", headers={"Authorization": f"Bearer {token}"}) as client_attacker:
+        del_unused = await client_attacker.delete(f"/api/media/{unused_fn}")
+        assert del_unused.status_code == 403

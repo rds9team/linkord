@@ -288,7 +288,6 @@ export const Discover: React.FC = () => {
         >
           <Radio className="w-3.5 h-3.5 text-rose-300 shrink-0" />
           <span>通話募集</span>
-          <span className="hidden sm:inline px-1.5 py-0.2 rounded bg-white/20 text-[10px] font-black">LIVE</span>
         </button>
         <button
           onClick={() => {
@@ -535,10 +534,12 @@ export const Discover: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-1 text-xs font-mono text-amber-500 dark:text-amber-400 bg-amber-500/10 px-2 py-1 rounded-lg">
-                        <Flame className="w-3.5 h-3.5" />
-                        <span>{server.boosts_count !== undefined ? server.boosts_count : 0}</span>
-                      </div>
+                      {(server.boosts_count ?? 0) > 0 && (
+                        <div className="flex items-center gap-1 text-xs font-mono text-amber-500 dark:text-amber-400 bg-amber-500/10 px-2 py-1 rounded-lg">
+                          <Flame className="w-3.5 h-3.5" />
+                          <span>{server.boosts_count}</span>
+                        </div>
+                      )}
                     </div>
 
                     <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-4 line-clamp-2">

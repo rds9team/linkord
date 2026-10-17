@@ -7,7 +7,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
 from app.core.config import settings
-from app.core.auth import get_current_user
+from app.core.auth import get_current_user, is_admin, is_super_admin
 from app.core.security import decrypt_token
 from app.models.models import Account, Server, Report, Donation, AuditLog
 from app.schemas.schemas import (
@@ -43,13 +43,7 @@ async def log_audit_action(
     db.add(audit)
 
 async def require_admin_user(current_user: Account = Depends(get_current_user)) -> Account:
-    admin_usernames = [u.strip().lower() for u in settings.get_admin_usernames()]
-    is_admin = (
-        current_user.username.lower() in admin_usernames
-        or bool(current_user.has_founder)
-        or bool(current_user.has_team)
-    )
-    if not is_admin:
+    if not is_admin(current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="管理者権限がありません"
@@ -196,8 +190,7 @@ async def update_profile_badges(
         target.has_team = has_team
         changes.append(f"team={has_team}")
     if has_founder is not None:
-        admin_usernames = [u.strip().lower() for u in settings.get_admin_usernames()]
-        if not (admin.username.lower() in admin_usernames or bool(admin.has_founder)):
+        if not is_super_admin(admin):
             raise HTTPException(status_code=403, detail="Founderバッジの変更には最上位管理者権限が必要です")
         target.has_founder = has_founder
         changes.append(f"founder={has_founder}")
@@ -230,8 +223,7 @@ async def batch_update_badges(
     db: AsyncSession = Depends(get_db)
 ):
     if data.has_founder is not None:
-        admin_usernames = [u.strip().lower() for u in settings.get_admin_usernames()]
-        if not (admin.username.lower() in admin_usernames or bool(admin.has_founder)):
+        if not is_super_admin(admin):
             raise HTTPException(status_code=403, detail="Founderバッジの一括変更には最上位管理者権限が必要です")
     raw_names = [u.strip().lstrip("@") for u in data.usernames if u.strip()]
     unique_names = list(dict.fromkeys(raw_names))
